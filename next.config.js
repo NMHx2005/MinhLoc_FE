@@ -3,6 +3,8 @@ const nextConfig = {
   // Enable experimental features for better performance
   experimental: {
     optimizePackageImports: ['@mui/material', '@mui/icons-material'],
+    webVitalsAttribution: ['CLS', 'LCP', 'FCP', 'FID', 'TTFB'],
+    gzipSize: true,
   },
   
   // Image optimization
@@ -15,7 +17,7 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     loader: 'default',
     unoptimized: false,
-    qualities: [25, 50, 75, 85, 95], // Add quality configuration
+    qualities: [25, 50, 75, 85, 95],
   },
 
   // Compression
@@ -157,20 +159,12 @@ const nextConfig = {
     return config;
   },
 
-  // Output configuration
-  output: 'standalone',
+  // Output configuration - Comment out for Vercel deployment
+  // output: 'standalone',
 
   // Production optimizations
-  compress: true,
   poweredByHeader: false,
   generateEtags: false,
-  
-  // Advanced compression
-  experimental: {
-    optimizePackageImports: ['@mui/material', '@mui/icons-material'],
-    webVitalsAttribution: ['CLS', 'LCP', 'FCP', 'FID', 'TTFB'],
-    gzipSize: true,
-  },
   
   // Performance optimizations
   reactStrictMode: true,
