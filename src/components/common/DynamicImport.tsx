@@ -36,8 +36,8 @@ export const DynamicNewsSection = dynamic(
     }
 );
 
-export const DynamicClientLogosSection = dynamic(
-    () => import('@/components/client/Home/ClientLogosSection'),
+export const DynamicPartnersSection = dynamic(
+    () => import('@/components/client/Home/PartnersSection'),
     {
         loading: () => (
             <Skeleton
