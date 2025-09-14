@@ -288,7 +288,7 @@ const TestimonialsSection: React.FC = () => {
                                         {/* User Info */}
                                         <Box sx={{ textAlign: 'center' }}>
                                             <Avatar
-                                                src={testimonial.avatar}
+                                                src={testimonial.avatar || '/default-avatar.jpg'}
                                                 alt={testimonial.name}
                                                 sx={{
                                                     width: { xs: 60, sm: 70 },
@@ -296,9 +296,6 @@ const TestimonialsSection: React.FC = () => {
                                                     mx: 'auto',
                                                     mb: 2,
                                                     border: '3px solid #E6C873',
-                                                }}
-                                                onError={(e) => {
-                                                    e.currentTarget.src = '/default-avatar.jpg';
                                                 }}
                                             />
                                             <Typography

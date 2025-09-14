@@ -28,7 +28,6 @@ const eslintConfig = [
         "varsIgnorePattern": "^_" 
       }],
       "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/prefer-const": "error",
       
       // General rules
       "no-console": ["warn", { "allow": ["warn", "error"] }],
