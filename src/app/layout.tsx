@@ -8,7 +8,7 @@ import StructuredData from '@/components/seo/StructuredData';
 import ServiceWorker from '@/components/common/ServiceWorker';
 // import PerformanceOptimizer from '@/components/common/PerformanceOptimizer';
 // import FontLoaderOptimized from '@/components/common/FontLoaderOptimized';
-// @ts-ignore: Nếu file globals.css chưa tồn tại, hãy tạo file này trong src/app hoặc đảm bảo đường dẫn đúng.
+// @ts-expect-error: Nếu file globals.css chưa tồn tại, hãy tạo file này trong src/app hoặc đảm bảo đường dẫn đúng.
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });

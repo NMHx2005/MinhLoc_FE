@@ -185,7 +185,7 @@ const RecentArticlesSection: React.FC = () => {
                                     <StyledCardMedia
                                         image={article.image}
                                         title={article.title}
-                                        onError={(e: any) => {
+                                        onError={(e: React.SyntheticEvent<HTMLDivElement>) => {
                                             e.currentTarget.style.display = 'none';
                                         }}
                                     />
@@ -254,7 +254,7 @@ const RecentArticlesSection: React.FC = () => {
                                         <ReadMoreButton
                                             onClick={() => {
                                                 // Handle read more click
-                                                console.log('Read more:', article.title);
+                                                console.warn('Read more:', article.title);
                                             }}
                                         >
                                             {article.readMore}

@@ -26,7 +26,7 @@ const HeroBanner: React.FC = () => {
     const [type, setType] = useState('');
 
     const handleSearch = () => {
-        console.log('Search:', { keyword, region, type });
+        console.warn('Search:', { keyword, region, type });
     };
 
     const regionOptions = [
@@ -132,7 +132,7 @@ const HeroBanner: React.FC = () => {
                             <Button
                                 variant="contained"
                                 endIcon={<ArrowForwardIcon />}
-                                onClick={() => console.log('View Details')}
+                                onClick={() => console.warn('View Details')}
                                 sx={{
                                     backgroundColor: '#E7C873',
                                     color: 'black',

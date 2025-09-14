@@ -18,6 +18,7 @@ import {
     LinkedIn,
     ArrowForward,
 } from '@mui/icons-material';
+import Image from 'next/image';
 
 const Footer: React.FC = () => {
     return (
@@ -42,9 +43,11 @@ const Footer: React.FC = () => {
                 >
                     {/* Logo */}
                     <Box sx={{ mb: { xs: 3, lg: 0 } }}>
-                        <img
+                        <Image
                             src="/Logo_MinhLocGroup.png"
                             alt="MINH LỘC GROUP"
+                            width={150}
+                            height={56}
                             style={{
                                 height: '56px',
                                 width: 'auto',

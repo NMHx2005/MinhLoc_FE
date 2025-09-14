@@ -35,7 +35,7 @@ const CriticalCSSLoader: React.FC = () => {
             };
 
             link.onload = () => {
-                console.log('Critical CSS loaded successfully');
+                console.warn('Critical CSS loaded successfully');
             };
 
             document.head.appendChild(link);
