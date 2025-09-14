@@ -1,7 +1,9 @@
 'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
-import { useInView } from 'react-intersection-observer';
+
 import { Box, Skeleton } from '@mui/material';
+import { useInView } from 'react-intersection-observer';
 
 interface UltraLazySectionProps {
     children: React.ReactNode;

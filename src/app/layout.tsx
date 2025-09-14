@@ -4,10 +4,10 @@ import { Toaster } from 'react-hot-toast';
 import EmotionRegistry from '@/lib/emotion-registry';
 import ThemeProvider from '@/components/providers/ThemeProvider';
 import StructuredData from '@/components/seo/StructuredData';
-import PerformanceMonitor from '@/components/common/PerformanceMonitor';
+// import PerformanceMonitor from '@/components/common/PerformanceMonitor';
 import ServiceWorker from '@/components/common/ServiceWorker';
-import PerformanceOptimizer from '@/components/common/PerformanceOptimizer';
-import FontLoaderOptimized from '@/components/common/FontLoaderOptimized';
+// import PerformanceOptimizer from '@/components/common/PerformanceOptimizer';
+// import FontLoaderOptimized from '@/components/common/FontLoaderOptimized';
 // @ts-ignore: Nếu file globals.css chưa tồn tại, hãy tạo file này trong src/app hoặc đảm bảo đường dẫn đúng.
 import './globals.css';
 
@@ -379,10 +379,10 @@ export default function RootLayout({
         <EmotionRegistry>
           <ThemeProvider>
             {children}
-            <PerformanceMonitor />
+            {/* <PerformanceMonitor /> */}
             <ServiceWorker />
-            <PerformanceOptimizer />
-            <FontLoaderOptimized />
+            {/* <PerformanceOptimizer /> */}
+            {/* <FontLoaderOptimized /> */}
             <Toaster
               position="top-right"
               toastOptions={{

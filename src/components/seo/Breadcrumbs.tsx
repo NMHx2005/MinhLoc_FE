@@ -1,8 +1,8 @@
 'use client'
 
 import { Breadcrumbs as MuiBreadcrumbs, Link, Typography } from '@mui/material';
-import { usePathname } from 'next/navigation';
 import NextLink from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface BreadcrumbItem {
     label: string;

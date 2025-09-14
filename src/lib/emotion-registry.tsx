@@ -1,9 +1,10 @@
 'use client'
 
-import { useServerInsertedHTML } from 'next/navigation'
-import { CacheProvider } from '@emotion/react'
-import createCache from '@emotion/cache'
 import { useState } from 'react'
+
+import createCache from '@emotion/cache'
+import { CacheProvider } from '@emotion/react'
+import { useServerInsertedHTML } from 'next/navigation'
 
 export default function EmotionRegistry({ children }: { children: React.ReactNode }) {
     const [cache] = useState(() => {
