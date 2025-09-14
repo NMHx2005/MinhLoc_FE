@@ -2,13 +2,14 @@
 
 import React from 'react';
 import Image from 'next/image';
+import type { CSSProperties } from 'react';
 
 interface OptimizedBannerProps {
     src: string;
     alt: string;
     priority?: boolean;
     className?: string;
-    sx?: any;
+    sx?: CSSProperties;
 }
 
 const OptimizedBanner: React.FC<OptimizedBannerProps> = ({

@@ -2,6 +2,11 @@
 
 import { useEffect } from 'react';
 
+interface LayoutShift extends PerformanceEntry {
+    value: number;
+    hadRecentInput: boolean;
+}
+
 const PerformanceMonitor: React.FC = () => {
     useEffect(() => {
         // Only run in production
@@ -12,18 +17,18 @@ const PerformanceMonitor: React.FC = () => {
             for (const entry of list.getEntries()) {
                 // Log LCP (Largest Contentful Paint)
                 if (entry.entryType === 'largest-contentful-paint') {
-                    console.log('LCP:', entry.startTime);
+                    console.warn('LCP:', entry.startTime);
                 }
 
                 // Log FID (First Input Delay)
                 if (entry.entryType === 'first-input') {
                     const fidEntry = entry as PerformanceEventTiming;
-                    console.log('FID:', fidEntry.processingStart - fidEntry.startTime);
+                    console.warn('FID:', fidEntry.processingStart - fidEntry.startTime);
                 }
 
                 // Log CLS (Cumulative Layout Shift)
-                if (entry.entryType === 'layout-shift' && !(entry as any).hadRecentInput) {
-                    console.log('CLS:', (entry as any).value);
+                if (entry.entryType === 'layout-shift' && !(entry as LayoutShift).hadRecentInput) {
+                    console.warn('CLS:', (entry as LayoutShift).value);
                 }
             }
         });
@@ -31,9 +36,9 @@ const PerformanceMonitor: React.FC = () => {
         // Observe different types of performance entries
         try {
             observer.observe({ entryTypes: ['largest-contentful-paint', 'first-input', 'layout-shift'] });
-        } catch (e) {
+        } catch {
             // Some browsers don't support all entry types
-            console.log('Performance monitoring not fully supported');
+            console.warn('Performance monitoring not fully supported');
         }
 
         // Monitor resource loading times
@@ -50,8 +55,8 @@ const PerformanceMonitor: React.FC = () => {
 
         try {
             resourceObserver.observe({ entryTypes: ['resource'] });
-        } catch (e) {
-            console.log('Resource monitoring not supported');
+        } catch {
+            console.warn('Resource monitoring not supported');
         }
 
         // Cleanup

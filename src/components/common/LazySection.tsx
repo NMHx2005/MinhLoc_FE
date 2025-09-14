@@ -2,13 +2,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Box } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material';
 
 interface LazySectionProps {
     children: React.ReactNode;
     threshold?: number;
     rootMargin?: string;
     fallback?: React.ReactNode;
-    sx?: any;
+    sx?: SxProps<Theme>;
 }
 
 const LazySection: React.FC<LazySectionProps> = ({
@@ -23,6 +24,7 @@ const LazySection: React.FC<LazySectionProps> = ({
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        const currentRef = ref.current;
         const observer = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting && !hasLoaded) {
@@ -36,13 +38,13 @@ const LazySection: React.FC<LazySectionProps> = ({
             }
         );
 
-        if (ref.current) {
-            observer.observe(ref.current);
+        if (currentRef) {
+            observer.observe(currentRef);
         }
 
         return () => {
-            if (ref.current) {
-                observer.unobserve(ref.current);
+            if (currentRef) {
+                observer.unobserve(currentRef);
             }
         };
     }, [threshold, rootMargin, hasLoaded]);

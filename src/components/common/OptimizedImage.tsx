@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Box, Skeleton } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material';
 import Image from 'next/image';
 
 interface OptimizedImageProps {
@@ -11,7 +12,7 @@ interface OptimizedImageProps {
     height?: number;
     priority?: boolean;
     className?: string;
-    sx?: any;
+    sx?: SxProps<Theme>;
     fill?: boolean;
     sizes?: string;
     quality?: number;
