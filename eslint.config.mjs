@@ -12,13 +12,50 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    ignores: [
-      "node_modules/**",
-      ".next/**",
-      "out/**",
-      "build/**",
-      "next-env.d.ts",
-    ],
+    rules: {
+      // Next.js specific rules
+      "@next/next/no-img-element": "error",
+      "@next/next/no-html-link-for-pages": "error",
+      
+      // React rules
+      "react/no-unescaped-entities": "off",
+      "react/prop-types": "off",
+      "react/react-in-jsx-scope": "off",
+      
+      // TypeScript rules
+      "@typescript-eslint/no-unused-vars": ["error", { 
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_" 
+      }],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/prefer-const": "error",
+      
+      // General rules
+      "no-console": ["warn", { "allow": ["warn", "error"] }],
+      "no-debugger": "error",
+      "prefer-const": "error",
+      "no-var": "error",
+      
+      // Import rules
+      "import/order": [
+        "error",
+        {
+          "groups": [
+            "builtin",
+            "external",
+            "internal",
+            "parent",
+            "sibling",
+            "index"
+          ],
+          "newlines-between": "always",
+          "alphabetize": {
+            "order": "asc",
+            "caseInsensitive": true
+          }
+        }
+      ],
+    },
   },
 ];
 

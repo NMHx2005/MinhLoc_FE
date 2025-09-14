@@ -1,0 +1,16 @@
+{
+  "name": "MinhLoc Group - Bất Động Sản Cao Cấp",
+  "short_name": "MinhLoc Group",
+  "description": "Khám phá dự án bất động sản cao cấp tại TP.HCM, Hà Nội. MinhLoc Group - Uy tín, chất lượng, giá tốt.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#E7C873",
+  "orientation": "portrait-primary",
+  "icons": [],
+  "categories": ["business", "real-estate", "property"],
+  "lang": "vi",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false
+}
