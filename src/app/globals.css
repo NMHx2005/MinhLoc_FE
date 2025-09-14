@@ -78,3 +78,26 @@ section {
   max-width: 100%;
   overflow-x: hidden;
 } */
+
+/* Prevent MUI Select dropdown from causing layout shift */
+.MuiPopover-root {
+  overflow: hidden !important;
+}
+
+.MuiMenu-root {
+  overflow: hidden !important;
+}
+
+.MuiPaper-root {
+  max-width: calc(100vw - 32px) !important;
+}
+
+/* Ensure MUI Select dropdown doesn't cause horizontal scroll */
+.MuiSelect-root {
+  overflow: hidden !important;
+}
+
+/* Additional safety for dropdown menus */
+.MuiBackdrop-root {
+  overflow: hidden !important;
+}

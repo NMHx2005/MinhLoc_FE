@@ -260,6 +260,28 @@ const HeroBanner: React.FC = () => {
                                         inputProps={{
                                             'aria-label': 'Chọn khu vực',
                                         }}
+                                        MenuProps={{
+                                            disableScrollLock: true,
+                                            PaperProps: {
+                                                sx: {
+                                                    backgroundColor: '#2a2a2a',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    borderRadius: 2,
+                                                    mt: 0.5,
+                                                    maxHeight: 300,
+                                                    maxWidth: 'calc(100vw - 48px)',
+                                                    '& .MuiMenuItem-root': {
+                                                        color: 'white',
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(255,255,255,0.1)',
+                                                        },
+                                                        '&.Mui-selected': {
+                                                            backgroundColor: 'rgba(231,200,115,0.2)',
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        }}
                                         sx={{
                                             color: 'white',
                                             backgroundColor: 'transparent',
@@ -314,6 +336,28 @@ const HeroBanner: React.FC = () => {
                                         IconComponent={ArrowDownIcon}
                                         inputProps={{
                                             'aria-label': 'Chọn loại bất động sản',
+                                        }}
+                                        MenuProps={{
+                                            disableScrollLock: true,
+                                            PaperProps: {
+                                                sx: {
+                                                    backgroundColor: '#2a2a2a',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    borderRadius: 2,
+                                                    mt: 0.5,
+                                                    maxHeight: 300,
+                                                    maxWidth: 'calc(100vw - 48px)',
+                                                    '& .MuiMenuItem-root': {
+                                                        color: 'white',
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(255,255,255,0.1)',
+                                                        },
+                                                        '&.Mui-selected': {
+                                                            backgroundColor: 'rgba(231,200,115,0.2)',
+                                                        },
+                                                    },
+                                                },
+                                            },
                                         }}
                                         sx={{
                                             color: 'white',
