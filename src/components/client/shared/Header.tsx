@@ -21,11 +21,21 @@ import {
     Phone as PhoneIcon,
     KeyboardArrowDown as ArrowDownIcon
 } from '@mui/icons-material';
+import { usePathname } from 'next/navigation';
 
 const Header: React.FC = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
     const [mobileMenuAnchor, setMobileMenuAnchor] = React.useState<null | HTMLElement>(null);
+    const pathname = usePathname();
+    const isHome = pathname === '/';
+
+    const headerBg = isHome ? 'transparent' : 'white';
+    const textColor = isHome ? 'white' : '#1a1a1a';
+    const borderBottom = isHome ? 'none' : '1px solid rgba(0,0,0,0.06)';
+    const menuPaperBg = isHome ? 'rgba(0, 0, 0, 0.9)' : 'white';
+    const menuPaperBorder = isHome ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.06)';
+    const hoverBg = isHome ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.05)';
 
     const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
         setMobileMenuAnchor(event.currentTarget);
@@ -36,11 +46,11 @@ const Header: React.FC = () => {
     };
 
     const navigationItems = [
-        { label: 'Trang chủ', path: '/', hasDropdown: true },
-        { label: 'Dự án', path: '/projects', hasDropdown: true },
-        { label: 'Về chúng tôi', path: '/about', hasDropdown: true },
-        { label: 'Tin tức', path: '/news', hasDropdown: true },
-        { label: 'Lĩnh vực', path: '/business-areas', hasDropdown: true },
+        { label: 'Trang chủ', path: '/', hasDropdown: false },
+        { label: 'Giới thiệu', path: '/about', hasDropdown: false },
+        { label: 'Dự án BĐS', path: '/projects', hasDropdown: false },
+        { label: 'Kinh doanh sâm', path: '/sam', hasDropdown: false },
+        { label: 'Lĩnh vực hoạt động', path: '/business-areas', hasDropdown: false },
         { label: 'Liên hệ', path: '/contact', hasDropdown: false },
     ];
 
@@ -49,11 +59,11 @@ const Header: React.FC = () => {
             position="absolute"
             elevation={0}
             sx={{
-                backgroundColor: 'transparent',
+                backgroundColor: headerBg,
                 height: { xs: '80px', md: '142.5px' },
                 zIndex: 9999,
                 boxShadow: 'none !important',
-                borderBottom: 'none !important',
+                borderBottom: borderBottom,
                 '&::before': {
                     display: 'none !important',
                 },
@@ -129,18 +139,33 @@ const Header: React.FC = () => {
                                     <Button
                                         component={Link}
                                         href={item.path}
+                                        disableRipple
+                                        disableElevation
+                                        variant="text"
                                         sx={{
-                                            color: 'white !important',
+                                            color: `${textColor} !important`,
                                             textTransform: 'none',
                                             fontWeight: 500,
                                             fontSize: { xs: '0.9rem', md: '1rem' },
                                             px: 0,
                                             py: 0,
                                             minWidth: 'auto',
-                                            textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                                            borderRadius: 0,
+                                            backgroundColor: 'transparent !important',
+                                            boxShadow: 'none !important',
+                                            textShadow: isHome ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
                                             '&:hover': {
-                                                backgroundColor: 'transparent',
-                                                color: 'white !important',
+                                                backgroundColor: 'transparent !important',
+                                                boxShadow: 'none !important',
+                                                color: `${textColor} !important`,
+                                            },
+                                            '&:focus': {
+                                                backgroundColor: 'transparent !important',
+                                                boxShadow: 'none !important',
+                                            },
+                                            '&:active': {
+                                                backgroundColor: 'transparent !important',
+                                                boxShadow: 'none !important',
                                             },
                                         }}
                                     >
@@ -149,7 +174,7 @@ const Header: React.FC = () => {
                                     {item.hasDropdown && (
                                         <ArrowDownIcon
                                             sx={{
-                                                color: 'white',
+                                                color: textColor,
                                                 fontSize: { xs: '14px', md: '16px' },
                                                 ml: 0.5,
                                             }}
@@ -175,39 +200,39 @@ const Header: React.FC = () => {
                                 gap: 1
                             }}>
                                 <PhoneIcon sx={{
-                                    color: 'white !important',
+                                    color: `${textColor} !important`,
                                     fontSize: { xs: '16px', md: '20px' }
                                 }} />
                                 <Typography
                                     variant="body2"
                                     sx={{
-                                        color: 'white !important',
+                                        color: `${textColor} !important`,
                                         fontSize: { xs: '0.8rem', md: '0.9rem' },
                                         fontWeight: 500,
-                                        textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                                        textShadow: isHome ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
                                     }}
                                 >
                                     +68 685 88666
                                 </Typography>
                             </Box>
 
-                            {/* Add Property Button */}
+                            {/* CTA Button */}
                             <Button
-                                variant="outlined"
+                                variant={isHome ? 'outlined' : 'outlined'}
                                 sx={{
-                                    color: 'white !important',
-                                    borderColor: 'white !important',
+                                    color: `${textColor} !important`,
+                                    borderColor: `${textColor} !important`,
                                     textTransform: 'none',
                                     borderRadius: '50px',
                                     px: { xs: 2, md: 3 },
                                     py: 1,
                                     fontSize: { xs: '0.8rem', md: '0.9rem' },
                                     fontWeight: 500,
-                                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                                    textShadow: isHome ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
                                     '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                        borderColor: 'white !important',
-                                        color: 'white !important',
+                                        backgroundColor: hoverBg,
+                                        borderColor: `${textColor} !important`,
+                                        color: `${textColor} !important`,
                                     },
                                 }}
                             >
@@ -225,7 +250,7 @@ const Header: React.FC = () => {
                                 color="inherit"
                                 aria-label="menu"
                                 onClick={handleMobileMenuOpen}
-                                sx={{ color: 'white' }}
+                                sx={{ color: textColor }}
                             >
                                 <MenuIcon />
                             </IconButton>
@@ -243,9 +268,9 @@ const Header: React.FC = () => {
                                 }}
                                 PaperProps={{
                                     sx: {
-                                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                                        backdropFilter: 'blur(10px)',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        backgroundColor: menuPaperBg,
+                                        backdropFilter: isHome ? 'blur(10px)' : 'none',
+                                        border: menuPaperBorder,
                                     }
                                 }}
                             >
@@ -256,10 +281,10 @@ const Header: React.FC = () => {
                                         href={item.path}
                                         onClick={handleMobileMenuClose}
                                         sx={{
-                                            color: 'white',
+                                            color: isHome ? 'white' : '#1a1a1a',
                                             fontWeight: 500,
                                             '&:hover': {
-                                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                                backgroundColor: hoverBg,
                                             },
                                         }}
                                     >

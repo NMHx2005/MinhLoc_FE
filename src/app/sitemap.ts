@@ -1,52 +1,18 @@
-import type { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = process.env.NODE_ENV === 'production'
-        ? 'https://minhlocgroup.com'
-        : 'http://localhost:3000'
+    const base = 'https://minhlocgroup.com';
+    const routes: string[] = [
+        '/',
+        '/about',
+        '/projects',
+        '/contact',
+        '/sam',
+        '/business-areas',
+        '/sam/sam-ngoc-linh-tuoi-10-nam',
+        '/sam/sam-han-quoc-hop-100g',
+    ];
 
-    return [
-        {
-            url: baseUrl,
-            lastModified: new Date(),
-            changeFrequency: 'daily',
-            priority: 1,
-        },
-        {
-            url: `${baseUrl}/projects`,
-            lastModified: new Date(),
-            changeFrequency: 'monthly',
-            priority: 0.8,
-        },
-        {
-            url: `${baseUrl}/about`,
-            lastModified: new Date(),
-            changeFrequency: 'monthly',
-            priority: 0.7,
-        },
-        {
-            url: `${baseUrl}/news`,
-            lastModified: new Date(),
-            changeFrequency: 'weekly',
-            priority: 0.6,
-        },
-        {
-            url: `${baseUrl}/business-areas`,
-            lastModified: new Date(),
-            changeFrequency: 'monthly',
-            priority: 0.6,
-        },
-        {
-            url: `${baseUrl}/contact`,
-            lastModified: new Date(),
-            changeFrequency: 'monthly',
-            priority: 0.5,
-        },
-        {
-            url: `${baseUrl}/search`,
-            lastModified: new Date(),
-            changeFrequency: 'daily',
-            priority: 0.4,
-        },
-    ]
+    const now = new Date();
+    return routes.map((url) => ({ url: `${base}${url}`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 }));
 }

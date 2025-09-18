@@ -148,7 +148,7 @@ const HeroBanner: React.FC = () => {
                                     },
                                 }}
                             >
-                                Xem chi tiết →
+                                Xem chi tiết
                             </Button>
                         </motion.div>
                     </Box>

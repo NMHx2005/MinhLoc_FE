@@ -1,14 +1,20 @@
+'use client'
+
 import React from 'react';
 import { Box, Container } from '@mui/material';
 import Header from './Header';
 import Footer from './Footer';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
+import { usePathname } from 'next/navigation';
 
 interface LayoutProps {
     children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+    const pathname = usePathname();
+    const showBreadcrumbs = pathname !== '/';
+
     return (
         <Box
             sx={{
@@ -26,7 +32,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 }}
             >
                 <Container maxWidth="lg" sx={{ py: 2 }}>
-                    <Breadcrumbs />
+                    {showBreadcrumbs && <Breadcrumbs />}
                     {children}
                 </Container>
             </Box>
