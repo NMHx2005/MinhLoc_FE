@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import EmotionRegistry from '@/lib/emotion-registry';
 import ThemeProvider from '@/components/providers/ThemeProvider';
-import AOSProvider from '@/components/providers/AOSProvider';
+// import AOSProvider from '@/components/providers/AOSProvider';
 import StructuredData from '@/components/seo/StructuredData';
 // import PerformanceMonitor from '@/components/common/PerformanceMonitor';
 // Removed import for deleted component
@@ -109,7 +109,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" />
         <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" /></noscript>
-        <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css" />
+        {/* AOS temporarily disabled to fix hydration issues */}
+        {/* <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css" />
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js" defer></script> */}
         <link rel="preload" href="/banner.png" as="image" fetchPriority="high" />
         <link rel="preload" href="/Logo_MinhLocGroup.png" as="image" fetchPriority="high" />
         <link rel="preload" href="/_next/static/css/app/layout.css" as="style" />
@@ -248,6 +250,73 @@ export default function RootLayout({
               0% { background-position: 200% 0; }
               100% { background-position: -200% 0; }
             }
+            /* Custom animations to replace AOS */
+            @keyframes fadeUp {
+              from {
+                opacity: 0;
+                transform: translateY(30px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            @keyframes fadeDown {
+              from {
+                opacity: 0;
+                transform: translateY(-30px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            @keyframes fadeLeft {
+              from {
+                opacity: 0;
+                transform: translateX(-30px);
+              }
+              to {
+                opacity: 1;
+                transform: translateX(0);
+              }
+            }
+            @keyframes fadeRight {
+              from {
+                opacity: 0;
+                transform: translateX(30px);
+              }
+              to {
+                opacity: 1;
+                transform: translateX(0);
+              }
+            }
+            @keyframes zoomIn {
+              from {
+                opacity: 0;
+                transform: scale(0.9);
+              }
+              to {
+                opacity: 1;
+                transform: scale(1);
+              }
+            }
+            /* Apply animations to elements with data-aos attributes */
+            [data-aos="fade-up"] {
+              animation: fadeUp 1s ease-out;
+            }
+            [data-aos="fade-down"] {
+              animation: fadeDown 0.8s ease-out;
+            }
+            [data-aos="fade-left"] {
+              animation: fadeLeft 1s ease-out 0.4s both;
+            }
+            [data-aos="fade-right"] {
+              animation: fadeRight 1s ease-out 0.2s both;
+            }
+            [data-aos="zoom-in"] {
+              animation: zoomIn 0.8s ease-out;
+            }
             .prevent-shift {
               min-height: 200px;
             }
@@ -264,6 +333,69 @@ export default function RootLayout({
             }
             .MuiTypography-root {
               font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+            }
+            /* Fix MUI body padding issue when input is focused - ULTRA AGGRESSIVE */
+            body {
+              padding-right: 0 !important;
+              overflow: visible !important;
+            }
+            html {
+              padding-right: 0 !important;
+              overflow: visible !important;
+            }
+            /* Disable MUI scroll lock - ALL VARIATIONS */
+            body[style*="padding-right"],
+            body[style*="padding-right: 0px"],
+            body[style*="padding-right: 15px"],
+            body[style*="padding-right: 17px"],
+            body[style*="padding-right: 16px"],
+            body[style*="padding-right: 14px"] {
+              padding-right: 0 !important;
+            }
+            body[style*="overflow: hidden"],
+            body[style*="overflow: visible"] {
+              overflow: visible !important;
+            }
+            /* Force body to never have padding-right - ULTIMATE */
+            body {
+              padding-right: 0 !important;
+              overflow: visible !important;
+            }
+            /* Override MUI's internal scroll lock completely */
+            .MuiModal-root,
+            .MuiDrawer-root,
+            .MuiDialog-root,
+            .MuiPopover-root,
+            .MuiMenu-root,
+            .MuiSelect-root,
+            .MuiTextField-root,
+            .MuiInputBase-root {
+              overflow: visible !important;
+            }
+            /* Prevent MUI from adding any body styles */
+            body[style] {
+              padding-right: 0 !important;
+              overflow: visible !important;
+            }
+            /* Ensure admin layout doesn't have body padding issues */
+            .admin-layout {
+              overflow: visible !important;
+            }
+            /* Fix for MUI components that might cause scroll lock */
+            .MuiModal-root,
+            .MuiDrawer-root,
+            .MuiDialog-root,
+            .MuiPopover-root,
+            .MuiMenu-root {
+              overflow: visible !important;
+            }
+            /* Override MUI's scroll lock completely */
+            .MuiModal-root .MuiBackdrop-root {
+              overflow: visible !important;
+            }
+            /* Additional safety for all MUI components */
+            [class*="Mui"] {
+              overflow: visible !important;
             }
             /* Prevent layout shift */
             .hero-section {
@@ -379,9 +511,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <EmotionRegistry>
           <ThemeProvider>
-            <AOSProvider>
-              {children}
-            </AOSProvider>
+            {/* <AOSProvider> */}
+            {children}
+            {/* </AOSProvider> */}
             {/* <PerformanceMonitor /> */}
             {/* ServiceWorker removed */}
             {/* <PerformanceOptimizer /> */}

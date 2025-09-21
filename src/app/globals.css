@@ -59,6 +59,9 @@ body {
   overflow-x: hidden;
   margin: 0;
   padding: 0;
+  /* Fix MUI scroll lock issues */
+  padding-right: 0 !important;
+  overflow: visible !important;
 }
 
 * {
@@ -97,4 +100,51 @@ section {
 /* Additional safety for dropdown menus */
 .MuiBackdrop-root {
   overflow: hidden !important;
+}
+
+/* Fix MUI scroll lock issues globally - SIMPLIFIED */
+body[style*="padding-right: 15px"],
+body[style*="padding-right: 17px"] {
+  padding-right: 0 !important;
+}
+
+body[style*="overflow: hidden"] {
+  overflow: visible !important;
+}
+
+/* Force body to never have padding-right */
+body {
+  padding-right: 0 !important;
+  overflow: visible !important;
+}
+
+/* Ensure admin pages don't have scroll issues */
+.admin-layout {
+  overflow: visible !important;
+}
+
+/* Fix for MUI components that might cause scroll lock */
+.MuiModal-root,
+.MuiDrawer-root,
+.MuiDialog-root,
+.MuiPopover-root,
+.MuiMenu-root {
+  overflow: visible !important;
+}
+
+/* Override MUI's scroll lock completely */
+.MuiModal-root .MuiBackdrop-root {
+  overflow: visible !important;
+}
+
+/* Prevent any MUI component from adding body padding */
+.MuiModal-root,
+.MuiDrawer-root,
+.MuiDialog-root {
+  overflow: visible !important;
+}
+
+/* Additional safety for all MUI components */
+[class*="Mui"] {
+  overflow: visible !important;
 }

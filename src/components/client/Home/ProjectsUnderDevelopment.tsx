@@ -313,8 +313,6 @@ const ProjectsUnderDevelopment: React.FC = () => {
                     variant="h3"
                     component="h2"
                     className="title-home"
-                    data-aos="fade-up"
-                    data-aos-duration="1000"
                     sx={{
                         textAlign: 'center',
                         color: '#E7C873',
@@ -334,9 +332,6 @@ const ProjectsUnderDevelopment: React.FC = () => {
                         <Box
                             component="ul"
                             className="tab-links"
-                            data-aos="fade-up"
-                            data-aos-duration="800"
-                            data-aos-delay="200"
                             sx={{
                                 display: 'flex',
                                 listStyle: 'none',
@@ -499,9 +494,6 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                             >
                                                 <Box
                                                     className="item-project slick-slide slick-current slick-active"
-                                                    data-aos="fade-up"
-                                                    data-aos-duration="800"
-                                                    data-aos-delay={400 + index * 200}
                                                     sx={{
                                                         width: '100%',
                                                         transition: 'all 0.2s ease-out',
