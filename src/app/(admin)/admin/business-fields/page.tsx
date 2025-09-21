@@ -15,17 +15,20 @@ import {
 import {
     Home as HomeIcon,
     Dashboard as DashboardIcon,
-    Article as ContentIcon,
-    Newspaper as NewsIcon,
-    Web as StaticPageIcon,
-    ViewCarousel as BannerIcon,
-    Search as SEOIcon,
+    Business as BusinessIcon,
+    Construction as ConstructionIcon,
+    AccountBalance as FinanceIcon,
+    HomeWork as RealEstateIcon,
+    Settings as SettingsIcon,
+    Analytics as AnalyticsIcon,
 } from '@mui/icons-material';
 import AdminLayout from '../../../../components/admin/AdminLayout';
-import NewsManagement from '../../../../components/admin/NewsManagement';
-import StaticPages from '../../../../components/admin/StaticPages';
-import BannerSlider from '../../../../components/admin/BannerSlider';
-import SEOSettings from '@/components/admin/SEOSettings';
+import BusinessFieldsList from '../../../../components/admin/BusinessFieldsList';
+import ConstructionField from '../../../../components/admin/ConstructionField';
+import FinanceField from '../../../../components/admin/FinanceField';
+import RealEstateField from '../../../../components/admin/RealEstateField';
+import FieldSettings from '../../../../components/admin/FieldSettings';
+import FieldAnalytics from '../../../../components/admin/FieldAnalytics';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -40,8 +43,8 @@ function TabPanel(props: TabPanelProps) {
         <div
             role="tabpanel"
             hidden={value !== index}
-            id={`content-tabpanel-${index}`}
-            aria-labelledby={`content-tab-${index}`}
+            id={`business-fields-tabpanel-${index}`}
+            aria-labelledby={`business-fields-tab-${index}`}
             {...other}
         >
             {value === index && (
@@ -55,12 +58,12 @@ function TabPanel(props: TabPanelProps) {
 
 function a11yProps(index: number) {
     return {
-        id: `content-tab-${index}`,
-        'aria-controls': `content-tabpanel-${index}`,
+        id: `business-fields-tab-${index}`,
+        'aria-controls': `business-fields-tabpanel-${index}`,
     };
 }
 
-const ContentManagementPage: React.FC = () => {
+const BusinessFieldsManagementPage: React.FC = () => {
     const [value, setValue] = useState(0);
 
     const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -91,18 +94,18 @@ const ContentManagementPage: React.FC = () => {
                         Dashboard
                     </Link>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <ContentIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-                        Quản lý Nội dung
+                        <BusinessIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+                        Quản lý Lĩnh vực Hoạt động
                     </Box>
                 </Breadcrumbs>
 
                 {/* Page Header */}
                 <Box sx={{ mb: 4 }}>
                     <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                        📝 Quản lý Nội dung
+                        🏗️ Quản lý Lĩnh vực Hoạt động
                     </Typography>
                     <Typography variant="body1" color="text.secondary">
-                        Quản lý tin tức, trang tĩnh, banner và cài đặt SEO cho website.
+                        Quản lý các lĩnh vực kinh doanh chính: Xây dựng, Đầu tư Tài chính, Bất động sản.
                     </Typography>
                 </Box>
 
@@ -110,29 +113,41 @@ const ContentManagementPage: React.FC = () => {
                 <Card sx={{ mb: 3 }}>
                     <CardContent sx={{ pb: 0 }}>
                         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                            <Tabs value={value} onChange={handleChange} aria-label="content management tabs">
+                            <Tabs value={value} onChange={handleChange} aria-label="business fields management tabs">
                                 <Tab
-                                    icon={<NewsIcon />}
-                                    label="Tin tức"
+                                    icon={<BusinessIcon />}
+                                    label="Danh sách lĩnh vực"
                                     {...a11yProps(0)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
-                                    icon={<StaticPageIcon />}
-                                    label="Trang tĩnh"
+                                    icon={<ConstructionIcon />}
+                                    label="Xây dựng"
                                     {...a11yProps(1)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
-                                    icon={<BannerIcon />}
-                                    label="Banner/Slider"
+                                    icon={<FinanceIcon />}
+                                    label="Đầu tư Tài chính"
                                     {...a11yProps(2)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
-                                    icon={<SEOIcon />}
-                                    label="SEO Settings"
+                                    icon={<RealEstateIcon />}
+                                    label="Bất động sản"
                                     {...a11yProps(3)}
+                                    sx={{ minHeight: 72 }}
+                                />
+                                <Tab
+                                    icon={<SettingsIcon />}
+                                    label="Cài đặt"
+                                    {...a11yProps(4)}
+                                    sx={{ minHeight: 72 }}
+                                />
+                                <Tab
+                                    icon={<AnalyticsIcon />}
+                                    label="Phân tích"
+                                    {...a11yProps(5)}
                                     sx={{ minHeight: 72 }}
                                 />
                             </Tabs>
@@ -142,20 +157,26 @@ const ContentManagementPage: React.FC = () => {
 
                 {/* Tab Panels */}
                 <TabPanel value={value} index={0}>
-                    <NewsManagement />
+                    <BusinessFieldsList />
                 </TabPanel>
                 <TabPanel value={value} index={1}>
-                    <StaticPages />
+                    <ConstructionField />
                 </TabPanel>
                 <TabPanel value={value} index={2}>
-                    <BannerSlider />
+                    <FinanceField />
                 </TabPanel>
                 <TabPanel value={value} index={3}>
-                    <SEOSettings />
+                    <RealEstateField />
+                </TabPanel>
+                <TabPanel value={value} index={4}>
+                    <FieldSettings />
+                </TabPanel>
+                <TabPanel value={value} index={5}>
+                    <FieldAnalytics />
                 </TabPanel>
             </Container>
         </AdminLayout>
     );
 };
 
-export default ContentManagementPage;
+export default BusinessFieldsManagementPage;

@@ -41,7 +41,6 @@ import {
     Visibility as ViewIcon,
     Email as EmailIcon,
     Phone as PhoneIcon,
-    Schedule as ScheduleIcon,
     MarkEmailRead as ReadIcon,
     MarkEmailUnread as UnreadIcon,
     Subject as SubjectIcon,

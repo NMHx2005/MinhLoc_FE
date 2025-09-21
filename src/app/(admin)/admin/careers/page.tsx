@@ -15,17 +15,19 @@ import {
 import {
     Home as HomeIcon,
     Dashboard as DashboardIcon,
-    Article as ContentIcon,
-    Newspaper as NewsIcon,
-    Web as StaticPageIcon,
-    ViewCarousel as BannerIcon,
-    Search as SEOIcon,
+    Work as CareersIcon,
+    Assignment as JobIcon,
+    People as ApplicationIcon,
+    Business as DepartmentIcon,
+    CardGiftcard as BenefitsIcon,
+    Timeline as ProcessIcon,
 } from '@mui/icons-material';
 import AdminLayout from '../../../../components/admin/AdminLayout';
-import NewsManagement from '../../../../components/admin/NewsManagement';
-import StaticPages from '../../../../components/admin/StaticPages';
-import BannerSlider from '../../../../components/admin/BannerSlider';
-import SEOSettings from '@/components/admin/SEOSettings';
+import JobPositionsManagement from '../../../../components/admin/JobPositionsManagement';
+import JobApplicationsManagement from '../../../../components/admin/JobApplicationsManagement';
+import DepartmentsManagement from '../../../../components/admin/DepartmentsManagement';
+import BenefitsManagement from '../../../../components/admin/BenefitsManagement';
+import RecruitmentProcess from '../../../../components/admin/RecruitmentProcess';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -40,8 +42,8 @@ function TabPanel(props: TabPanelProps) {
         <div
             role="tabpanel"
             hidden={value !== index}
-            id={`content-tabpanel-${index}`}
-            aria-labelledby={`content-tab-${index}`}
+            id={`careers-tabpanel-${index}`}
+            aria-labelledby={`careers-tab-${index}`}
             {...other}
         >
             {value === index && (
@@ -55,12 +57,12 @@ function TabPanel(props: TabPanelProps) {
 
 function a11yProps(index: number) {
     return {
-        id: `content-tab-${index}`,
-        'aria-controls': `content-tabpanel-${index}`,
+        id: `careers-tab-${index}`,
+        'aria-controls': `careers-tabpanel-${index}`,
     };
 }
 
-const ContentManagementPage: React.FC = () => {
+const CareersManagementPage: React.FC = () => {
     const [value, setValue] = useState(0);
 
     const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -91,18 +93,18 @@ const ContentManagementPage: React.FC = () => {
                         Dashboard
                     </Link>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <ContentIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-                        Quản lý Nội dung
+                        <CareersIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+                        Quản lý Tuyển dụng
                     </Box>
                 </Breadcrumbs>
 
                 {/* Page Header */}
                 <Box sx={{ mb: 4 }}>
                     <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                        📝 Quản lý Nội dung
+                        💼 Quản lý Tuyển dụng
                     </Typography>
                     <Typography variant="body1" color="text.secondary">
-                        Quản lý tin tức, trang tĩnh, banner và cài đặt SEO cho website.
+                        Quản lý vị trí tuyển dụng, hồ sơ ứng viên, phòng ban và quy trình tuyển dụng.
                     </Typography>
                 </Box>
 
@@ -110,29 +112,35 @@ const ContentManagementPage: React.FC = () => {
                 <Card sx={{ mb: 3 }}>
                     <CardContent sx={{ pb: 0 }}>
                         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                            <Tabs value={value} onChange={handleChange} aria-label="content management tabs">
+                            <Tabs value={value} onChange={handleChange} aria-label="careers management tabs">
                                 <Tab
-                                    icon={<NewsIcon />}
-                                    label="Tin tức"
+                                    icon={<JobIcon />}
+                                    label="Vị trí tuyển dụng"
                                     {...a11yProps(0)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
-                                    icon={<StaticPageIcon />}
-                                    label="Trang tĩnh"
+                                    icon={<ApplicationIcon />}
+                                    label="Hồ sơ ứng viên"
                                     {...a11yProps(1)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
-                                    icon={<BannerIcon />}
-                                    label="Banner/Slider"
+                                    icon={<DepartmentIcon />}
+                                    label="Phòng ban"
                                     {...a11yProps(2)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
-                                    icon={<SEOIcon />}
-                                    label="SEO Settings"
+                                    icon={<BenefitsIcon />}
+                                    label="Phúc lợi"
                                     {...a11yProps(3)}
+                                    sx={{ minHeight: 72 }}
+                                />
+                                <Tab
+                                    icon={<ProcessIcon />}
+                                    label="Quy trình tuyển dụng"
+                                    {...a11yProps(4)}
                                     sx={{ minHeight: 72 }}
                                 />
                             </Tabs>
@@ -142,20 +150,23 @@ const ContentManagementPage: React.FC = () => {
 
                 {/* Tab Panels */}
                 <TabPanel value={value} index={0}>
-                    <NewsManagement />
+                    <JobPositionsManagement />
                 </TabPanel>
                 <TabPanel value={value} index={1}>
-                    <StaticPages />
+                    <JobApplicationsManagement />
                 </TabPanel>
                 <TabPanel value={value} index={2}>
-                    <BannerSlider />
+                    <DepartmentsManagement />
                 </TabPanel>
                 <TabPanel value={value} index={3}>
-                    <SEOSettings />
+                    <BenefitsManagement />
+                </TabPanel>
+                <TabPanel value={value} index={4}>
+                    <RecruitmentProcess />
                 </TabPanel>
             </Container>
         </AdminLayout>
     );
 };
 
-export default ContentManagementPage;
+export default CareersManagementPage;

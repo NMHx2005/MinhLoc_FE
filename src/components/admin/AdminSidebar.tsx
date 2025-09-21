@@ -23,6 +23,9 @@ import {
     Home as HomeIcon,
     Spa as SamIcon,
     Assessment as ReportsIcon,
+    BusinessCenter as CompanyIcon,
+    Work as CareersIcon,
+    Domain as BusinessFieldsIcon,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -57,6 +60,21 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onClose }) => {
             title: 'Sản phẩm Sâm',
             icon: <SamIcon />,
             path: '/admin/ginseng-products',
+        },
+        {
+            title: 'Thông tin Công ty',
+            icon: <CompanyIcon />,
+            path: '/admin/company',
+        },
+        {
+            title: 'Tuyển dụng',
+            icon: <CareersIcon />,
+            path: '/admin/careers',
+        },
+        {
+            title: 'Lĩnh vực Hoạt động',
+            icon: <BusinessFieldsIcon />,
+            path: '/admin/business-fields',
         },
         {
             title: 'Nội dung',

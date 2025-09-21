@@ -15,17 +15,21 @@ import {
 import {
     Home as HomeIcon,
     Dashboard as DashboardIcon,
-    Article as ContentIcon,
-    Newspaper as NewsIcon,
-    Web as StaticPageIcon,
-    ViewCarousel as BannerIcon,
-    Search as SEOIcon,
+    Business as CompanyIcon,
+    Info as GeneralIcon,
+    History as HistoryIcon,
+    Star as CompetitiveIcon,
+    Group as SystemIcon,
+    Handshake as PartnersIcon,
+    Favorite as SocialIcon,
 } from '@mui/icons-material';
 import AdminLayout from '../../../../components/admin/AdminLayout';
-import NewsManagement from '../../../../components/admin/NewsManagement';
-import StaticPages from '../../../../components/admin/StaticPages';
-import BannerSlider from '../../../../components/admin/BannerSlider';
-import SEOSettings from '@/components/admin/SEOSettings';
+import CompanyGeneralInfo from '../../../../components/admin/CompanyGeneralInfo';
+import CompanyHistory from '../../../../components/admin/CompanyHistory';
+import CompanyCompetitive from '../../../../components/admin/CompanyCompetitive';
+import CompanySystem from '../../../../components/admin/CompanySystem';
+import CompanyPartners from '../../../../components/admin/CompanyPartners';
+import CompanySocial from '../../../../components/admin/CompanySocial';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -40,8 +44,8 @@ function TabPanel(props: TabPanelProps) {
         <div
             role="tabpanel"
             hidden={value !== index}
-            id={`content-tabpanel-${index}`}
-            aria-labelledby={`content-tab-${index}`}
+            id={`company-tabpanel-${index}`}
+            aria-labelledby={`company-tab-${index}`}
             {...other}
         >
             {value === index && (
@@ -55,12 +59,12 @@ function TabPanel(props: TabPanelProps) {
 
 function a11yProps(index: number) {
     return {
-        id: `content-tab-${index}`,
-        'aria-controls': `content-tabpanel-${index}`,
+        id: `company-tab-${index}`,
+        'aria-controls': `company-tabpanel-${index}`,
     };
 }
 
-const ContentManagementPage: React.FC = () => {
+const CompanyManagementPage: React.FC = () => {
     const [value, setValue] = useState(0);
 
     const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -91,18 +95,18 @@ const ContentManagementPage: React.FC = () => {
                         Dashboard
                     </Link>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <ContentIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-                        Quản lý Nội dung
+                        <CompanyIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+                        Quản lý Thông tin Công ty
                     </Box>
                 </Breadcrumbs>
 
                 {/* Page Header */}
                 <Box sx={{ mb: 4 }}>
                     <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                        📝 Quản lý Nội dung
+                        🏢 Quản lý Thông tin Công ty
                     </Typography>
                     <Typography variant="body1" color="text.secondary">
-                        Quản lý tin tức, trang tĩnh, banner và cài đặt SEO cho website.
+                        Quản lý thông tin giới thiệu, lịch sử, năng lực cạnh tranh và các hoạt động của MinhLoc Group.
                     </Typography>
                 </Box>
 
@@ -110,29 +114,41 @@ const ContentManagementPage: React.FC = () => {
                 <Card sx={{ mb: 3 }}>
                     <CardContent sx={{ pb: 0 }}>
                         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                            <Tabs value={value} onChange={handleChange} aria-label="content management tabs">
+                            <Tabs value={value} onChange={handleChange} aria-label="company management tabs">
                                 <Tab
-                                    icon={<NewsIcon />}
-                                    label="Tin tức"
+                                    icon={<GeneralIcon />}
+                                    label="Thông tin chung"
                                     {...a11yProps(0)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
-                                    icon={<StaticPageIcon />}
-                                    label="Trang tĩnh"
+                                    icon={<HistoryIcon />}
+                                    label="Lịch sử hình thành"
                                     {...a11yProps(1)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
-                                    icon={<BannerIcon />}
-                                    label="Banner/Slider"
+                                    icon={<CompetitiveIcon />}
+                                    label="Năng lực cạnh tranh"
                                     {...a11yProps(2)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
-                                    icon={<SEOIcon />}
-                                    label="SEO Settings"
+                                    icon={<SystemIcon />}
+                                    label="Hệ thống MinhLoc"
                                     {...a11yProps(3)}
+                                    sx={{ minHeight: 72 }}
+                                />
+                                <Tab
+                                    icon={<PartnersIcon />}
+                                    label="Đối tác"
+                                    {...a11yProps(4)}
+                                    sx={{ minHeight: 72 }}
+                                />
+                                <Tab
+                                    icon={<SocialIcon />}
+                                    label="Hoạt động xã hội"
+                                    {...a11yProps(5)}
                                     sx={{ minHeight: 72 }}
                                 />
                             </Tabs>
@@ -142,20 +158,26 @@ const ContentManagementPage: React.FC = () => {
 
                 {/* Tab Panels */}
                 <TabPanel value={value} index={0}>
-                    <NewsManagement />
+                    <CompanyGeneralInfo />
                 </TabPanel>
                 <TabPanel value={value} index={1}>
-                    <StaticPages />
+                    <CompanyHistory />
                 </TabPanel>
                 <TabPanel value={value} index={2}>
-                    <BannerSlider />
+                    <CompanyCompetitive />
                 </TabPanel>
                 <TabPanel value={value} index={3}>
-                    <SEOSettings />
+                    <CompanySystem />
+                </TabPanel>
+                <TabPanel value={value} index={4}>
+                    <CompanyPartners />
+                </TabPanel>
+                <TabPanel value={value} index={5}>
+                    <CompanySocial />
                 </TabPanel>
             </Container>
         </AdminLayout>
     );
 };
 
-export default ContentManagementPage;
+export default CompanyManagementPage;
