@@ -1,43 +1,27 @@
 'use client'
 
 import React from 'react';
-import { Box, Container } from '@mui/material';
 import Header from './Header';
 import Footer from './Footer';
-import Breadcrumbs from '@/components/seo/Breadcrumbs';
-import { usePathname } from 'next/navigation';
+import { Box } from '@mui/material';
 
 interface LayoutProps {
     children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-    const pathname = usePathname();
-    const showBreadcrumbs = pathname !== '/';
 
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: '100vh',
-            }}
-        >
+        <>
             <Header />
-            <Box
-                component="main"
-                sx={{
-                    flexGrow: 1,
-                    pt: { xs: '80px', md: '142.5px' }, // Add padding-top to account for absolute header
-                }}
-            >
-                <Container maxWidth="lg" sx={{ py: 2 }}>
-                    {showBreadcrumbs && <Breadcrumbs />}
-                    {children}
-                </Container>
+            <Box sx={{
+                flexGrow: 1,
+                pt: { xs: '100px', md: '150px' }, // Add padding top to compensate for fixed header
+            }}>
+                {children}
             </Box>
             <Footer />
-        </Box>
+        </>
     );
 };
 

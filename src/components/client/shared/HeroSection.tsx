@@ -2,16 +2,14 @@
 
 import React from 'react';
 import { Box } from '@mui/material';
-import Header from './Header';
 import HeroBanner from '../Home/HeroBanner';
-import OptimizedBanner from '@/components/common/OptimizedBanner';
+// Removed import for deleted component
 
 const HeroSection: React.FC = () => {
     return (
         <Box
             sx={{
                 position: 'relative',
-                minHeight: '100vh',
                 filter: 'hue-rotate(0deg) saturate(0.8) brightness(0.9)',
                 '&::before': {
                     content: '""',
@@ -25,23 +23,7 @@ const HeroSection: React.FC = () => {
                 }
             }}
         >
-            <OptimizedBanner
-                src="/banner.png"
-                alt="MinhLoc Group - Bất Động Sản Cao Cấp"
-                priority={true}
-                sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    zIndex: 0,
-                }}
-            />
-            {/* Header with transparent background */}
-            <Box sx={{ position: 'relative', zIndex: 2 }}>
-                <Header />
-            </Box>
+            {/* Background image removed - using HeroBanner's own background */}
 
             {/* Hero Banner without background */}
             <Box sx={{ position: 'relative', zIndex: 2 }}>

@@ -88,9 +88,6 @@ section {
   overflow: hidden !important;
 }
 
-.MuiPaper-root {
-  max-width: calc(100vw - 32px) !important;
-}
 
 /* Ensure MUI Select dropdown doesn't cause horizontal scroll */
 .MuiSelect-root {

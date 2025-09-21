@@ -1,305 +1,659 @@
-import type { Metadata } from 'next';
-import React from 'react';
-import { notFound } from 'next/navigation';
-import Layout from '@/components/client/shared/Layout';
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import {
-    Box,
     Container,
     Typography,
-    Chip,
+    Box,
     Card,
-    CardMedia,
     CardContent,
+    CardMedia,
     Button,
-    Divider,
-    Avatar,
-    Stack,
+    Breadcrumbs,
+    Link as MuiLink,
+    Grid,
+    Chip,
+    Tabs,
+    Tab,
+    IconButton,
+    Dialog,
+    DialogContent,
+    DialogTitle,
     List,
     ListItem,
     ListItemText,
+    Avatar,
+    Rating,
+    Stack,
+    Divider,
 } from '@mui/material';
-import { LocationOn, PictureAsPdf, Map, CalendarMonth, PhotoLibrary, Phone, Chat, Verified } from '@mui/icons-material';
+import {
+    Home,
+    Business,
+    LocationOn,
+    Phone,
+    Email,
+    Favorite,
+    FavoriteBorder,
+    Close,
+    AttachMoney,
+    SquareFoot,
+    Bed,
+    Bathtub,
+    DirectionsCar,
+    Pool,
+    FitnessCenter,
+    Wifi,
+    Restaurant,
+    LocalHospital,
+    School,
+} from '@mui/icons-material';
+import Link from 'next/link';
+import Layout from '@/components/client/shared/Layout';
 
 interface ProjectDetail {
-    slug: string;
-    name: string;
-    summary: string;
-    city: string;
-    district: string;
-    address: string;
-    priceLabel: string;
-    areaLabel: string;
+    id: number;
+    title: string;
+    subtitle: string;
+    description: string;
+    images: string[];
+    price: string;
+    pricePerM2: string;
+    area: string;
+    bedrooms: number;
+    bathrooms: number;
+    parking: number;
     status: 'available' | 'sold' | 'coming-soon';
-    features: string[];
-    heroImage: string;
-    gallery: string[];
-    floorplanImages: string[];
-    progress: { date: string; label: string }[];
-    brochureUrl?: string;
-}
-
-const DATA: ProjectDetail[] = [
-    {
-        slug: 'chung-cu-green-valley',
-        name: 'Chung cư Green Valley',
-        summary: 'Dự án chung cư cao cấp với thiết kế hiện đại, tiện ích đầy đủ, vị trí chiến lược tại Quận 2.',
-        city: 'TP.HCM',
-        district: 'Quận 2',
-        address: 'Số 1 Đường XYZ, Quận 2, TP.HCM',
-        priceLabel: '3,5 tỷ',
-        areaLabel: '85m²',
-        status: 'available',
-        features: ['Hồ bơi', 'Gym', 'Vườn cây', 'Bảo vệ 24/7', 'Khu BBQ', 'Sân chơi trẻ em'],
-        heroImage: '/article-1.png',
-        gallery: ['/article-1.png', '/article-2.png', '/article-3.png', '/article-4.png'],
-        floorplanImages: ['/modern-house.png', '/next.svg'],
-        progress: [
-            { date: '2024-01', label: 'Khởi công' },
-            { date: '2024-08', label: 'Hoàn thành phần thô' },
-            { date: '2025-03', label: 'Hoàn thiện nội thất' },
-        ],
-        brochureUrl: '/og-image.jpg',
-    },
-    {
-        slug: 'biet-thu-royal-garden',
-        name: 'Biệt thự Royal Garden',
-        summary: 'Biệt thự sang trọng với không gian sống rộng rãi, tiện ích đẳng cấp tại Quận 7.',
-        city: 'TP.HCM',
-        district: 'Quận 7',
-        address: 'Số 9 Đường ABC, Quận 7, TP.HCM',
-        priceLabel: '15 tỷ',
-        areaLabel: '250m²',
-        status: 'available',
-        features: ['Sân vườn', 'Garage', 'Hồ bơi riêng', 'Thang máy', 'Bảo mật 24/7'],
-        heroImage: '/article-2.png',
-        gallery: ['/article-2.png', '/article-3.png', '/article-4.png'],
-        floorplanImages: ['/modern-house.png'],
-        progress: [
-            { date: '2024-02', label: 'Khởi công' },
-            { date: '2024-12', label: 'Hoàn thành phần thô' },
-        ],
-        brochureUrl: '/og-image.jpg',
-    },
-];
-
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-    const { slug } = await params;
-    const project = DATA.find(p => p.slug === slug);
-    if (!project) {
-        return {
-            title: 'Dự án | MinhLoc Group',
-            description: 'Chi tiết dự án bất động sản MinhLoc Group',
-        };
-    }
-    return {
-        title: `${project.name} | MinhLoc Group`,
-        description: project.summary,
-        alternates: { canonical: `/projects/${project.slug}` },
-        openGraph: {
-            title: `${project.name} | MinhLoc Group`,
-            description: project.summary,
-            url: `https://minhlocgroup.com/projects/${project.slug}`,
-            type: 'article',
-            images: [project.heroImage],
-        },
+    location: string;
+    developer: string;
+    handoverDate: string;
+    scale: string;
+    amenities: {
+        id: number;
+        name: string;
+        icon: React.ReactNode;
+        description: string;
+    }[];
+    floorPlans: {
+        id: number;
+        name: string;
+        area: string;
+        bedrooms: number;
+        bathrooms: number;
+        price: string;
+        image: string;
+    }[];
+    contact: {
+        name: string;
+        phone: string;
+        email: string;
+        avatar: string;
+        rating: number;
+        reviews: number;
     };
 }
 
-function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
-    return (
-        <Box display="flex" alignItems="center" gap={1} mb={2}>
-            {icon}
-            <Typography variant="h5" component="h2">{title}</Typography>
-        </Box>
-    );
-}
+const ProjectDetailPage: React.FC = () => {
+    const [project, setProject] = useState<ProjectDetail | null>(null);
+    const [activeTab, setActiveTab] = useState(0);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-export default async function ProjectDetailPage({ params }: { params: Promise<{ slug: string }> }) {
-    const { slug } = await params;
-    const project = DATA.find(p => p.slug === slug);
+    useEffect(() => {
+        // Tất cả dự án đều trả về cùng 1 dự án mẫu (The Privé)
+        const mockProject: ProjectDetail = {
+            id: 1,
+            title: 'The Privé',
+            subtitle: 'Khu căn hộ cao cấp ven sông',
+            description: 'The Privé là dự án căn hộ cao cấp ven sông với thiết kế hiện đại, tiện ích đầy đủ và vị trí đắc địa. Dự án mang đến không gian sống lý tưởng cho gia đình trẻ với hệ thống tiện ích hoàn chỉnh và dịch vụ chuyên nghiệp.',
+            images: [
+                'https://datxanhmiennam.com.vn/Data/Sites/1/Product/87/phoi-canh-tu-can-ho-the-prive-quan-2-anh-theprive-net-vn.jpg',
+                'https://datxanhmiennam.com.vn/Data/Sites/1/Product/86/th%C3%B4ng-tin-d%E1%BB%B1-%C3%A1n-stown-gateway-h%C3%ACnh-%E1%BA%A3nh-5_6.jpg',
+                'https://datxanhmiennam.com.vn/Data/Sites/1/Product/85/phoi-canh-the-gio-riverside.jpg',
+            ],
+            price: '3.2 - 8.5 tỷ',
+            pricePerM2: '65 - 85 triệu/m²',
+            area: '49 - 95 m²',
+            bedrooms: 2,
+            bathrooms: 2,
+            parking: 1,
+            status: 'available',
+            location: 'Quận 2, TP.HCM',
+            developer: 'Minh Lộc Group',
+            handoverDate: 'Q4/2025',
+            scale: '3.175 căn hộ',
+            amenities: [
+                { id: 1, name: 'Hồ bơi', icon: <Pool />, description: 'Hồ bơi ngoài trời rộng 500m²' },
+                { id: 2, name: 'Gym & Fitness', icon: <FitnessCenter />, description: 'Phòng gym hiện đại 24/7' },
+                { id: 3, name: 'Wifi miễn phí', icon: <Wifi />, description: 'Internet tốc độ cao toàn khu' },
+                { id: 4, name: 'Nhà hàng', icon: <Restaurant />, description: 'Nhà hàng cao cấp trong khu' },
+                { id: 5, name: 'Bệnh viện', icon: <LocalHospital />, description: 'Bệnh viện quốc tế gần khu' },
+                { id: 6, name: 'Trường học', icon: <School />, description: 'Trường quốc tế trong bán kính 2km' },
+            ],
+            floorPlans: [
+                { id: 1, name: '2PN + 2WC', area: '65m²', bedrooms: 2, bathrooms: 2, price: '4.2 tỷ', image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/87/phoi-canh-tu-can-ho-the-prive-quan-2-anh-theprive-net-vn.jpg' },
+                { id: 2, name: '3PN + 2WC', area: '85m²', bedrooms: 3, bathrooms: 2, price: '6.8 tỷ', image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/86/th%C3%B4ng-tin-d%E1%BB%B1-%C3%A1n-stown-gateway-h%C3%ACnh-%E1%BA%A3nh-5_6.jpg' },
+                { id: 3, name: '4PN + 3WC', area: '95m²', bedrooms: 4, bathrooms: 3, price: '8.5 tỷ', image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/85/phoi-canh-the-gio-riverside.jpg' },
+            ],
+            contact: {
+                name: 'Nguyễn Văn A',
+                phone: '0901234567',
+                email: 'nguyenvana@minhlocgroup.com',
+                avatar: 'https://datxanhmiennam.com.vn/Data/Sites/1/media/du-an/canho.png',
+                rating: 4.8,
+                reviews: 156,
+            },
+        };
+        setProject(mockProject);
+    }, []);
 
-    if (!project) return notFound();
+    const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+        setActiveTab(newValue);
+    };
+
+    const handleImageClick = (image: string, index: number) => {
+        setSelectedImage(image);
+        setCurrentImageIndex(index);
+    };
+
+    const handleCloseImage = () => {
+        setSelectedImage(null);
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'available': return 'success';
+            case 'sold': return 'error';
+            case 'coming-soon': return 'warning';
+            default: return 'default';
+        }
+    };
+
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case 'available': return 'Còn trống';
+            case 'sold': return 'Đã bán';
+            case 'coming-soon': return 'Sắp mở bán';
+            default: return status;
+        }
+    };
+
+    if (!project) {
+        return (
+            <Layout>
+                <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
+                    <Typography variant="h4">Đang tải...</Typography>
+                </Container>
+            </Layout>
+        );
+    }
 
     return (
         <Layout>
-            <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, columnGap: 3, rowGap: 3, alignItems: 'start' }}>
-                    {/* Left content */}
-                    <Box>
-                        {/* Gallery */}
-                        <Card sx={{ mb: 2, borderRadius: 3, overflow: 'hidden' }}>
-                            <CardMedia component="img" height="420" image={project.heroImage} alt={project.name} sx={{ objectFit: 'cover' }} />
-                        </Card>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 1, mb: 3 }}>
-                            {project.gallery.map((src, i) => (
-                                <Card key={i} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-                                    <CardMedia component="img" height="96" image={src} alt={`${project.name} ${i + 1}`} sx={{ objectFit: 'cover' }} />
-                                </Card>
-                            ))}
-                        </Box>
+            {/* Hero Section */}
+            <Box
+                sx={{
+                    position: 'relative',
+                    height: { xs: '50vh', md: '70vh' },
+                    overflow: 'hidden',
+                }}
+            >
+                <CardMedia
+                    component="img"
+                    image={project.images[0]}
+                    alt={project.title}
+                    sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                    }}
+                />
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7))',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'flex-end',
+                        p: 4,
+                    }}
+                >
+                    <Container maxWidth="lg">
+                        <Breadcrumbs aria-label="breadcrumb" sx={{ color: 'white', mb: 2 }}>
+                            <MuiLink component={Link} href="/" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Home sx={{ mr: 0.5 }} fontSize="inherit" />
+                                Trang chủ
+                            </MuiLink>
+                            <MuiLink component={Link} href="/projects" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Business sx={{ mr: 0.5 }} fontSize="inherit" />
+                                Dự án
+                            </MuiLink>
+                            <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', color: '#E7C873' }}>
+                                {project.title}
+                            </Typography>
+                        </Breadcrumbs>
 
-                        {/* Title and quick facts */}
-                        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 800 }}>{project.name}</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mr: 1 }}>
-                                <LocationOn color="action" />
-                                <Typography variant="body2">{project.address}</Typography>
-                            </Box>
-                            <Chip label={project.city} />
-                            <Chip label={project.district} />
-                            <Chip label={project.areaLabel} />
-                            <Chip label={project.priceLabel} color="primary" />
-                        </Box>
-
-                        {/* CTA row */}
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 3 }}>
-                            <Button variant="contained" color="primary" startIcon={<PictureAsPdf />}>Tải brochure</Button>
-                            <Button variant="outlined" startIcon={<Phone />}>Hiện số</Button>
-                            <Button variant="outlined" startIcon={<Chat />}>Chat ngay</Button>
-                        </Stack>
-
-                        <Divider sx={{ mb: 3 }} />
-
-                        {/* Description */}
-                        <SectionTitle icon={<PhotoLibrary />} title="Thông tin mô tả" />
-                        <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.7 }}>
-                            {project.summary} Liên hệ để được tư vấn chi tiết và nhận ưu đãi mới nhất.
+                        <Typography
+                            variant="h2"
+                            component="h1"
+                            sx={{
+                                color: 'white',
+                                fontWeight: 700,
+                                mb: 1,
+                                fontSize: { xs: '2rem', md: '3.5rem' },
+                            }}
+                        >
+                            {project.title}
                         </Typography>
 
-                        {/* Property features table-like */}
-                        <SectionTitle icon={<CalendarMonth />} title="Đặc điểm bất động sản" />
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 3 }}>
-                            <Card sx={{ borderRadius: 2 }}>
-                                <List dense>
-                                    <ListItem>
-                                        <ListItemText primary="Mức giá" secondary={project.priceLabel} />
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListItemText primary="Diện tích" secondary={project.areaLabel} />
-                                    </ListItem>
-                                </List>
-                            </Card>
-                            <Card sx={{ borderRadius: 2 }}>
-                                <List dense>
-                                    <ListItem>
-                                        <ListItemText primary="Pháp lý" secondary="Hợp đồng mua bán" />
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListItemText primary="Trạng thái" secondary={project.status === 'available' ? 'Còn trống' : project.status === 'coming-soon' ? 'Sắp mở bán' : 'Đã bán'} />
-                                    </ListItem>
-                                </List>
-                            </Card>
+                        <Typography
+                            variant="h5"
+                            sx={{
+                                color: '#E7C873',
+                                mb: 2,
+                                fontSize: { xs: '1.2rem', md: '1.5rem' },
+                            }}
+                        >
+                            {project.subtitle}
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                            <Chip
+                                label={getStatusLabel(project.status)}
+                                color={getStatusColor(project.status) as "success" | "error" | "warning" | "default"}
+                                sx={{ color: 'white', fontWeight: 600 }}
+                            />
+                            <Chip
+                                icon={<LocationOn />}
+                                label={project.location}
+                                sx={{ color: 'white', backgroundColor: 'rgba(255,255,255,0.2)' }}
+                            />
+                            <Chip
+                                icon={<AttachMoney />}
+                                label={project.price}
+                                sx={{ color: 'white', backgroundColor: 'rgba(255,255,255,0.2)' }}
+                            />
                         </Box>
-
-                        {/* Project info */}
-                        <SectionTitle icon={<Map />} title="Thông tin dự án" />
-                        <Card sx={{ mb: 3, borderRadius: 2 }}>
-                            <CardContent>
-                                <Stack direction="row" spacing={2} alignItems="center">
-                                    <CardMedia component="img" image={project.heroImage} alt={project.name} sx={{ width: 80, height: 56, objectFit: 'cover', borderRadius: 1 }} />
-                                    <Box>
-                                        <Typography variant="subtitle1" fontWeight={700}>{project.name}</Typography>
-                                        <Typography variant="body2" color="text.secondary">Đang cập nhật tiến độ • Chủ đầu tư: MinhLoc Group</Typography>
-                                    </Box>
-                                </Stack>
-                            </CardContent>
-                        </Card>
-
-                        {/* Banner */}
-                        <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
-                            <CardMedia component="img" image="/banner.png" alt="banner" sx={{ objectFit: 'cover' }} />
-                        </Card>
-
-                        {/* Map */}
-                        <SectionTitle icon={<Map />} title="Xem trên bản đồ" />
-                        <Card sx={{ height: 320, mb: 3, borderRadius: 2, overflow: 'hidden' }}>
-                            <Box sx={{ width: '100%', height: '100%', backgroundColor: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Typography color="text.secondary">Bản đồ (placeholder)</Typography>
-                            </Box>
-                        </Card>
-
-                        {/* Listing meta */}
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 2, mb: 5 }}>
-                            <Box><Typography variant="caption" color="text.secondary">Ngày đăng</Typography><Typography>12/09/2025</Typography></Box>
-                            <Box><Typography variant="caption" color="text.secondary">Ngày hết hạn</Typography><Typography>22/09/2025</Typography></Box>
-                            <Box><Typography variant="caption" color="text.secondary">Loại tin</Typography><Typography>Tin thường</Typography></Box>
-                            <Box><Typography variant="caption" color="text.secondary">Mã tin</Typography><Typography>43556374</Typography></Box>
-                        </Box>
-                    </Box>
-
-                    {/* Right sidebar */}
-                    <Box>
-                        <Card sx={{ mb: 2, borderRadius: 2 }}>
-                            <CardContent>
-                                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                                    <Avatar src="/avatar.jpg" alt="Agent" />
-                                    <Box>
-                                        <Typography fontWeight={700}>Nguyễn Thị Hương</Typography>
-                                        <Typography variant="caption" color="text.secondary">Môi giới chuyên nghiệp</Typography>
-                                    </Box>
-                                    <Verified sx={{ color: '#2e7d32', ml: 'auto' }} />
-                                </Stack>
-                                <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-                                    <Box>
-                                        <Typography variant="h6" textAlign="center">1 năm</Typography>
-                                        <Typography variant="caption" color="text.secondary">Kinh nghiệm</Typography>
-                                    </Box>
-                                    <Box>
-                                        <Typography variant="h6" textAlign="center">112</Typography>
-                                        <Typography variant="caption" color="text.secondary">Tin đăng</Typography>
-                                    </Box>
-                                </Stack>
-                                <Stack spacing={1}>
-                                    <Button variant="contained" fullWidth startIcon={<Phone />}>Hiện số</Button>
-                                    <Button variant="outlined" fullWidth startIcon={<Chat />}>Chat qua Zalo</Button>
-                                </Stack>
-                            </CardContent>
-                        </Card>
-
-                        <Card sx={{ mb: 2, borderRadius: 2 }}>
-                            <CardContent>
-                                <Typography fontWeight={700} sx={{ mb: 1 }}>Bất động sản nổi bật</Typography>
-                                <List dense>
-                                    <ListItem><ListItemText primary="Mua bán nhà đất ở thành phố Vinh" /></ListItem>
-                                    <ListItem><ListItemText primary="Bán đất Cẩm Mỹ" /></ListItem>
-                                    <ListItem><ListItemText primary="Bán nhà Bến Tre" /></ListItem>
-                                    <ListItem><ListItemText primary="Bán nhà Giang Điền" /></ListItem>
-                                </List>
-                            </CardContent>
-                        </Card>
-
-                        <Card sx={{ borderRadius: 2 }}>
-                            <CardContent>
-                                <Typography fontWeight={700} sx={{ mb: 1 }}>Hỗ trợ tiện ích</Typography>
-                                <List dense>
-                                    <ListItem><ListItemText primary="Tư vấn phong thuỷ" /></ListItem>
-                                    <ListItem><ListItemText primary="Hỗ trợ pháp lý làm nhà" /></ListItem>
-                                    <ListItem><ListItemText primary="Tính lãi suất" /></ListItem>
-                                    <ListItem><ListItemText primary="Quy trình xây nhà" /></ListItem>
-                                </List>
-                            </CardContent>
-                        </Card>
-                    </Box>
+                    </Container>
                 </Box>
+            </Box>
 
-                {/* Related grid */}
-                <Divider sx={{ my: 4 }} />
-                <Typography variant="h5" sx={{ mb: 2, fontWeight: 800 }}>Bất động sản dành cho bạn</Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 3 }}>
-                    {DATA.slice(0, 2).map((rel) => (
-                        <Card key={rel.slug} sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3, boxShadow: '0 6px 18px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-                            <CardMedia component="img" height="180" image={rel.heroImage} alt={rel.name} sx={{ objectFit: 'cover' }} />
-                            <CardContent sx={{ flexGrow: 1 }}>
-                                <Typography fontWeight={700} sx={{ mb: 0.5 }}>{rel.name}</Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                    <LocationOn sx={{ fontSize: 16, mr: 0.5 }} /> {rel.address}
+            <Container maxWidth="lg" sx={{ py: 6 }}>
+                <Grid container spacing={4}>
+                    {/* Main Content */}
+                    <Grid item xs={12} md={8}>
+                        {/* Project Info */}
+                        <Card sx={{ mb: 4 }}>
+                            <CardContent sx={{ p: 4 }}>
+                                <Typography variant="h4" component="h2" gutterBottom sx={{ color: '#E7C873', fontWeight: 600 }}>
+                                    Thông tin dự án
                                 </Typography>
-                                <Typography color="primary" fontWeight={700}>{rel.priceLabel}</Typography>
+
+                                <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', lineHeight: 1.8, mb: 3 }}>
+                                    {project.description}
+                                </Typography>
+
+                                <Grid container spacing={3}>
+                                    <Grid item xs={12} sm={6} md={3}>
+                                        <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                                            <SquareFoot sx={{ fontSize: 40, color: '#E7C873', mb: 1 }} />
+                                            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                {project.area}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Diện tích
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                    <Grid item xs={12} sm={6} md={3}>
+                                        <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                                            <Bed sx={{ fontSize: 40, color: '#E7C873', mb: 1 }} />
+                                            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                {project.bedrooms}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Phòng ngủ
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                    <Grid item xs={12} sm={6} md={3}>
+                                        <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                                            <Bathtub sx={{ fontSize: 40, color: '#E7C873', mb: 1 }} />
+                                            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                {project.bathrooms}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Phòng tắm
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                    <Grid item xs={12} sm={6} md={3}>
+                                        <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                                            <DirectionsCar sx={{ fontSize: 40, color: '#E7C873', mb: 1 }} />
+                                            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                {project.parking}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Chỗ để xe
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                </Grid>
                             </CardContent>
                         </Card>
-                    ))}
-                </Box>
+
+                        {/* Tabs */}
+                        <Card sx={{ mb: 4 }}>
+                            <Tabs
+                                value={activeTab}
+                                onChange={handleTabChange}
+                                variant="scrollable"
+                                scrollButtons="auto"
+                                sx={{
+                                    borderBottom: 1,
+                                    borderColor: 'divider',
+                                    '& .MuiTab-root': {
+                                        textTransform: 'none',
+                                        fontWeight: 500,
+                                        '&.Mui-selected': {
+                                            color: '#E7C873',
+                                            fontWeight: 600,
+                                        },
+                                    },
+                                    '& .MuiTabs-indicator': {
+                                        backgroundColor: '#E7C873',
+                                    },
+                                }}
+                            >
+                                <Tab label="Hình ảnh" />
+                                <Tab label="Mặt bằng" />
+                                <Tab label="Tiện ích" />
+                            </Tabs>
+
+                            <CardContent sx={{ p: 0 }}>
+                                {/* Images Tab */}
+                                {activeTab === 0 && (
+                                    <Box sx={{ p: 3 }}>
+                                        <Grid container spacing={2}>
+                                            {project.images.map((image, index) => (
+                                                <Grid item xs={12} sm={6} md={4} key={index}>
+                                                    <Card
+                                                        sx={{
+                                                            cursor: 'pointer',
+                                                            transition: 'transform 0.2s',
+                                                            '&:hover': {
+                                                                transform: 'scale(1.02)',
+                                                            },
+                                                        }}
+                                                        onClick={() => handleImageClick(image, index)}
+                                                    >
+                                                        <CardMedia
+                                                            component="img"
+                                                            height="200"
+                                                            image={image}
+                                                            alt={`${project.title} ${index + 1}`}
+                                                            sx={{ objectFit: 'cover' }}
+                                                        />
+                                                    </Card>
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+                                    </Box>
+                                )}
+
+                                {/* Floor Plans Tab */}
+                                {activeTab === 1 && (
+                                    <Box sx={{ p: 3 }}>
+                                        <Grid container spacing={3}>
+                                            {project.floorPlans.map((plan) => (
+                                                <Grid item xs={12} md={6} key={plan.id}>
+                                                    <Card sx={{ height: '100%' }}>
+                                                        <CardMedia
+                                                            component="img"
+                                                            height="250"
+                                                            image={plan.image}
+                                                            alt={plan.name}
+                                                            sx={{ objectFit: 'cover' }}
+                                                        />
+                                                        <CardContent>
+                                                            <Typography variant="h6" gutterBottom>
+                                                                {plan.name}
+                                                            </Typography>
+                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    Diện tích: {plan.area}
+                                                                </Typography>
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    {plan.bedrooms}PN + {plan.bathrooms}WC
+                                                                </Typography>
+                                                            </Box>
+                                                            <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
+                                                                {plan.price}
+                                                            </Typography>
+                                                        </CardContent>
+                                                    </Card>
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+                                    </Box>
+                                )}
+
+                                {/* Amenities Tab */}
+                                {activeTab === 2 && (
+                                    <Box sx={{ p: 3 }}>
+                                        <Grid container spacing={3}>
+                                            {project.amenities.map((amenity) => (
+                                                <Grid item xs={12} sm={6} md={4} key={amenity.id}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                                                        <Box sx={{ color: '#E7C873', mr: 2 }}>
+                                                            {amenity.icon}
+                                                        </Box>
+                                                        <Box>
+                                                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                                {amenity.name}
+                                                            </Typography>
+                                                            <Typography variant="body2" color="text.secondary">
+                                                                {amenity.description}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+                                    </Box>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </Grid>
+
+                    {/* Sidebar */}
+                    <Grid item xs={12} md={4}>
+                        {/* Contact Card */}
+                        <Card sx={{ mb: 4, position: 'sticky', top: 100 }}>
+                            <CardContent sx={{ p: 4 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                    <Avatar
+                                        src={project.contact.avatar}
+                                        sx={{ width: 60, height: 60, mr: 2 }}
+                                    />
+                                    <Box>
+                                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                            {project.contact.name}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Rating value={project.contact.rating} readOnly size="small" />
+                                            <Typography variant="body2" color="text.secondary">
+                                                ({project.contact.reviews} đánh giá)
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ mb: 3 }}>
+                                    <Typography variant="h4" color="primary" sx={{ fontWeight: 700, mb: 1 }}>
+                                        {project.price}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {project.pricePerM2}
+                                    </Typography>
+                                </Box>
+
+                                <Stack spacing={2}>
+                                    <Button
+                                        variant="contained"
+                                        fullWidth
+                                        size="large"
+                                        startIcon={<Phone />}
+                                        sx={{
+                                            backgroundColor: '#E7C873',
+                                            color: 'white',
+                                            py: 1.5,
+                                            '&:hover': {
+                                                backgroundColor: '#d4b85a',
+                                            },
+                                        }}
+                                    >
+                                        Gọi ngay
+                                    </Button>
+
+                                    <Button
+                                        variant="outlined"
+                                        fullWidth
+                                        size="large"
+                                        startIcon={<Email />}
+                                        sx={{
+                                            borderColor: '#E7C873',
+                                            color: '#E7C873',
+                                            py: 1.5,
+                                            '&:hover': {
+                                                borderColor: '#d4b85a',
+                                                backgroundColor: 'rgba(231, 200, 115, 0.1)',
+                                            },
+                                        }}
+                                    >
+                                        Gửi email
+                                    </Button>
+
+                                    <Button
+                                        variant="outlined"
+                                        fullWidth
+                                        size="large"
+                                        startIcon={isFavorite ? <Favorite /> : <FavoriteBorder />}
+                                        onClick={() => setIsFavorite(!isFavorite)}
+                                        sx={{
+                                            borderColor: isFavorite ? '#E7C873' : '#ddd',
+                                            color: isFavorite ? '#E7C873' : '#666',
+                                            py: 1.5,
+                                        }}
+                                    >
+                                        {isFavorite ? 'Đã lưu' : 'Lưu dự án'}
+                                    </Button>
+                                </Stack>
+
+                                <Divider sx={{ my: 3 }} />
+
+                                <Box>
+                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                        Thông tin liên hệ
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ mb: 1 }}>
+                                        📞 {project.contact.phone}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        ✉️ {project.contact.email}
+                                    </Typography>
+                                </Box>
+                            </CardContent>
+                        </Card>
+
+                        {/* Project Details */}
+                        <Card>
+                            <CardContent sx={{ p: 4 }}>
+                                <Typography variant="h6" gutterBottom sx={{ color: '#E7C873', fontWeight: 600 }}>
+                                    Chi tiết dự án
+                                </Typography>
+
+                                <List dense>
+                                    <ListItem>
+                                        <ListItemText
+                                            primary="Chủ đầu tư"
+                                            secondary={project.developer}
+                                        />
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListItemText
+                                            primary="Quy mô"
+                                            secondary={project.scale}
+                                        />
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListItemText
+                                            primary="Bàn giao"
+                                            secondary={project.handoverDate}
+                                        />
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListItemText
+                                            primary="Trạng thái"
+                                        />
+                                        <Chip
+                                            label={getStatusLabel(project.status)}
+                                            color={getStatusColor(project.status) as "success" | "error" | "warning" | "default"}
+                                            size="small"
+                                        />
+                                    </ListItem>
+                                </List>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                </Grid>
             </Container>
+
+            {/* Image Modal */}
+            <Dialog
+                open={!!selectedImage}
+                onClose={handleCloseImage}
+                maxWidth="lg"
+                fullWidth
+                sx={{
+                    '& .MuiDialog-paper': {
+                        backgroundColor: 'rgba(0,0,0,0.9)',
+                        color: 'white',
+                    },
+                }}
+            >
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box component="span" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>
+                        {project.title} - Hình {currentImageIndex + 1}
+                    </Box>
+                    <IconButton onClick={handleCloseImage} sx={{ color: 'white' }}>
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 0, position: 'relative' }}>
+                    {selectedImage && (
+                        <Box sx={{ position: 'relative' }}>
+                            <CardMedia
+                                component="img"
+                                image={selectedImage}
+                                alt={project.title}
+                                sx={{
+                                    width: '100%',
+                                    maxHeight: '70vh',
+                                    objectFit: 'contain',
+                                }}
+                            />
+                        </Box>
+                    )}
+                </DialogContent>
+            </Dialog>
         </Layout>
     );
-}
+};
+
+export default ProjectDetailPage;

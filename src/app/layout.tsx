@@ -3,9 +3,10 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import EmotionRegistry from '@/lib/emotion-registry';
 import ThemeProvider from '@/components/providers/ThemeProvider';
+import AOSProvider from '@/components/providers/AOSProvider';
 import StructuredData from '@/components/seo/StructuredData';
 // import PerformanceMonitor from '@/components/common/PerformanceMonitor';
-import ServiceWorker from '@/components/common/ServiceWorker';
+// Removed import for deleted component
 // import PerformanceOptimizer from '@/components/common/PerformanceOptimizer';
 // import FontLoaderOptimized from '@/components/common/FontLoaderOptimized';
 // @ts-expect-error: Nếu file globals.css chưa tồn tại, hãy tạo file này trong src/app hoặc đảm bảo đường dẫn đúng.
@@ -108,6 +109,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" />
         <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" /></noscript>
+        <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css" />
         <link rel="preload" href="/banner.png" as="image" fetchPriority="high" />
         <link rel="preload" href="/Logo_MinhLocGroup.png" as="image" fetchPriority="high" />
         <link rel="preload" href="/_next/static/css/app/layout.css" as="style" />
@@ -250,7 +252,6 @@ export default function RootLayout({
               min-height: 200px;
             }
             .MuiAppBar-root {
-              background-color: transparent !important;
               box-shadow: none !important;
               border-bottom: none !important;
             }
@@ -378,9 +379,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <EmotionRegistry>
           <ThemeProvider>
-            {children}
+            <AOSProvider>
+              {children}
+            </AOSProvider>
             {/* <PerformanceMonitor /> */}
-            <ServiceWorker />
+            {/* ServiceWorker removed */}
             {/* <PerformanceOptimizer /> */}
             {/* <FontLoaderOptimized /> */}
             <Toaster

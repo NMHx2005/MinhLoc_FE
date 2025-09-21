@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     AppBar,
     Toolbar,
@@ -9,294 +9,534 @@ import {
     Box,
     Container,
     IconButton,
-    Menu,
-    MenuItem,
     useMediaQuery,
     useTheme,
+    Drawer,
+    List,
+    ListItem,
+    ListItemText,
+    Divider,
+    Stack,
 } from '@mui/material';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
     Menu as MenuIcon,
+    Close as CloseIcon,
+    Search as SearchIcon,
     Phone as PhoneIcon,
-    KeyboardArrowDown as ArrowDownIcon
+    Facebook,
+    YouTube,
+    Home,
+    Login,
+    PersonAdd,
 } from '@mui/icons-material';
 import { usePathname } from 'next/navigation';
 
 const Header: React.FC = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
-    const [mobileMenuAnchor, setMobileMenuAnchor] = React.useState<null | HTMLElement>(null);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
     const pathname = usePathname();
-    const isHome = pathname === '/';
 
-    const headerBg = isHome ? 'transparent' : 'white';
-    const textColor = isHome ? 'white' : '#1a1a1a';
-    const borderBottom = isHome ? 'none' : '1px solid rgba(0,0,0,0.06)';
-    const menuPaperBg = isHome ? 'rgba(0, 0, 0, 0.9)' : 'white';
-    const menuPaperBorder = isHome ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.06)';
-    const hoverBg = isHome ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.05)';
+    // Scroll effect
+    useEffect(() => {
+        const handleScroll = () => {
+            const offset = window.scrollY;
+            if (offset > 50) {
+                setScrolled(true);
+            } else {
+                setScrolled(false);
+            }
+        };
 
-    const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-        setMobileMenuAnchor(event.currentTarget);
+        // Check if window is available (client-side)
+        if (typeof window !== 'undefined') {
+            // Initial check
+            handleScroll();
+
+            window.addEventListener('scroll', handleScroll);
+            return () => {
+                window.removeEventListener('scroll', handleScroll);
+            };
+        }
+    }, []);
+
+    const handleMobileMenuToggle = () => {
+        setMobileMenuOpen(!mobileMenuOpen);
     };
 
-    const handleMobileMenuClose = () => {
-        setMobileMenuAnchor(null);
+    const handleSearchToggle = () => {
+        setSearchOpen(!searchOpen);
     };
 
     const navigationItems = [
-        { label: 'Trang chủ', path: '/', hasDropdown: false },
+        { label: 'Trang chủ', path: '/', hasDropdown: false, icon: <Home /> },
         { label: 'Giới thiệu', path: '/about', hasDropdown: false },
-        { label: 'Dự án BĐS', path: '/projects', hasDropdown: false },
-        { label: 'Kinh doanh sâm', path: '/sam', hasDropdown: false },
-        { label: 'Lĩnh vực hoạt động', path: '/business-areas', hasDropdown: false },
+        {
+            label: 'Dự án',
+            path: '/projects',
+            hasDropdown: false,
+        },
+        { label: 'Lĩnh Vực Hoạt Động', path: '/field', hasDropdown: false },
+        {
+            label: 'Tin tức',
+            path: '/news',
+            hasDropdown: false,
+        },
+        { label: 'Các Loại Sâm', path: '/SamType', hasDropdown: false },
+        {
+            label: 'Tuyển Dụng',
+            path: '/careers',
+            hasDropdown: false,
+        },
         { label: 'Liên hệ', path: '/contact', hasDropdown: false },
     ];
 
+    const topBarItems = [
+        { label: 'MinhLoc Group - Trụ Sở', path: '/about/headquarters' },
+        { label: 'Saigon Real', path: 'https://minhlocgroup.vn' },
+    ];
+
     return (
-        <AppBar
-            position="absolute"
-            elevation={0}
-            sx={{
-                backgroundColor: headerBg,
-                height: { xs: '80px', md: '142.5px' },
-                zIndex: 9999,
-                boxShadow: 'none !important',
-                borderBottom: borderBottom,
-                '&::before': {
-                    display: 'none !important',
-                },
-                '&::after': {
-                    display: 'none !important',
-                },
-            }}
-        >
-            <Container maxWidth={false} sx={{ px: 0 }}>
-                <Toolbar
+        <>
+
+            {/* Main Header */}
+            <AppBar
+                position="fixed"
+                elevation={scrolled ? 4 : 0}
+                data-aos="fade-down"
+                data-aos-duration="800"
+                data-aos-delay="0"
+                sx={{
+                    backgroundColor: 'white',
+                    color: '#1a1a1a',
+                    boxShadow: scrolled ? '0 2px 8px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.1)',
+                    zIndex: 1000,
+                    transition: 'all 0.3s ease-in-out',
+                }}
+            >
+                {/* Top Bar */}
+                <Box
                     sx={{
-                        height: { xs: '80px', md: '142.5px' },
-                        px: { xs: 2, md: 4 },
-                        justifyContent: 'space-between',
-                        boxShadow: 'none !important',
-                        borderBottom: 'none !important',
-                        '&::before': {
-                            display: 'none !important',
-                        },
-                        '&::after': {
-                            display: 'none !important',
-                        },
+                        backgroundColor: '#E7C873', // Luxurious gold instead of blue
+                        color: 'white',
+                        py: scrolled ? 0 : 0.8,
+                        position: 'relative',
+                        zIndex: 1001,
+                        height: scrolled ? 0 : 'auto',
+                        overflow: 'hidden',
+                        transition: 'all 0.3s ease-in-out',
+                        display: { xs: 'none', md: 'block' },
                     }}
                 >
-                    {/* Logo */}
-                    <Box
-                        component={Link}
-                        href="/"
+                    <Container maxWidth="lg">
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                fontSize: '0.875rem',
+                                fontWeight: 500,
+                            }}
+                        >
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                {topBarItems.map((item, index) => (
+                                    <React.Fragment key={item.path}>
+                                        <Link
+                                            href={item.path}
+                                            style={{
+                                                color: 'white',
+                                                textDecoration: 'none',
+                                                fontWeight: 500,
+                                                fontSize: '0.875rem',
+                                            }}
+                                        >
+                                            {item.label}
+                                        </Link>
+                                        {index < topBarItems.length - 1 && (
+                                            <Box
+                                                sx={{
+                                                    width: '1px',
+                                                    height: '16px',
+                                                    backgroundColor: 'rgba(255,255,255,0.3)',
+                                                }}
+                                            />
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </Box>
+                        </Box>
+                    </Container>
+                </Box>
+                <Container sx={{ display: 'flex', gap: 2, justifyContent: 'space-between', width: '100%' }}>
+                    <Toolbar
                         sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            textDecoration: 'none',
-                            color: 'inherit',
-                            height: { xs: '60px', md: '80px' },
-                            width: { xs: '120px', md: '150px' },
+                            minHeight: scrolled ? { xs: '50px', md: '60px' } : { xs: '70px', md: '80px' },
+                            px: { xs: 2, md: 0 },
+                            transition: 'all 0.3s ease-in-out',
                         }}
                     >
-                        <Image
-                            src="/Logo_MinhLocGroup.png"
-                            alt="MINH LỘC GROUP"
-                            width={120}
-                            height={60}
-                            priority={true}
-                            sizes="(max-width: 768px) 120px, 150px"
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain'
-                            }}
-                        />
-                    </Box>
-
-                    {/* Desktop Navigation */}
-                    {!isMobile && (
-                        <Box sx={{
-                            display: 'flex',
-                            gap: 0,
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                        }}>
-                            {navigationItems.map((item) => (
-                                <Box
-                                    key={item.path}
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        px: { xs: 1, md: 2 },
-                                        py: 1,
-                                        position: 'relative',
-                                        minWidth: 'fit-content',
-                                    }}
-                                >
-                                    <Button
-                                        component={Link}
-                                        href={item.path}
-                                        disableRipple
-                                        disableElevation
-                                        variant="text"
-                                        sx={{
-                                            color: `${textColor} !important`,
-                                            textTransform: 'none',
-                                            fontWeight: 500,
-                                            fontSize: { xs: '0.9rem', md: '1rem' },
-                                            px: 0,
-                                            py: 0,
-                                            minWidth: 'auto',
-                                            borderRadius: 0,
-                                            backgroundColor: 'transparent !important',
-                                            boxShadow: 'none !important',
-                                            textShadow: isHome ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
-                                            '&:hover': {
-                                                backgroundColor: 'transparent !important',
-                                                boxShadow: 'none !important',
-                                                color: `${textColor} !important`,
-                                            },
-                                            '&:focus': {
-                                                backgroundColor: 'transparent !important',
-                                                boxShadow: 'none !important',
-                                            },
-                                            '&:active': {
-                                                backgroundColor: 'transparent !important',
-                                                boxShadow: 'none !important',
-                                            },
-                                        }}
-                                    >
-                                        {item.label}
-                                    </Button>
-                                    {item.hasDropdown && (
-                                        <ArrowDownIcon
-                                            sx={{
-                                                color: textColor,
-                                                fontSize: { xs: '14px', md: '16px' },
-                                                ml: 0.5,
-                                            }}
-                                        />
-                                    )}
-                                </Box>
-                            ))}
-                        </Box>
-                    )}
-
-                    {/* Right Side Actions */}
-                    {!isMobile && (
-                        <Box sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: { xs: 1, md: 2 },
-                            flexWrap: 'wrap',
-                        }}>
-                            {/* Phone */}
-                            <Box sx={{
-                                display: { xs: 'none', lg: 'flex' },
+                        {/* Logo */}
+                        <Box
+                            component={Link}
+                            href="/"
+                            sx={{
+                                display: 'flex',
                                 alignItems: 'center',
-                                gap: 1
-                            }}>
-                                <PhoneIcon sx={{
-                                    color: `${textColor} !important`,
-                                    fontSize: { xs: '16px', md: '20px' }
-                                }} />
+                                textDecoration: 'none',
+                                color: 'inherit',
+                                mr: 4,
+                            }}
+                        >
+                            <Image
+                                src="/Logo_MinhLocGroup.png"
+                                alt="MinhLoc Group"
+                                width={scrolled ? 120 : 120}
+                                height={scrolled ? 90 : 120}
+                                priority={true}
+                                style={{
+                                    height: scrolled ? '90px' : '120px',
+                                    objectFit: 'contain',
+                                    width: 'auto',
+                                    transition: 'all 0.3s ease-in-out',
+                                }}
+                            />
+                        </Box>
+                    </Toolbar>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', width: '100%' }}>
+                        {/* Right Side Actions */}
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: "end",
+                            py: scrolled ? 0.5 : 1,
+                            gap: scrolled ? 1.5 : 2,
+                            transition: 'all 0.3s ease-in-out',
+                        }}>
+                            {/* Hotline */}
+                            <Box
+                                sx={{
+                                    display: { xs: 'none', md: 'flex' },
+                                    alignItems: 'center',
+                                    gap: scrolled ? 0.5 : 1,
+                                    backgroundColor: '#E7C873',
+                                    color: 'white',
+                                    px: scrolled ? 1.2 : 2,
+                                    py: scrolled ? 0.6 : 1,
+                                    borderRadius: '4px',
+                                    fontWeight: 600,
+                                    fontSize: scrolled ? '0.8rem' : '0.9rem',
+                                    transition: 'all 0.3s ease-in-out',
+                                }}
+                            >
+                                <PhoneIcon sx={{ fontSize: '1.2rem' }} />
                                 <Typography
-                                    variant="body2"
+                                    component={Link}
+                                    href="tel:1900232427"
                                     sx={{
-                                        color: `${textColor} !important`,
-                                        fontSize: { xs: '0.8rem', md: '0.9rem' },
-                                        fontWeight: 500,
-                                        textShadow: isHome ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
+                                        color: 'white',
+                                        textDecoration: 'none',
+                                        fontWeight: 600,
+                                        fontSize: '0.9rem',
                                     }}
                                 >
-                                    +68 685 88666
+                                    1900232427
                                 </Typography>
                             </Box>
 
-                            {/* CTA Button */}
-                            <Button
-                                variant={isHome ? 'outlined' : 'outlined'}
+                            {/* Search Toggle */}
+                            <IconButton
+                                onClick={handleSearchToggle}
                                 sx={{
-                                    color: `${textColor} !important`,
-                                    borderColor: `${textColor} !important`,
-                                    textTransform: 'none',
-                                    borderRadius: '50px',
-                                    px: { xs: 2, md: 3 },
-                                    py: 1,
-                                    fontSize: { xs: '0.8rem', md: '0.9rem' },
-                                    fontWeight: 500,
-                                    textShadow: isHome ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
+                                    color: '#1a1a1a',
+                                    border: '1px solid #E7C873',
+                                    borderRadius: '4px',
+                                    width: scrolled ? '32px' : '40px',
+                                    height: scrolled ? '32px' : '40px',
+                                    transition: 'all 0.3s ease-in-out',
                                     '&:hover': {
-                                        backgroundColor: hoverBg,
-                                        borderColor: `${textColor} !important`,
-                                        color: `${textColor} !important`,
+                                        backgroundColor: 'rgba(231, 200, 115, 0.1)',
+                                        color: '#E7C873',
                                     },
                                 }}
                             >
-                                Tìm kiếm bất động sản
-                            </Button>
-                        </Box>
-                    )}
-
-                    {/* Mobile Menu */}
-                    {isMobile && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <IconButton
-                                size="large"
-                                edge="start"
-                                color="inherit"
-                                aria-label="menu"
-                                onClick={handleMobileMenuOpen}
-                                sx={{ color: textColor }}
-                            >
-                                <MenuIcon />
+                                <SearchIcon sx={{ fontSize: scrolled ? '1rem' : '1.2rem' }} />
                             </IconButton>
-                            <Menu
-                                anchorEl={mobileMenuAnchor}
-                                open={Boolean(mobileMenuAnchor)}
-                                onClose={handleMobileMenuClose}
-                                anchorOrigin={{
-                                    vertical: 'bottom',
-                                    horizontal: 'right',
-                                }}
-                                transformOrigin={{
-                                    vertical: 'top',
-                                    horizontal: 'right',
-                                }}
-                                PaperProps={{
-                                    sx: {
-                                        backgroundColor: menuPaperBg,
-                                        backdropFilter: isHome ? 'blur(10px)' : 'none',
-                                        border: menuPaperBorder,
-                                    }
+
+                            {/* Social Icons */}
+                            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: scrolled ? 0.5 : 1 }}>
+                                <IconButton
+                                    component={Link}
+                                    href="https://facebook.com/minhlocgroup"
+                                    target="_blank"
+                                    sx={{
+                                        backgroundColor: '#1877F2',
+                                        color: 'white',
+                                        width: scrolled ? '32px' : '40px',
+                                        height: scrolled ? '32px' : '40px',
+                                        borderRadius: '4px',
+                                        transition: 'all 0.3s ease-in-out',
+                                        '&:hover': {
+                                            backgroundColor: '#166FE5',
+                                        },
+                                    }}
+                                >
+                                    <Facebook sx={{ fontSize: scrolled ? '1rem' : '1.2rem' }} />
+                                </IconButton>
+                                <IconButton
+                                    component={Link}
+                                    href="https://youtube.com/minhlocgroup"
+                                    target="_blank"
+                                    sx={{
+                                        backgroundColor: '#FF0000',
+                                        color: 'white',
+                                        width: scrolled ? '32px' : '40px',
+                                        height: scrolled ? '32px' : '40px',
+                                        borderRadius: '4px',
+                                        transition: 'all 0.3s ease-in-out',
+                                        '&:hover': {
+                                            backgroundColor: '#E60000',
+                                        },
+                                    }}
+                                >
+                                    <YouTube sx={{ fontSize: scrolled ? '1rem' : '1.2rem' }} />
+                                </IconButton>
+                            </Box>
+
+                            {/* Mobile Menu Button */}
+                            {isMobile && (
+                                <IconButton
+                                    onClick={handleMobileMenuToggle}
+                                    sx={{
+                                        color: '#1a1a1a',
+                                        '&:hover': {
+                                            color: '#E7C873',
+                                        },
+                                    }}
+                                >
+                                    <MenuIcon />
+                                </IconButton>
+                            )}
+                        </Box>
+                        {/* Navigation Menu */}
+                        <Box
+                            sx={{
+                                borderTop: '1px solid #f0f0f0',
+                                py: scrolled ? 0.5 : 1,
+                                transition: 'all 0.3s ease-in-out',
+                            }}
+                        >
+                            <Container>
+                                <Box
+                                    sx={{
+                                        display: { xs: 'none', md: 'flex' },
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 0,
+                                    }}
+                                >
+                                    {navigationItems.map((item) => (
+                                        <Button
+                                            key={item.path}
+                                            component={Link}
+                                            href={item.path}
+                                            startIcon={item.icon}
+                                            sx={{
+                                                color: '#1a1a1a',
+                                                textTransform: 'none',
+                                                fontWeight: 700,
+                                                backgroundColor: 'transparent',
+                                                fontSize: scrolled ? '0.75rem' : '0.875rem',
+                                                px: scrolled ? 1.2 : 2,
+                                                py: scrolled ? 0.6 : 1,
+                                                borderRadius: 0,
+                                                minWidth: 'auto',
+                                                boxShadow: 'none',
+                                                borderBottom: pathname === item.path ? '2px solid #E7C873' : '2px solid transparent',
+                                                transition: 'all 0.3s ease-in-out',
+                                                '&:hover': {
+                                                    borderBottom: '2px solid #E7C873',
+                                                    boxShadow: 'none',
+                                                },
+                                                '&:focus': {
+                                                    backgroundColor: 'transparent',
+                                                },
+                                                '&:active': {
+                                                    backgroundColor: 'transparent',
+                                                },
+                                            }}
+                                        >
+                                            {item.label}
+                                        </Button>
+                                    ))}
+                                </Box>
+                            </Container>
+                        </Box>
+
+                        {/* Mobile Hotline */}
+                        {isMobile && (
+                            <Box
+                                sx={{
+                                    backgroundColor: '#E7C873',
+                                    color: 'white',
+                                    py: 1,
+                                    textAlign: 'center',
                                 }}
                             >
-                                {navigationItems.map((item) => (
-                                    <MenuItem
-                                        key={item.path}
-                                        component={Link}
-                                        href={item.path}
-                                        onClick={handleMobileMenuClose}
+                                <Typography
+                                    component={Link}
+                                    href="tel:1900232427"
+                                    sx={{
+                                        color: 'white',
+                                        textDecoration: 'none',
+                                        fontWeight: 600,
+                                        fontSize: '0.9rem',
+                                    }}
+                                >
+                                    📞 1900232427
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
+                </Container>
+            </AppBar>
+
+            {/* Mobile Menu Drawer */}
+            <Drawer
+                anchor="left"
+                open={mobileMenuOpen}
+                onClose={handleMobileMenuToggle}
+                sx={{
+                    '& .MuiDrawer-paper': {
+                        width: '280px',
+                        backgroundColor: 'white',
+                    },
+                }}
+            >
+                <Box sx={{ p: 2 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            mb: 2,
+                        }}
+                    >
+                        <Typography variant="h6" sx={{ color: '#E7C873', fontWeight: 700 }}>
+                            Menu
+                        </Typography>
+                        <IconButton onClick={handleMobileMenuToggle}>
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+
+                    <Divider sx={{ mb: 2 }} />
+
+                    {/* Mobile User Controls */}
+                    <Box sx={{ mb: 2 }}>
+                        <Stack direction="row" sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
+                            <Button
+                                component={Link}
+                                href="/login"
+                                startIcon={<Login />}
+                                size="small"
+                                sx={{
+                                    borderColor: '#E7C873',
+                                    color: '#E7C873',
+                                    textTransform: 'none',
+                                    flex: 1,
+                                }}
+                            >
+                                Đăng nhập
+                            </Button>
+                            <Button
+                                component={Link}
+                                href="/register"
+                                startIcon={<PersonAdd />}
+                                variant="outlined"
+                                size="small"
+                                sx={{
+                                    borderColor: '#E7C873',
+                                    color: '#E7C873',
+                                    textTransform: 'none',
+                                    flex: 1,
+                                }}
+                            >
+                                Đăng ký
+                            </Button>
+                        </Stack>
+                    </Box>
+
+                    <Divider sx={{ mb: 2 }} />
+
+                    {/* Mobile Navigation */}
+                    <List>
+                        {navigationItems.map((item) => (
+                            <React.Fragment key={item.path}>
+                                <ListItem
+                                    component={Link}
+                                    href={item.path}
+                                    onClick={handleMobileMenuToggle}
+                                    sx={{
+                                        borderRadius: '8px',
+                                        mb: 0.5,
+                                        backgroundColor: pathname === item.path ? 'rgba(231, 200, 115, 0.1)' : 'transparent',
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(231, 200, 115, 0.1)',
+                                        },
+                                    }}
+                                >
+                                    <ListItemText
+                                        primary={item.label}
                                         sx={{
-                                            color: isHome ? 'white' : '#1a1a1a',
-                                            fontWeight: 500,
-                                            '&:hover': {
-                                                backgroundColor: hoverBg,
+                                            '& .MuiListItemText-primary': {
+                                                color: pathname === item.path ? '#E7C873' : '#1a1a1a',
+                                                fontWeight: pathname === item.path ? 600 : 400,
                                             },
                                         }}
-                                    >
-                                        {item.label}
-                                    </MenuItem>
-                                ))}
-                            </Menu>
-                        </Box>
-                    )}
-                </Toolbar>
-            </Container>
-        </AppBar>
+                                    />
+                                </ListItem>
+                            </React.Fragment>
+                        ))}
+                    </List>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Mobile Social Icons */}
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                        <IconButton
+                            component={Link}
+                            href="https://facebook.com/minhlocgroup"
+                            target="_blank"
+                            sx={{
+                                color: '#1877F2',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(24, 119, 242, 0.1)',
+                                },
+                            }}
+                        >
+                            <Facebook />
+                        </IconButton>
+                        <IconButton
+                            component={Link}
+                            href="https://youtube.com/minhlocgroup"
+                            target="_blank"
+                            sx={{
+                                color: '#FF0000',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                                },
+                            }}
+                        >
+                            <YouTube />
+                        </IconButton>
+                    </Box>
+                </Box>
+            </Drawer>
+        </>
     );
 };
 

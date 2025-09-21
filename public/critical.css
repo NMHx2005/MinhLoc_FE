@@ -132,7 +132,6 @@ html {
 
 /* Material-UI Critical Styles */
 .MuiAppBar-root {
-  background-color: transparent !important;
   box-shadow: none !important;
   border-bottom: none !important;
 }
