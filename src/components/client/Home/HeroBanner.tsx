@@ -78,9 +78,6 @@ const HeroBanner: React.FC = () => {
                         {/* Property Specs */}
                         <Typography
                             variant="h6"
-                            data-aos="fade-up"
-                            data-aos-duration="1000"
-                            data-aos-delay="300"
                             sx={{
                                 color: 'white',
                                 fontSize: '1.1rem',
@@ -96,9 +93,6 @@ const HeroBanner: React.FC = () => {
                         <Typography
                             component="h1"
                             variant="h1"
-                            data-aos="fade-up"
-                            data-aos-duration="1200"
-                            data-aos-delay="500"
                             sx={{
                                 fontSize: { xs: '2.5rem', md: '4rem' },
                                 fontWeight: 'bold',
@@ -114,9 +108,6 @@ const HeroBanner: React.FC = () => {
                         <Typography
                             component="h2"
                             variant="h3"
-                            data-aos="fade-up"
-                            data-aos-duration="1000"
-                            data-aos-delay="700"
                             sx={{
                                 color: 'white',
                                 fontSize: { xs: '1.8rem', md: '2.2rem' },
@@ -132,9 +123,6 @@ const HeroBanner: React.FC = () => {
                             variant="contained"
                             endIcon={<ArrowForwardIcon />}
                             onClick={() => console.warn('View Details')}
-                            data-aos="zoom-in"
-                            data-aos-duration="800"
-                            data-aos-delay="900"
                             sx={{
                                 backgroundColor: '#E7C873',
                                 color: 'black',
@@ -159,9 +147,6 @@ const HeroBanner: React.FC = () => {
             {/* Search Form */}
             <Container maxWidth="lg">
                 <Box
-                    data-aos="fade-up"
-                    data-aos-duration="1000"
-                    data-aos-delay="1100"
                     sx={{
                         backgroundColor: '#1a1a1a',
                         borderRadius: 1,

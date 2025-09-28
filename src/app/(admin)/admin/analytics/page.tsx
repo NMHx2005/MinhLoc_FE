@@ -117,7 +117,7 @@ const AnalyticsPage: React.FC = () => {
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
                         📊 Phân tích Traffic
                     </Typography>
-                    <TrafficChart />
+                    <TrafficChart filters={filters} />
                 </Box>
 
                 {/* Conversion Metrics */}
@@ -125,7 +125,7 @@ const AnalyticsPage: React.FC = () => {
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
                         🎯 Chỉ số Conversion
                     </Typography>
-                    <ConversionMetrics />
+                    <ConversionMetrics filters={filters} />
                 </Box>
 
                 {/* User Behavior */}

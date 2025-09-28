@@ -12,11 +12,14 @@ import {
     Link as MuiLink,
     Grid,
     Chip,
-    Avatar
+    Avatar,
+    CircularProgress,
+    Alert
 } from '@mui/material';
 import { Home, Business, Timeline, Star, Group, Handshake, Favorite } from '@mui/icons-material';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { companyService, type CompanyInfo } from '@/services/client/companyService';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -41,19 +44,83 @@ function TabPanel(props: TabPanelProps) {
 
 export default function AboutPage() {
     const [activeTab, setActiveTab] = useState(0);
+    const [companyData, setCompanyData] = useState<CompanyInfo[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
         setActiveTab(newValue);
+    };
+
+    // Load company data from API
+    useEffect(() => {
+        const loadCompanyData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const response = await companyService.getCompanyInfo();
+
+                // Handle both single object and array responses
+                if (Array.isArray(response)) {
+                    console.warn('Company Data:', response);
+                    setCompanyData(response);
+                } else if (typeof response === 'object' && response !== null) {
+                    console.warn('Company Data:', response);
+                    // If single object, wrap in array
+                    setCompanyData([response]);
+                } else {
+                    console.warn('Unexpected data format:', response);
+                    setCompanyData([]); // Set empty array as fallback
+                }
+            } catch (err) {
+                console.error('Error loading company data:', err);
+                setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu công ty');
+                setCompanyData([]); // Set empty array on error
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadCompanyData();
+    }, []);
+
+    // Helper function to get data by section
+    const getDataBySection = (section: string) => {
+        return companyData.find(item => item.section === section);
     };
 
     const tabs = [
         { id: 0, label: 'Giới thiệu chung', icon: <Business /> },
         { id: 1, label: 'Lịch sử hình thành', icon: <Timeline /> },
         { id: 2, label: 'Năng lực cạnh tranh', icon: <Star /> },
-        { id: 3, label: 'Hệ thống Minh Lộc Group', icon: <Group /> },
-        { id: 4, label: 'Đối tác', icon: <Handshake /> },
-        { id: 5, label: 'Hoạt động xã hội', icon: <Favorite /> },
+        { id: 3, label: 'Hệ thống & Mạng lưới', icon: <Group /> },
+        { id: 4, label: 'Đối tác chiến lược', icon: <Handshake /> },
+        { id: 5, label: 'Trách nhiệm xã hội', icon: <Favorite /> },
     ];
+
+    // Show loading state
+    if (loading) {
+        return (
+            <Layout>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+                    <CircularProgress size={60} />
+                </Box>
+            </Layout>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <Layout>
+                <Container maxWidth="lg" sx={{ py: 6 }}>
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                        {error}
+                    </Alert>
+                </Container>
+            </Layout>
+        );
+    }
 
     return (
         <Layout>
@@ -211,7 +278,7 @@ export default function AboutPage() {
                                 mb: 4,
                             }}
                         >
-                            GIỚI THIỆU MINH LỘC GROUP
+                            {getDataBySection('general')?.title || 'GIỚI THIỆU CHUNG'}
                         </Typography>
                     </Box>
 
@@ -267,43 +334,214 @@ export default function AboutPage() {
                                         lineHeight: 1.8,
                                         color: '#333',
                                         mb: 3,
+                                        whiteSpace: 'pre-line'
                                     }}
                                 >
-                                    Minh Lộc Group được thành lập năm 2015 với mục tiêu mang đến những sản phẩm bất động sản đẳng cấp và các sản phẩm nhân sâm cao cấp chất lượng tốt nhất. Với hơn 8 năm phát triển, chúng tôi đã khẳng định vị thế là một trong những tập đoàn hàng đầu trong lĩnh vực bất động sản và kinh doanh nhân sâm tại Việt Nam.
+                                    {getDataBySection('general')?.content || 'Minh Lộc Group được thành lập năm 2015 với mục tiêu mang đến những sản phẩm bất động sản đẳng cấp và các sản phẩm nhân sâm cao cấp chất lượng tốt nhất. Với hơn 8 năm phát triển, chúng tôi đã khẳng định vị thế là một trong những tập đoàn hàng đầu trong lĩnh vực bất động sản và kinh doanh nhân sâm tại Việt Nam.'}
                                 </Typography>
-                                <Typography
-                                    variant="body1"
-                                    sx={{
-                                        fontSize: '1.1rem',
-                                        lineHeight: 1.8,
-                                        color: '#333',
-                                        mb: 3,
-                                    }}
-                                >
-                                    Minh Lộc Group không ngừng nỗ lực nâng cao giá trị cuộc sống cho người dân Việt Nam thông qua việc cung cấp những sản phẩm bất động sản chất lượng cao và các sản phẩm chăm sóc sức khỏe từ nhân sâm. Chúng tôi cam kết mang đến những cơ hội đầu tư an toàn, hiệu quả và bền vững.
-                                </Typography>
-                                <Typography
-                                    variant="body1"
-                                    sx={{
-                                        fontSize: '1.1rem',
-                                        lineHeight: 1.8,
-                                        color: '#333',
-                                        mb: 4,
-                                    }}
-                                >
-                                    Với triết lý kinh doanh "Xây dựng niềm tin bắt đầu từ xây dựng ngôi nhà của bạn", Minh Lộc Group luôn đặt khách hàng làm trung tâm, đảm bảo mọi sản phẩm và dịch vụ đều đạt tiêu chuẩn cao nhất.
-                                </Typography>
+
+                                {/* Company Info */}
+                                {getDataBySection('general')?.data && (
+                                    <Box sx={{ mb: 3 }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1976d2', mb: 2 }}>
+                                            Thông tin công ty
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                            {getDataBySection('general')?.data?.companyName && (
+                                                <Grid item xs={12} sm={6}>
+                                                    <Typography variant="body2" sx={{ mb: 1 }}>
+                                                        <strong>Tên công ty:</strong> {getDataBySection('general')?.data?.companyName}
+                                                    </Typography>
+                                                </Grid>
+                                            )}
+                                            {getDataBySection('general')?.data?.foundedYear && (
+                                                <Grid item xs={12} sm={6}>
+                                                    <Typography variant="body2" sx={{ mb: 1 }}>
+                                                        <strong>Năm thành lập:</strong> {getDataBySection('general')?.data?.foundedYear}
+                                                    </Typography>
+                                                </Grid>
+                                            )}
+                                            {getDataBySection('general')?.data?.headquarters && (
+                                                <Grid item xs={12} sm={6}>
+                                                    <Typography variant="body2" sx={{ mb: 1 }}>
+                                                        <strong>Trụ sở chính:</strong> {getDataBySection('general')?.data?.headquarters}
+                                                    </Typography>
+                                                </Grid>
+                                            )}
+                                            {getDataBySection('general')?.data?.contactInfo?.email && (
+                                                <Grid item xs={12} sm={6}>
+                                                    <Typography variant="body2" sx={{ mb: 1 }}>
+                                                        <strong>Email:</strong> {getDataBySection('general')?.data?.contactInfo?.email}
+                                                    </Typography>
+                                                </Grid>
+                                            )}
+                                        </Grid>
+                                    </Box>
+                                )}
+
+                                {/* Mission & Vision */}
+                                <Grid container spacing={3} sx={{ mt: 2 }}>
+                                    <Grid item xs={12} md={6}>
+                                        <Box sx={{ p: 2, backgroundColor: 'rgba(231, 200, 115, 0.1)', borderRadius: 1 }}>
+                                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1976d2', mb: 1 }}>
+                                                Sứ mệnh
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ color: '#666' }}>
+                                                {getDataBySection('general')?.data?.mission || 'Mang đến những sản phẩm và dịch vụ chất lượng cao, góp phần xây dựng cuộc sống tốt đẹp hơn cho cộng đồng và phát triển bền vững.'}
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                    <Grid item xs={12} md={6}>
+                                        <Box sx={{ p: 2, backgroundColor: 'rgba(231, 200, 115, 0.1)', borderRadius: 1 }}>
+                                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1976d2', mb: 1 }}>
+                                                Tầm nhìn
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ color: '#666' }}>
+                                                {getDataBySection('general')?.data?.vision || 'Trở thành tập đoàn đa ngành hàng đầu Việt Nam và khu vực Đông Nam Á, được khách hàng tin tưởng và đối tác đánh giá cao.'}
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                </Grid>
                                 <Box sx={{ textAlign: 'right', pt: 2, borderTop: '1px solid #e0e0e0' }}>
                                     <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                                        Tổng Giám đốc Minh Lộc Group
+                                        Lãnh đạo MinhLoc Group
                                     </Typography>
                                     <Typography variant="h5" sx={{ fontWeight: 700, color: '#1a1a1a' }}>
-                                        Nguyễn Minh Lộc
+                                        Tập thể lãnh đạo tài năng
                                     </Typography>
                                 </Box>
                             </Box>
                         </Grid>
                     </Grid>
+
+                    {/* Achievements Section */}
+                    {(() => {
+                        const achievements = getDataBySection('general')?.data?.achievements;
+                        return achievements && achievements.length > 0 ? (
+                            <Box sx={{ mt: 8 }}>
+                                <Typography
+                                    variant="h4"
+                                    sx={{
+                                        textAlign: 'center',
+                                        fontWeight: 'bold',
+                                        color: '#1a1a1a',
+                                        mb: 6,
+                                    }}
+                                >
+                                    Thành tựu nổi bật
+                                </Typography>
+                                <Grid container spacing={3}>
+                                    {getDataBySection('general')?.data?.achievements?.map((achievement, index) => (
+                                        <Grid item xs={12} sm={6} md={4} key={index}>
+                                            <Box
+                                                data-aos="zoom-in"
+                                                data-aos-delay={index * 100}
+                                                sx={{
+                                                    textAlign: 'center',
+                                                    p: 3,
+                                                    backgroundColor: 'white',
+                                                    borderRadius: 2,
+                                                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                                    border: '1px solid #e0e0e0',
+                                                    '&:hover': {
+                                                        transform: 'translateY(-8px)',
+                                                        boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+                                                    },
+                                                    transition: 'all 0.3s ease',
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="h3"
+                                                    sx={{
+                                                        fontWeight: 'bold',
+                                                        color: '#1976d2',
+                                                        mb: 2,
+                                                        fontSize: { xs: '2rem', md: '3rem' },
+                                                    }}
+                                                >
+                                                    {achievement.number}
+                                                </Typography>
+                                                <Typography
+                                                    variant="body1"
+                                                    sx={{
+                                                        color: '#333',
+                                                        fontWeight: 500,
+                                                        textAlign: 'center',
+                                                        lineHeight: 1.4,
+                                                    }}
+                                                >
+                                                    {achievement.label}
+                                                </Typography>
+                                            </Box>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            </Box>
+                        ) : (
+                            <Box sx={{ mt: 8, textAlign: 'center' }}>
+                                <Typography variant="h6" sx={{ color: '#666', fontStyle: 'italic' }}>
+                                    Chưa có dữ liệu thành tựu
+                                </Typography>
+                            </Box>
+                        );
+                    })()}
+
+                    {/* Values Section */}
+                    {(() => {
+                        const values = getDataBySection('general')?.data?.values;
+                        return values && values.length > 0 ? (
+                            <Box sx={{ mt: 8 }}>
+                                <Typography
+                                    variant="h4"
+                                    sx={{
+                                        textAlign: 'center',
+                                        fontWeight: 'bold',
+                                        color: '#1a1a1a',
+                                        mb: 6,
+                                    }}
+                                >
+                                    Giá trị cốt lõi
+                                </Typography>
+                                <Grid container spacing={3}>
+                                    {getDataBySection('general')?.data?.values?.map((value, index) => (
+                                        <Grid item xs={12} md={6} key={index}>
+                                            <Box
+                                                data-aos="fade-up"
+                                                data-aos-delay={index * 100}
+                                                sx={{
+                                                    p: 3,
+                                                    backgroundColor: 'rgba(231, 200, 115, 0.1)',
+                                                    borderRadius: 2,
+                                                    borderLeft: 4,
+                                                    borderLeftColor: '#E7C873',
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(231, 200, 115, 0.15)',
+                                                    },
+                                                    transition: 'all 0.3s ease',
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body1"
+                                                    sx={{
+                                                        fontWeight: 'medium',
+                                                        lineHeight: 1.6,
+                                                    }}
+                                                >
+                                                    {value}
+                                                </Typography>
+                                            </Box>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            </Box>
+                        ) : (
+                            <Box sx={{ mt: 8, textAlign: 'center' }}>
+                                <Typography variant="h6" sx={{ color: '#666', fontStyle: 'italic' }}>
+                                    Chưa có dữ liệu giá trị cốt lõi
+                                </Typography>
+                            </Box>
+                        );
+                    })()}
                 </TabPanel>
 
                 {/* Lịch sử hình thành */}
@@ -321,7 +559,7 @@ export default function AboutPage() {
                                 mb: 4,
                             }}
                         >
-                            LỊCH SỬ HÌNH THÀNH
+                            {getDataBySection('history')?.title || 'LỊCH SỬ HÌNH THÀNH VÀ PHÁT TRIỂN'}
                         </Typography>
                     </Box>
 
@@ -357,42 +595,78 @@ export default function AboutPage() {
                                     textAlign: 'center',
                                 }}
                             >
-                                Dòng thời gian phát triển
+                                Các mốc phát triển quan trọng
                             </Typography>
 
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 2, mb: 4 }}>
-                                {[
-                                    { year: '2015', event: 'Thành lập Minh Lộc Group' },
-                                    { year: '2017', event: 'Ra mắt dự án BĐS đầu tiên' },
-                                    { year: '2019', event: 'Mở rộng sang lĩnh vực nhân sâm' },
-                                    { year: '2021', event: 'Đạt doanh thu 1000 tỷ VNĐ' },
-                                    { year: '2023', event: 'Mở rộng ra thị trường quốc tế' },
-                                    { year: '2024', event: 'Kỷ niệm 10 năm thành lập' },
-                                ].map((item, index) => (
-                                    <Card
-                                        key={item.year}
-                                        data-aos="zoom-in"
-                                        data-aos-delay={index * 100}
-                                        sx={{
-                                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                            p: 2,
-                                            minWidth: 200,
-                                            textAlign: 'center',
-                                            '&:hover': {
-                                                transform: 'translateY(-4px)',
-                                                boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                                            },
-                                            transition: 'all 0.3s ease',
-                                        }}
-                                    >
-                                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1976d2', mb: 1 }}>
-                                            {item.year}
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ color: '#666' }}>
-                                            {item.event}
-                                        </Typography>
-                                    </Card>
-                                ))}
+                                {(() => {
+                                    const milestones = getDataBySection('history')?.data?.milestones;
+                                    return milestones && milestones.length > 0 ?
+                                        milestones.map((item, index) => (
+                                            <Card
+                                                key={item.year || index}
+                                                data-aos="zoom-in"
+                                                data-aos-delay={index * 100}
+                                                sx={{
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                    p: 3,
+                                                    minWidth: 280,
+                                                    maxWidth: 350,
+                                                    textAlign: 'center',
+                                                    borderRadius: 2,
+                                                    border: '1px solid rgba(25, 118, 210, 0.1)',
+                                                    '&:hover': {
+                                                        transform: 'translateY(-4px)',
+                                                        boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                                                        borderColor: '#1976d2',
+                                                    },
+                                                    transition: 'all 0.3s ease',
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="h5"
+                                                    sx={{
+                                                        fontWeight: 'bold',
+                                                        color: '#1976d2',
+                                                        mb: 2,
+                                                        fontSize: '1.8rem'
+                                                    }}
+                                                >
+                                                    {item.year}
+                                                </Typography>
+                                                <Typography
+                                                    variant="h6"
+                                                    sx={{
+                                                        fontWeight: 'bold',
+                                                        color: '#333',
+                                                        mb: 2,
+                                                        fontSize: '1.1rem',
+                                                        lineHeight: 1.3
+                                                    }}
+                                                >
+                                                    {item.event}
+                                                </Typography>
+                                                {item.description && (
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            color: '#666',
+                                                            lineHeight: 1.5,
+                                                            fontSize: '0.9rem'
+                                                        }}
+                                                    >
+                                                        {item.description}
+                                                    </Typography>
+                                                )}
+                                            </Card>
+                                        )) : (
+                                            <Box sx={{ textAlign: 'center', py: 4 }}>
+                                                <Typography variant="h6" sx={{ color: '#666', fontStyle: 'italic' }}>
+                                                    Chưa có dữ liệu lịch sử
+                                                </Typography>
+                                            </Box>
+                                        );
+                                })()}
                             </Box>
 
                             <Box sx={{ textAlign: 'center' }}>
@@ -438,94 +712,100 @@ export default function AboutPage() {
                                 mb: 4,
                             }}
                         >
-                            NĂNG LỰC CẠNH TRANH
+                            {getDataBySection('competitiveness')?.title || 'NĂNG LỰC CẠNH TRANH VÀ THẾ MẠNH'}
                         </Typography>
                     </Box>
 
+                    {/* Content Description */}
+                    {getDataBySection('competitiveness')?.content && (
+                        <Box sx={{ textAlign: 'center', mb: 6 }}>
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    maxWidth: 800,
+                                    mx: 'auto',
+                                    lineHeight: 1.8,
+                                    color: '#666',
+                                }}
+                            >
+                                {getDataBySection('competitiveness')?.content}
+                            </Typography>
+                        </Box>
+                    )}
+
                     <Grid container spacing={4}>
-                        {[
-                            {
-                                title: 'Vốn hóa mạnh mẽ',
-                                description: 'Tổng vốn điều lệ hơn 2.000 tỷ VNĐ, đảm bảo năng lực tài chính vững mạnh',
-                                icon: '💰',
-                                color: '#4caf50'
-                            },
-                            {
-                                title: 'Đội ngũ chuyên nghiệp',
-                                description: 'Hơn 500 nhân viên có trình độ cao, kinh nghiệm dày dặn trong lĩnh vực BĐS và nhân sâm',
-                                icon: '👥',
-                                color: '#2196f3'
-                            },
-                            {
-                                title: 'Công nghệ tiên tiến',
-                                description: 'Ứng dụng công nghệ 4.0 trong quản lý dự án và phân phối sản phẩm',
-                                icon: '🚀',
-                                color: '#ff9800'
-                            },
-                            {
-                                title: 'Mạng lưới rộng khắp',
-                                description: 'Có mặt tại 15 tỉnh thành với hơn 50 điểm bán hàng và showroom',
-                                icon: '🌐',
-                                color: '#9c27b0'
-                            },
-                            {
-                                title: 'Chứng nhận chất lượng',
-                                description: 'Đạt các chứng nhận ISO 9001:2015, ISO 14001:2015 và HACCP',
-                                icon: '🏆',
-                                color: '#f44336'
-                            },
-                            {
-                                title: 'Đối tác uy tín',
-                                description: 'Hợp tác với hơn 100 đối tác trong nước và quốc tế',
-                                icon: '🤝',
-                                color: '#607d8b'
-                            }
-                        ].map((item, index) => (
-                            <Grid item xs={12} md={6} key={index}>
-                                <Card
-                                    data-aos="fade-up"
-                                    data-aos-delay={index * 100}
-                                    sx={{
-                                        height: '100%',
-                                        p: 3,
-                                        textAlign: 'center',
-                                        border: `2px solid ${item.color}`,
-                                        borderRadius: 1,
-                                        '&:hover': {
-                                            transform: 'translateY(-4px)',
-                                            boxShadow: `0 8px 25px ${item.color}30`,
-                                        },
-                                        transition: 'all 0.3s ease',
-                                    }}
-                                >
-                                    <Typography
-                                        variant="h2"
-                                        sx={{ mb: 2, fontSize: '3rem' }}
-                                    >
-                                        {item.icon}
-                                    </Typography>
-                                    <Typography
-                                        variant="h5"
-                                        sx={{
-                                            fontWeight: 'bold',
-                                            color: item.color,
-                                            mb: 2,
-                                        }}
-                                    >
-                                        {item.title}
-                                    </Typography>
-                                    <Typography
-                                        variant="body1"
-                                        sx={{
-                                            color: '#666',
-                                            lineHeight: 1.6,
-                                        }}
-                                    >
-                                        {item.description}
-                                    </Typography>
-                                </Card>
-                            </Grid>
-                        ))}
+                        {(() => {
+                            const strengths = getDataBySection('competitiveness')?.data?.strengths;
+                            return strengths && strengths.length > 0 ?
+                                strengths.map((item, index) => (
+                                    <Grid item xs={12} md={6} key={index}>
+                                        <Card
+                                            data-aos="fade-up"
+                                            data-aos-delay={index * 100}
+                                            sx={{
+                                                height: '100%',
+                                                p: 3,
+                                                textAlign: 'center',
+                                                border: `2px solid ${item.color}`,
+                                                borderRadius: 1,
+                                                '&:hover': {
+                                                    transform: 'translateY(-4px)',
+                                                    boxShadow: `0 8px 25px ${item.color}30`,
+                                                },
+                                                transition: 'all 0.3s ease',
+                                            }}
+                                        >
+                                            <Box
+                                                sx={{
+                                                    width: 80,
+                                                    height: 80,
+                                                    borderRadius: '50%',
+                                                    backgroundColor: `${item.color}20`,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    mx: 'auto',
+                                                    mb: 2,
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="h2"
+                                                    sx={{ fontSize: '2.5rem' }}
+                                                >
+                                                    {item.icon || '💼'}
+                                                </Typography>
+                                            </Box>
+                                            <Typography
+                                                variant="h5"
+                                                sx={{
+                                                    fontWeight: 'bold',
+                                                    color: item.color,
+                                                    mb: 2,
+                                                }}
+                                            >
+                                                {item.title}
+                                            </Typography>
+                                            <Typography
+                                                variant="body1"
+                                                sx={{
+                                                    color: '#666',
+                                                    lineHeight: 1.6,
+                                                }}
+                                            >
+                                                {item.description}
+                                            </Typography>
+                                        </Card>
+                                    </Grid>
+                                )) : (
+                                    <Grid item xs={12}>
+                                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                                            <Typography variant="h6" sx={{ color: '#666', fontStyle: 'italic' }}>
+                                                Chưa có dữ liệu thế mạnh
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                );
+                        })()}
                     </Grid>
                 </TabPanel>
 
@@ -544,123 +824,119 @@ export default function AboutPage() {
                                 mb: 4,
                             }}
                         >
-                            HỆ THỐNG MINH LỘC GROUP
+                            {getDataBySection('system')?.title || 'HỆ THỐNG VÀ MẠNG LƯỚI HOẠT ĐỘNG'}
                         </Typography>
                     </Box>
 
-                    <Grid container spacing={4}>
-                        <Grid item xs={12} md={6}>
-                            <Card
-                                data-aos="fade-right"
-                                data-aos-duration="1000"
+                    {/* Content Description */}
+                    {getDataBySection('system')?.content && (
+                        <Box sx={{ textAlign: 'center', mb: 6 }}>
+                            <Typography
+                                variant="h6"
                                 sx={{
-                                    height: '100%',
-                                    p: 4,
-                                    background: 'linear-gradient(135deg, #E7C873 0%, #d4b85a 100%)',
-                                    color: 'white',
+                                    maxWidth: 800,
+                                    mx: 'auto',
+                                    lineHeight: 1.8,
+                                    color: '#666',
                                 }}
                             >
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
-                                    Bất động sản
-                                </Typography>
-                                <Box component="ul" sx={{ pl: 0, listStyle: 'none' }}>
-                                    {[
-                                        'Căn hộ cao cấp',
-                                        'Nhà phố, biệt thự',
-                                        'Khu đô thị mới',
-                                        'Dự án nghỉ dưỡng',
-                                        'Văn phòng cho thuê',
-                                        'Khu thương mại'
-                                    ].map((item, index) => (
-                                        <Box key={index} component="li" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-                                            <Box sx={{ width: 8, height: 8, backgroundColor: 'white', borderRadius: '50%', mr: 2 }} />
-                                            <Typography>{item}</Typography>
-                                        </Box>
-                                    ))}
-                                </Box>
-                            </Card>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                            <Card
-                                data-aos="fade-left"
-                                data-aos-duration="1000"
-                                sx={{
-                                    height: '100%',
-                                    p: 4,
-                                    background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
-                                    color: 'white',
-                                }}
-                            >
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
-                                    Nhân sâm cao cấp
-                                </Typography>
-                                <Box component="ul" sx={{ pl: 0, listStyle: 'none' }}>
-                                    {[
-                                        'Sâm tươi Hàn Quốc',
-                                        'Sâm khô chất lượng cao',
-                                        'Cao sâm đặc biệt',
-                                        'Trà sâm thảo dược',
-                                        'Thực phẩm chức năng',
-                                        'Mỹ phẩm từ sâm'
-                                    ].map((item, index) => (
-                                        <Box key={index} component="li" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-                                            <Box sx={{ width: 8, height: 8, backgroundColor: 'white', borderRadius: '50%', mr: 2 }} />
-                                            <Typography>{item}</Typography>
-                                        </Box>
-                                    ))}
-                                </Box>
-                            </Card>
-                        </Grid>
-                    </Grid>
+                                {getDataBySection('system')?.content}
+                            </Typography>
+                        </Box>
+                    )}
 
-                    <Box sx={{ mt: 6, textAlign: 'center' }}>
-                        <Typography
-                            variant="h4"
-                            sx={{
-                                fontWeight: 'bold',
-                                color: '#1a1a1a',
-                                mb: 4,
-                            }}
-                        >
-                            Mạng lưới hoạt động
-                        </Typography>
-                        <Grid container spacing={3}>
-                            {[
-                                { city: 'Hà Nội', projects: 15, staff: 120 },
-                                { city: 'TP.HCM', projects: 25, staff: 200 },
-                                { city: 'Đà Nẵng', projects: 8, staff: 60 },
-                                { city: 'Hải Phòng', projects: 5, staff: 40 },
-                                { city: 'Cần Thơ', projects: 6, staff: 45 },
-                                { city: 'Nha Trang', projects: 4, staff: 35 },
-                            ].map((item, index) => (
-                                <Grid item xs={12} sm={6} md={4} key={index}>
-                                    <Card
-                                        data-aos="zoom-in"
-                                        data-aos-delay={index * 100}
-                                        sx={{
-                                            p: 3,
-                                            textAlign: 'center',
-                                            '&:hover': {
-                                                transform: 'translateY(-4px)',
-                                                boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                                            },
-                                            transition: 'all 0.3s ease',
-                                        }}
-                                    >
-                                        <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#1976d2', mb: 1 }}>
-                                            {item.city}
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ color: '#666' }}>
-                                            {item.projects} dự án
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ color: '#666' }}>
-                                            {item.staff} nhân viên
-                                        </Typography>
-                                    </Card>
+                    {/* Business Areas */}
+                    {(() => {
+                        const businessAreas = getDataBySection('system')?.data?.businessAreas;
+                        return businessAreas && businessAreas.length > 0 && (
+                            <Grid container spacing={4} sx={{ mb: 6 }}>
+                                {businessAreas.map((area, index) => (
+                                    <Grid item xs={12} md={6} key={index}>
+                                        <Card
+                                            data-aos="fade-up"
+                                            data-aos-delay={index * 200}
+                                            sx={{
+                                                height: '100%',
+                                                p: 4,
+                                                background: `linear-gradient(135deg, ${area.color} 0%, ${area.color}dd 100%)`,
+                                                color: 'white',
+                                                borderRadius: 2,
+                                                '&:hover': {
+                                                    transform: 'translateY(-4px)',
+                                                    boxShadow: `0 8px 25px ${area.color}40`,
+                                                },
+                                                transition: 'all 0.3s ease',
+                                            }}
+                                        >
+                                            <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 2 }}>
+                                                {area.name}
+                                            </Typography>
+                                            <Typography variant="body1" sx={{ mb: 3, opacity: 0.9 }}>
+                                                {area.description}
+                                            </Typography>
+                                            <Box component="ul" sx={{ pl: 0, listStyle: 'none' }}>
+                                                {area.items.map((item, itemIndex) => (
+                                                    <Box key={itemIndex} component="li" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                                                        <Box sx={{ width: 8, height: 8, backgroundColor: 'white', borderRadius: '50%', mr: 2 }} />
+                                                        <Typography>{item}</Typography>
+                                                    </Box>
+                                                ))}
+                                            </Box>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        );
+                    })()}
+
+                    {/* Network */}
+                    {(() => {
+                        const network = getDataBySection('system')?.data?.network;
+                        return network && network.length > 0 && (
+                            <Box sx={{ textAlign: 'center' }}>
+                                <Typography
+                                    variant="h4"
+                                    sx={{
+                                        fontWeight: 'bold',
+                                        color: '#1a1a1a',
+                                        mb: 4,
+                                    }}
+                                >
+                                    Mạng lưới chi nhánh và văn phòng
+                                </Typography>
+                                <Grid container spacing={3}>
+                                    {network.map((item, index) => (
+                                        <Grid item xs={12} sm={6} md={4} key={index}>
+                                            <Card
+                                                data-aos="zoom-in"
+                                                data-aos-delay={index * 100}
+                                                sx={{
+                                                    p: 3,
+                                                    textAlign: 'center',
+                                                    '&:hover': {
+                                                        transform: 'translateY(-4px)',
+                                                        boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                                                    },
+                                                    transition: 'all 0.3s ease',
+                                                }}
+                                            >
+                                                <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#1976d2', mb: 1 }}>
+                                                    {item.city}
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ color: '#666', mb: 1 }}>
+                                                    {item.projects} dự án
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ color: '#666' }}>
+                                                    {item.staff} nhân viên
+                                                </Typography>
+                                            </Card>
+                                        </Grid>
+                                    ))}
                                 </Grid>
-                            ))}
-                        </Grid>
-                    </Box>
+                            </Box>
+                        );
+                    })()}
+
                 </TabPanel>
 
                 {/* Đối tác */}
@@ -678,69 +954,104 @@ export default function AboutPage() {
                                 mb: 4,
                             }}
                         >
-                            ĐỐI TÁC CHIẾN LƯỢC
+                            {getDataBySection('partners')?.title || 'ĐỐI TÁC CHIẾN LƯỢC VÀ UY TÍN'}
                         </Typography>
                     </Box>
 
+                    {/* Content Description */}
+                    {getDataBySection('partners')?.content && (
+                        <Box sx={{ textAlign: 'center', mb: 6 }}>
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    maxWidth: 800,
+                                    mx: 'auto',
+                                    lineHeight: 1.8,
+                                    color: '#666',
+                                }}
+                            >
+                                {getDataBySection('partners')?.content}
+                            </Typography>
+                        </Box>
+                    )}
+
                     <Grid container spacing={4}>
-                        {[
-                            { name: 'Ngân hàng TMCP Đầu tư và Phát triển Việt Nam', type: 'Tài chính' },
-                            { name: 'Tập đoàn Vingroup', type: 'Bất động sản' },
-                            { name: 'Công ty TNHH Samsung Electronics Việt Nam', type: 'Công nghệ' },
-                            { name: 'Tập đoàn FPT', type: 'Công nghệ thông tin' },
-                            { name: 'Công ty TNHH LG Electronics Việt Nam', type: 'Điện tử' },
-                            { name: 'Tập đoàn Hòa Phát', type: 'Thép' },
-                            { name: 'Công ty TNHH Nestlé Việt Nam', type: 'Thực phẩm' },
-                            { name: 'Tập đoàn Masan', type: 'Thực phẩm' },
-                            { name: 'Công ty TNHH Unilever Việt Nam', type: 'Hàng tiêu dùng' },
-                            { name: 'Tập đoàn Vinamilk', type: 'Sữa' },
-                            { name: 'Công ty TNHH Canon Marketing Việt Nam', type: 'Thiết bị văn phòng' },
-                            { name: 'Tập đoàn Thế Giới Di Động', type: 'Bán lẻ' },
-                        ].map((partner, index) => (
-                            <Grid item xs={12} sm={6} md={4} key={index}>
-                                <Card
-                                    data-aos="fade-up"
-                                    data-aos-delay={index * 100}
-                                    sx={{
-                                        p: 3,
-                                        height: '100%',
-                                        textAlign: 'center',
-                                        border: '1px solid #e0e0e0',
-                                        '&:hover': {
-                                            borderColor: '#1976d2',
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: '0 4px 20px rgba(25,118,210,0.15)',
-                                        },
-                                        transition: 'all 0.3s ease',
-                                    }}
-                                >
-                                    <Avatar
-                                        sx={{
-                                            width: 60,
-                                            height: 60,
-                                            mx: 'auto',
-                                            mb: 2,
-                                            backgroundColor: '#1976d2',
-                                            fontSize: '1.5rem',
-                                        }}
-                                    >
-                                        {partner.name.charAt(0)}
-                                    </Avatar>
-                                    <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1, fontSize: '1rem' }}>
-                                        {partner.name}
-                                    </Typography>
-                                    <Chip
-                                        label={partner.type}
-                                        size="small"
-                                        sx={{
-                                            backgroundColor: '#E7C873',
-                                            color: 'white',
-                                            fontWeight: 'bold',
-                                        }}
-                                    />
-                                </Card>
-                            </Grid>
-                        ))}
+                        {(() => {
+                            const partners = getDataBySection('partners')?.data?.partners;
+                            return partners && partners.length > 0 ?
+                                partners.map((partner, index) => (
+                                    <Grid item xs={12} sm={6} md={4} key={index}>
+                                        <Card
+                                            data-aos="fade-up"
+                                            data-aos-delay={index * 100}
+                                            sx={{
+                                                p: 3,
+                                                height: '100%',
+                                                textAlign: 'center',
+                                                border: '1px solid #e0e0e0',
+                                                '&:hover': {
+                                                    borderColor: '#1976d2',
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: '0 4px 20px rgba(25,118,210,0.15)',
+                                                },
+                                                transition: 'all 0.3s ease',
+                                            }}
+                                        >
+                                            {partner.logo ? (
+                                                <Box
+                                                    component="img"
+                                                    src={partner.logo}
+                                                    alt={partner.name}
+                                                    sx={{
+                                                        width: 100,
+                                                        height: 100,
+                                                        mx: 'auto',
+                                                        mb: 2,
+                                                        objectFit: 'contain',
+                                                        borderRadius: 1,
+                                                        border: '1px solid #e0e0e0',
+                                                        backgroundColor: 'white',
+                                                        p: 1,
+                                                    }}
+                                                />
+                                            ) : (
+                                                <Avatar
+                                                    sx={{
+                                                        width: 80,
+                                                        height: 80,
+                                                        mx: 'auto',
+                                                        mb: 2,
+                                                        backgroundColor: '#1976d2',
+                                                        fontSize: '1.8rem',
+                                                    }}
+                                                >
+                                                    {partner.name.charAt(0)}
+                                                </Avatar>
+                                            )}
+                                            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1, fontSize: '1rem' }}>
+                                                {partner.name}
+                                            </Typography>
+                                            <Chip
+                                                label={partner.type}
+                                                size="small"
+                                                sx={{
+                                                    backgroundColor: '#E7C873',
+                                                    color: 'white',
+                                                    fontWeight: 'bold',
+                                                }}
+                                            />
+                                        </Card>
+                                    </Grid>
+                                )) : (
+                                    <Grid item xs={12}>
+                                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                                            <Typography variant="h6" sx={{ color: '#666', fontStyle: 'italic' }}>
+                                                Chưa có dữ liệu đối tác
+                                            </Typography>
+                                        </Box>
+                                    </Grid>
+                                );
+                        })()}
                     </Grid>
                 </TabPanel>
 
@@ -759,82 +1070,103 @@ export default function AboutPage() {
                                 mb: 4,
                             }}
                         >
-                            HOẠT ĐỘNG XÃ HỘI
+                            {getDataBySection('social_activities')?.title || 'TRÁCH NHIỆM XÃ HỘI VÀ CỘNG ĐỒNG'}
                         </Typography>
                     </Box>
 
-                    <Grid container spacing={4}>
-                        <Grid item xs={12} md={6}>
-                            <Box
-                                data-aos="fade-right"
-                                data-aos-duration="1000"
+                    {/* Content Description */}
+                    {getDataBySection('social_activities')?.content && (
+                        <Box sx={{ textAlign: 'center', mb: 6 }}>
+                            <Typography
+                                variant="h6"
                                 sx={{
-                                    background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
-                                    borderRadius: 1,
-                                    p: 4,
-                                    color: 'white',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        bottom: 0,
-                                        backgroundImage: 'url("https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=600&h=400&fit=crop")',
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center',
-                                        opacity: 0.2,
-                                        zIndex: 1,
-                                    }
+                                    maxWidth: 800,
+                                    mx: 'auto',
+                                    lineHeight: 1.8,
+                                    color: '#666',
                                 }}
                             >
-                                <Box sx={{ position: 'relative', zIndex: 2 }}>
-                                    <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
-                                        CỘNG ĐỒNG
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.8 }}>
-                                        Gắn kết với cộng đồng, vì cộng đồng và chia sẻ thành công với cộng đồng là những nghĩa cử cao đẹp đã được toàn thể cán bộ, công nhân viên Minh Lộc Group thực hiện. Mỗi thành viên trong hệ thống Minh Lộc Group luôn ý thức sâu sắc trách nhiệm gắn bó và chia sẻ với cộng đồng bằng những hành động thiết thực.
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
-                                        Minh Lộc Group đã tổ chức một Ban công tác xã hội và Quỹ từ thiện riêng để kịp thời chung tay chia sẻ khó khăn với những hoàn cảnh kém may mắn, đồng hành cùng các cơ quan đoàn thể mang lại hạnh phúc ấm no cho người dân gặp khó khăn trong cả nước.
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                            <Box
-                                data-aos="fade-left"
-                                data-aos-duration="1000"
-                                sx={{
-                                    background: 'linear-gradient(135deg, #E7C873 0%, #d4b85a 100%)',
-                                    borderRadius: 1,
-                                    p: 4,
-                                    color: 'white',
-                                }}
-                            >
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
-                                    Các hoạt động nổi bật
+                                {getDataBySection('social_activities')?.content}
+                            </Typography>
+                        </Box>
+                    )}
+
+                    {/* Activities */}
+                    {(() => {
+                        const activities = getDataBySection('social_activities')?.data?.activities;
+                        return activities && activities.length > 0 && (
+                            <Box sx={{ mb: 6 }}>
+                                <Typography
+                                    variant="h4"
+                                    sx={{
+                                        fontWeight: 'bold',
+                                        color: '#1a1a1a',
+                                        mb: 4,
+                                        textAlign: 'center',
+                                    }}
+                                >
+                                    Chương trình và hoạt động từ thiện
                                 </Typography>
-                                <Box component="ul" sx={{ pl: 0, listStyle: 'none' }}>
-                                    {[
-                                        'Chương trình "Mái ấm cho em" - Xây dựng nhà tình thương',
-                                        'Quỹ học bổng "Vì tương lai Việt Nam" - Hỗ trợ học sinh nghèo',
-                                        'Chương trình "Sức khỏe cộng đồng" - Khám bệnh miễn phí',
-                                        'Dự án "Xanh hóa môi trường" - Trồng cây gây rừng',
-                                        'Hỗ trợ người dân vùng lũ lụt, thiên tai',
-                                        'Tặng quà Tết cho gia đình chính sách'
-                                    ].map((item, index) => (
-                                        <Box key={index} component="li" sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
-                                            <Box sx={{ width: 8, height: 8, backgroundColor: 'white', borderRadius: '50%', mr: 2, mt: 1, flexShrink: 0 }} />
-                                            <Typography sx={{ lineHeight: 1.6 }}>{item}</Typography>
-                                        </Box>
+                                <Grid container spacing={4}>
+                                    {activities.map((activity, index) => (
+                                        <Grid item xs={12} md={6} key={index}>
+                                            <Card
+                                                data-aos="fade-up"
+                                                data-aos-delay={index * 200}
+                                                sx={{
+                                                    height: '100%',
+                                                    overflow: 'hidden',
+                                                    '&:hover': {
+                                                        transform: 'translateY(-4px)',
+                                                        boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                                                    },
+                                                    transition: 'all 0.3s ease',
+                                                }}
+                                            >
+                                                {activity.image && (
+                                                    <Box
+                                                        component="img"
+                                                        src={activity.image}
+                                                        alt={activity.title}
+                                                        sx={{
+                                                            width: '100%',
+                                                            height: 200,
+                                                            objectFit: 'cover',
+                                                        }}
+                                                    />
+                                                )}
+                                                <Box sx={{ p: 3 }}>
+                                                    <Typography
+                                                        variant="h6"
+                                                        sx={{
+                                                            fontWeight: 'bold',
+                                                            mb: 2,
+                                                            color: '#1976d2',
+                                                            fontSize: '1.1rem',
+                                                            lineHeight: 1.3
+                                                        }}
+                                                    >
+                                                        {activity.title}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            color: '#666',
+                                                            lineHeight: 1.6,
+                                                            fontSize: '0.9rem'
+                                                        }}
+                                                    >
+                                                        {activity.description}
+                                                    </Typography>
+                                                </Box>
+                                            </Card>
+                                        </Grid>
                                     ))}
-                                </Box>
+                                </Grid>
                             </Box>
-                        </Grid>
-                    </Grid>
+                        );
+                    })()}
+
 
                     <Box sx={{ mt: 6 }}>
                         <Typography
@@ -846,58 +1178,63 @@ export default function AboutPage() {
                                 textAlign: 'center',
                             }}
                         >
-                            Thành tích đạt được
+                            Kết quả và thành tích đạt được
                         </Typography>
                         <Grid container spacing={3}>
-                            {[
-                                { number: '500+', label: 'Gia đình được hỗ trợ' },
-                                { number: '1,000+', label: 'Học sinh nhận học bổng' },
-                                { number: '50+', label: 'Nhà tình thương được xây' },
-                                { number: '10,000+', label: 'Cây xanh được trồng' },
-                                { number: '100+', label: 'Chương trình từ thiện' },
-                                { number: '5 tỷ VNĐ', label: 'Tổng giá trị hỗ trợ' },
-                            ].map((item, index) => (
-                                <Grid item xs={12} sm={6} md={4} key={index}>
-                                    <Card
-                                        data-aos="zoom-in"
-                                        data-aos-delay={index * 100}
-                                        sx={{
-                                            p: 3,
-                                            textAlign: 'center',
-                                            background: 'linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%)',
-                                            '&:hover': {
-                                                transform: 'translateY(-4px)',
-                                                boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                                            },
-                                            transition: 'all 0.3s ease',
-                                        }}
-                                    >
-                                        <Typography
-                                            variant="h3"
-                                            sx={{
-                                                fontWeight: 'bold',
-                                                color: '#1976d2',
-                                                mb: 1,
-                                            }}
-                                        >
-                                            {item.number}
-                                        </Typography>
-                                        <Typography
-                                            variant="body1"
-                                            sx={{
-                                                color: '#666',
-                                                fontWeight: '500',
-                                            }}
-                                        >
-                                            {item.label}
-                                        </Typography>
-                                    </Card>
-                                </Grid>
-                            ))}
+                            {(() => {
+                                const achievements = getDataBySection('social_activities')?.data?.achievements;
+                                return achievements && achievements.length > 0 ?
+                                    achievements.map((item, index) => (
+                                        <Grid item xs={12} sm={6} md={4} key={index}>
+                                            <Card
+                                                data-aos="zoom-in"
+                                                data-aos-delay={index * 100}
+                                                sx={{
+                                                    p: 3,
+                                                    textAlign: 'center',
+                                                    background: 'linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%)',
+                                                    '&:hover': {
+                                                        transform: 'translateY(-4px)',
+                                                        boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                                                    },
+                                                    transition: 'all 0.3s ease',
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="h3"
+                                                    sx={{
+                                                        fontWeight: 'bold',
+                                                        color: '#1976d2',
+                                                        mb: 1,
+                                                    }}
+                                                >
+                                                    {item.number}
+                                                </Typography>
+                                                <Typography
+                                                    variant="body1"
+                                                    sx={{
+                                                        color: '#666',
+                                                        fontWeight: '500',
+                                                    }}
+                                                >
+                                                    {item.label}
+                                                </Typography>
+                                            </Card>
+                                        </Grid>
+                                    )) : (
+                                        <Grid item xs={12}>
+                                            <Box sx={{ textAlign: 'center', py: 4 }}>
+                                                <Typography variant="h6" sx={{ color: '#666', fontStyle: 'italic' }}>
+                                                    Chưa có dữ liệu thành tích
+                                                </Typography>
+                                            </Box>
+                                        </Grid>
+                                    );
+                            })()}
                         </Grid>
                     </Box>
                 </TabPanel>
             </Container>
-        </Layout>
+        </Layout >
     );
 }

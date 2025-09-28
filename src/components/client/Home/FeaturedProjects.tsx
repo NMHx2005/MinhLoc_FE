@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Typography,
@@ -9,37 +9,78 @@ import {
     CardMedia,
     Button,
     Container,
+    CircularProgress,
 } from '@mui/material';
 import { ArrowForward } from '@mui/icons-material';
 import Link from 'next/link';
+import TruncatedDescription from '@/components/client/shared/TruncatedDescription';
+import { getProjects } from '@/services/client/projectService';
+import type { Project } from '@/services/client/projectService';
 
 const FeaturedProjects: React.FC = () => {
-    const projects = [
-        {
-            id: 1,
-            title: 'Picity Sky Park',
-            description: 'Picity Sky Park Bình Đường là Dự án Căn hộ Chung cư cao tầng kết hợp TMDV văn phòng cao cấp tiếp...',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/68/220628_picity-skypark_v02_bird-view-day_final-3.jpg',
-            slug: 'picity-sky-park',
-            featured: true, // Large card
-        },
-        {
-            id: 2,
-            title: 'Vinhomes Grand Park',
-            description: 'Vinhomes Grand Park là Đại đô thị thông minh đẳng cấp quốc tế được vận hành ứng dụng theo các mô...',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/67/the-beverly-27.jpg',
-            slug: 'vinhomes-grand-park',
-            featured: false,
-        },
-        {
-            id: 3,
-            title: 'Diamond Boulevard',
-            description: 'Diamond Boulevard nâng niu đời sống tinh thần cư dân, đem đến cảm hứng sống tràn đầy qua hệ tiện ích...',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/79/1.new.-hb_new-fix.jpg',
-            slug: 'diamond-boulevard',
-            featured: false,
-        },
-    ];
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            try {
+                setLoading(true);
+                const response = await getProjects(1, 3, {});
+                if (response.success) {
+                    setProjects(response.data);
+                } else {
+                    setError('Không thể tải dữ liệu dự án');
+                }
+            } catch (err) {
+                console.error('Error fetching projects:', err);
+                setError('Có lỗi xảy ra khi tải dữ liệu');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProjects();
+    }, []);
+
+    if (loading) {
+        return (
+            <Box sx={{ py: 8, backgroundColor: '#F5F5F5', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (error) {
+        return (
+            <Box sx={{ py: 8, backgroundColor: '#F5F5F5', textAlign: 'center' }}>
+                <Typography variant="h6" color="error">
+                    {error}
+                </Typography>
+            </Box>
+        );
+    }
+
+    if (projects.length === 0) {
+        return (
+            <Box sx={{ py: 8, backgroundColor: '#F5F5F5', textAlign: 'center' }}>
+                <Typography variant="h6">
+                    Không có dự án nào
+                </Typography>
+            </Box>
+        );
+    }
+
+    // Ensure we have at least one project
+    if (!projects[0]) {
+        return (
+            <Box sx={{ py: 8, backgroundColor: '#F5F5F5', textAlign: 'center' }}>
+                <Typography variant="h6">
+                    Dữ liệu dự án không hợp lệ
+                </Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ py: 8, backgroundColor: '#F5F5F5' }}>
@@ -49,8 +90,8 @@ const FeaturedProjects: React.FC = () => {
                     <Typography
                         variant="h3"
                         component="h2"
-                        data-aos="fade-up"
-                        data-aos-duration="1000"
+
+
                         sx={{
                             color: '#E7C873',
                             fontWeight: 700,
@@ -64,17 +105,19 @@ const FeaturedProjects: React.FC = () => {
                 </Box>
 
                 {/* Projects Grid */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, alignItems: 'stretch' }}>
                     {/* Large Featured Project */}
-                    <Box data-aos="fade-right" data-aos-duration="1200">
+                    <Box>
                         <Card
                             sx={{
                                 height: '100%',
-                                position: 'relative',
                                 borderRadius: 0,
                                 overflow: 'hidden',
                                 boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
                                 transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                maxWidth: '100%',
                                 '&:hover': {
                                     transform: 'translateY(-4px)',
                                     boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
@@ -83,91 +126,82 @@ const FeaturedProjects: React.FC = () => {
                         >
                             <CardMedia
                                 component="img"
-                                image={projects[0].image}
-                                alt={projects[0].title}
+                                image={projects[0].images?.[0] || '/modern-house.png'}
+                                alt={projects[0].name || 'Dự án'}
                                 sx={{
                                     objectFit: 'cover',
-                                    position: 'relative',
-                                    transition: 'transform 0.3s ease',
-                                    overflow: 'hidden',
-                                    '&:hover': {
-                                        transform: 'scale(1.05)',
-                                    },
+                                    // height: 200,
+                                    width: '100%',
+                                    flexShrink: 0,
+                                    maxWidth: '100%',
+                                    overflow: 'hidden!important',
                                 }}
                             />
-                            {/* Overlay */}
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    bottom: 0,
-                                    left: 0,
-                                    right: 0,
-                                    p: 3,
-                                    // color: 'white',
-                                }}
-                            >
+                            <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 <Typography
-                                    variant="h4"
+                                    variant="h5"
                                     component="h3"
                                     sx={{
                                         fontWeight: 700,
                                         mb: 2,
-                                        fontSize: { xs: '1.5rem', md: '2rem' },
+                                        fontSize: '1.5rem',
                                         color: '#E7C873',
                                     }}
                                 >
-                                    {projects[0].title}
+                                    {projects[0].name || 'Dự án'}
                                 </Typography>
-                                <Typography
-                                    variant="body1"
+                                <TruncatedDescription
+                                    maxLines={4}
+                                    lineHeight={1.6}
+                                    fontSize="0.95rem"
                                     sx={{
                                         mb: 3,
-                                        fontSize: '1rem',
-                                        lineHeight: 1.6,
-                                        opacity: 0.9,
+                                        color: '#666',
+                                        flex: 1
                                     }}
                                 >
-                                    {projects[0].description}
-                                </Typography>
+                                    {projects[0].description || 'Mô tả dự án'}
+                                </TruncatedDescription>
                                 <Button
                                     component={Link}
-                                    href={`/projects/${projects[0].slug}`}
+                                    href={`/projects/${projects[0].slug || '#'}`}
                                     endIcon={<ArrowForward />}
                                     sx={{
-                                        fontSize: '1rem',
+                                        fontSize: '0.95rem',
                                         fontWeight: 500,
-                                        backgroundColor: 'transparent',
-                                        boxShadow: 'none',
-                                        hover: {
+                                        color: '#E7C873',
+                                        textTransform: 'none',
+                                        alignSelf: 'flex-start',
+                                        p: 0,
+                                        '&:hover': {
                                             backgroundColor: 'transparent',
-                                            boxShadow: 'none',
                                         },
                                     }}
                                 >
                                     Chi tiết
                                 </Button>
-                            </Box>
+                            </CardContent>
                         </Card>
                     </Box>
 
                     {/* Smaller Projects */}
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
-                        {projects.slice(1).map((project, index) => (
+                        {projects.slice(1).map((project) => (
                             <Box
-                                key={project.id}
-                                data-aos="fade-left"
-                                data-aos-duration="1200"
-                                data-aos-delay={index * 200}
+                                key={project._id}
+                                sx={{ flex: '1 1 0', minHeight: 0 }}
                             >
                                 <Card
                                     sx={{
-                                        flex: 1,
+                                        height: '100%',
                                         borderRadius: 0,
                                         overflow: 'hidden',
                                         boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                                         transition: 'transform 0.3s ease, box-shadow 0.3s ease',
                                         display: 'flex',
                                         flexDirection: 'row',
+                                        minHeight: 0,
+                                        maxWidth: '100%',
                                         '&:hover': {
                                             transform: 'translateY(-2px)',
                                         },
@@ -176,50 +210,48 @@ const FeaturedProjects: React.FC = () => {
                                     <CardMedia
                                         component="img"
                                         sx={{
-                                            width: '50%',
+                                            width: '40%',
                                             objectFit: 'cover',
                                             flexShrink: 0,
-                                            transition: 'transform 0.3s ease',
-                                            overflow: 'hidden',
-                                            color: '#E7C873',
-                                            '&:hover': {
-                                                transform: 'scale(1.05)',
-                                            },
+                                            maxWidth: '40%',
+                                            overflow: 'hidden!important',
                                         }}
-                                        image={project.image}
-                                        alt={project.title}
+                                        image={project.images?.[0] || '/modern-house.png'}
+                                        alt={project.name}
                                     />
                                     <CardContent sx={{
                                         p: 3,
                                         flex: 1,
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        justifyContent: 'space-between'
+                                        justifyContent: 'space-between',
+                                        minWidth: 0,
+                                        overflow: 'hidden'
                                     }}>
                                         <Box>
                                             <Typography
-                                                variant="h5"
+                                                variant="h6"
                                                 component="h3"
                                                 sx={{
                                                     fontWeight: 700,
                                                     mb: 2,
-                                                    fontSize: '1.25rem',
+                                                    fontSize: '1.1rem',
                                                     color: '#E7C873',
                                                 }}
                                             >
-                                                {project.title}
+                                                {project.name}
                                             </Typography>
-                                            <Typography
-                                                variant="body2"
+                                            <TruncatedDescription
+                                                maxLines={3}
+                                                lineHeight={1.5}
+                                                fontSize="0.9rem"
                                                 sx={{
-                                                    mb: 3,
-                                                    color: '#666',
-                                                    lineHeight: 1.6,
-                                                    fontSize: '0.95rem',
+                                                    mb: 2,
+                                                    color: '#666'
                                                 }}
                                             >
                                                 {project.description}
-                                            </Typography>
+                                            </TruncatedDescription>
                                         </Box>
                                         <Button
                                             component={Link}
@@ -228,7 +260,7 @@ const FeaturedProjects: React.FC = () => {
                                             sx={{
                                                 color: '#E7C873',
                                                 textTransform: 'none',
-                                                fontSize: '0.95rem',
+                                                fontSize: '0.9rem',
                                                 fontWeight: 500,
                                                 p: 0,
                                                 alignSelf: 'flex-start',

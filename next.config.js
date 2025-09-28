@@ -3,6 +3,25 @@ const nextConfig = {
   // Enable experimental features for better performance
   experimental: {
     optimizePackageImports: ['@mui/material', '@mui/icons-material'],
+    serverComponents: false, // Tắt tạm để kiểm tra
+  },
+  
+  // Webpack configuration to fix module resolution
+  webpack: (config) => {
+    // Fix for webpack module resolution issues
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+    
+    // Ensure proper module resolution
+    config.resolve.alias = {
+      ...config.resolve.alias,
+    };
+    
+    return config;
   },
   
   // Image optimization
@@ -13,6 +32,32 @@ const nextConfig = {
     minimumCacheTTL: 31536000,
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'watermark.lovepik.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
   },
 
   // Compression

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Container,
     Typography,
@@ -10,7 +10,7 @@ import {
     CardMedia,
     Grid,
     Breadcrumbs,
-    Link as MuiLink,
+    Link,
     Button,
     Chip,
     Stack,
@@ -24,7 +24,9 @@ import {
     ListItemText,
     Avatar,
     Paper,
-    Rating,
+    CircularProgress,
+    Alert,
+    IconButton,
 } from '@mui/material';
 import {
     Home,
@@ -35,230 +37,105 @@ import {
     Favorite,
     FavoriteBorder,
     Visibility,
-    Inventory,
     CheckCircle,
     HealthAndSafety,
     Spa,
     Nature
 } from '@mui/icons-material';
-import Link from 'next/link';
 import Layout from '@/components/client/shared/Layout';
-
-interface SamProduct {
-    id: number;
-    name: string;
-    category: 'hong-sam' | 'nhat-sam' | 'han-quoc-sam' | 'my-sam' | 'canada-sam';
-    origin: string;
-    age: string;
-    price: number;
-    originalPrice?: number;
-    image: string;
-    rating: number;
-    reviewCount: number;
-    description: string;
-    benefits: string[];
-    ingredients: string[];
-    usage: string;
-    storage: string;
-    weight: string;
-    isNew: boolean;
-    isBestSeller: boolean;
-    isLimited: boolean;
-    stock: number;
-    slug: string;
-}
+import {
+    getProducts,
+    getCategories,
+    getOrigins,
+    searchProducts,
+    type Product,
+    type ProductFilters,
+    type Category,
+    type Origin
+} from '@/services/client/productService';
 
 const SamTypePage: React.FC = () => {
     const [activeTab, setActiveTab] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [sortBy, setSortBy] = useState('name');
-    const [favorites, setFavorites] = useState<number[]>([]);
+    const [favorites, setFavorites] = useState<string[]>([]);
 
-    const categories = [
-        { value: 'all', label: 'Tất cả loại sâm' },
-        { value: 'hong-sam', label: 'Hồng Sâm' },
-        { value: 'nhat-sam', label: 'Nhật Sâm' },
-        { value: 'han-quoc-sam', label: 'Hàn Quốc Sâm' },
-        { value: 'my-sam', label: 'Mỹ Sâm' },
-        { value: 'canada-sam', label: 'Canada Sâm' },
-    ];
+    // API states
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [_origins, _setOrigins] = useState<Origin[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [_totalPages, _setTotalPages] = useState(1);
+    const [_totalProducts, _setTotalProducts] = useState(0);
 
-    const samProducts: SamProduct[] = [
-        {
-            id: 1,
-            name: 'Hồng Sâm Hàn Quốc 6 năm tuổi',
-            category: 'hong-sam',
-            origin: 'Hàn Quốc',
-            age: '6 năm',
-            price: 2500000,
-            originalPrice: 3000000,
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/87/phoi-canh-tu-can-ho-the-prive-quan-2-anh-theprive-net-vn.jpg',
-            rating: 4.8,
-            reviewCount: 156,
-            description: 'Hồng sâm Hàn Quốc 6 năm tuổi được chế biến từ nhân sâm tươi 6 năm tuổi, có tác dụng bồi bổ sức khỏe, tăng cường miễn dịch và chống lão hóa.',
-            benefits: [
-                'Tăng cường sức đề kháng',
-                'Bồi bổ khí huyết',
-                'Chống lão hóa',
-                'Cải thiện trí nhớ',
-                'Tăng cường sinh lực'
-            ],
-            ingredients: ['Nhân sâm 6 năm tuổi', 'Mật ong', 'Đường phèn', 'Tinh chất sâm'],
-            usage: 'Ngày 1-2 lần, mỗi lần 1-2 viên, uống với nước ấm',
-            storage: 'Bảo quản nơi khô ráo, thoáng mát, tránh ánh nắng trực tiếp',
-            weight: '100g',
-            isNew: true,
-            isBestSeller: true,
-            isLimited: false,
-            stock: 50,
-            slug: 'hong-sam-han-quoc-6-nam-tuoi'
-        },
-        {
-            id: 2,
-            name: 'Nhật Sâm Tươi Cao Cấp',
-            category: 'nhat-sam',
-            origin: 'Nhật Bản',
-            age: '4 năm',
-            price: 1800000,
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/86/th%C3%B4ng-tin-d%E1%BB%B1-%C3%A1n-stown-gateway-h%C3%ACnh-%E1%BA%A3nh-5_6.jpg',
-            rating: 4.6,
-            reviewCount: 89,
-            description: 'Nhật sâm tươi cao cấp được trồng và chăm sóc theo phương pháp truyền thống, giữ nguyên được dưỡng chất quý giá.',
-            benefits: [
-                'Bổ sung năng lượng',
-                'Cải thiện tuần hoàn máu',
-                'Tăng cường chức năng gan',
-                'Hỗ trợ tiêu hóa',
-                'Giảm căng thẳng'
-            ],
-            ingredients: ['Nhật sâm tươi 4 năm tuổi', 'Chất bảo quản tự nhiên'],
-            usage: 'Ngâm với nước ấm 30 phút, uống 1-2 lần/ngày',
-            storage: 'Bảo quản trong tủ lạnh, sử dụng trong 30 ngày',
-            weight: '200g',
-            isNew: false,
-            isBestSeller: false,
-            isLimited: true,
-            stock: 15,
-            slug: 'nhat-sam-tuoi-cao-cap'
-        },
-        {
-            id: 3,
-            name: 'Hàn Quốc Sâm Đỏ Premium',
-            category: 'han-quoc-sam',
-            origin: 'Hàn Quốc',
-            age: '8 năm',
-            price: 3500000,
-            originalPrice: 4000000,
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/85/phoi-canh-the-gio-riverside.jpg',
-            rating: 4.9,
-            reviewCount: 234,
-            description: 'Hàn Quốc sâm đỏ premium 8 năm tuổi - sản phẩm cao cấp nhất với hàm lượng saponin cao, mang lại hiệu quả tối ưu.',
-            benefits: [
-                'Tăng cường miễn dịch mạnh mẽ',
-                'Chống oxy hóa cao',
-                'Cải thiện chức năng não',
-                'Tăng cường sinh lý nam',
-                'Hỗ trợ điều trị tiểu đường'
-            ],
-            ingredients: ['Sâm đỏ Hàn Quốc 8 năm tuổi', 'Chiết xuất sâm', 'Vitamin E', 'Chất chống oxy hóa'],
-            usage: 'Ngày 1 lần, mỗi lần 1 viên, uống trước bữa ăn 30 phút',
-            storage: 'Bảo quản nơi khô ráo, nhiệt độ dưới 25°C',
-            weight: '60 viên',
-            isNew: false,
-            isBestSeller: true,
-            isLimited: false,
-            stock: 25,
-            slug: 'han-quoc-sam-do-premium'
-        },
-        {
-            id: 4,
-            name: 'Mỹ Sâm Tây Bắc',
-            category: 'my-sam',
-            origin: 'Mỹ',
-            age: '5 năm',
-            price: 1200000,
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/84/b%E1%BA%A3n-sao-c%E1%BB%A7a-db06e9991a33a36dfa22.jpg',
-            rating: 4.4,
-            reviewCount: 67,
-            description: 'Mỹ sâm Tây Bắc được trồng tại vùng núi cao, có khí hậu lạnh phù hợp, cho chất lượng sâm đặc biệt.',
-            benefits: [
-                'Tăng cường sức khỏe tổng thể',
-                'Hỗ trợ tim mạch',
-                'Cải thiện giấc ngủ',
-                'Tăng cường trao đổi chất',
-                'Chống viêm nhiễm'
-            ],
-            ingredients: ['Mỹ sâm 5 năm tuổi', 'Chiết xuất thảo dược', 'Khoáng chất tự nhiên'],
-            usage: 'Ngày 2 lần, mỗi lần 1-2 viên, uống với nước',
-            storage: 'Bảo quản nơi khô ráo, tránh ẩm ướt',
-            weight: '80 viên',
-            isNew: true,
-            isBestSeller: false,
-            isLimited: false,
-            stock: 40,
-            slug: 'my-sam-tay-bac'
-        },
-        {
-            id: 5,
-            name: 'Canada Sâm Rừng Organic',
-            category: 'canada-sam',
-            origin: 'Canada',
-            age: '7 năm',
-            price: 2800000,
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/83/photo-3-1728871003192740345375-1728874764904-17288747649761796268016.png',
-            rating: 4.7,
-            reviewCount: 123,
-            description: 'Canada sâm rừng organic được thu hái từ rừng nguyên sinh, không sử dụng hóa chất, đảm bảo độ tinh khiết cao nhất.',
-            benefits: [
-                'Tăng cường năng lượng tự nhiên',
-                'Cải thiện khả năng tập trung',
-                'Hỗ trợ hệ thần kinh',
-                'Tăng cường sức bền',
-                'Chống stress hiệu quả'
-            ],
-            ingredients: ['Canada sâm rừng 7 năm tuổi', 'Chất bảo quản hữu cơ', 'Chiết xuất tự nhiên'],
-            usage: 'Ngày 1-2 lần, mỗi lần 1 viên, nhai kỹ hoặc ngậm tan',
-            storage: 'Bảo quản nơi khô ráo, nhiệt độ phòng',
-            weight: '50 viên',
-            isNew: false,
-            isBestSeller: false,
-            isLimited: true,
-            stock: 8,
-            slug: 'canada-sam-rung-organic'
-        },
-        {
-            id: 6,
-            name: 'Hồng Sâm Nước Cao Cấp',
-            category: 'hong-sam',
-            origin: 'Hàn Quốc',
-            age: '6 năm',
-            price: 800000,
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/81/hinh-anh-tt-avio-3.jpg',
-            rating: 4.5,
-            reviewCount: 98,
-            description: 'Hồng sâm nước cao cấp dạng lỏng, dễ hấp thu, tiện lợi sử dụng mọi lúc mọi nơi.',
-            benefits: [
-                'Hấp thu nhanh chóng',
-                'Tăng cường sức khỏe',
-                'Bổ sung năng lượng',
-                'Cải thiện tuần hoàn',
-                'Tăng cường miễn dịch'
-            ],
-            ingredients: ['Chiết xuất hồng sâm 6 năm tuổi', 'Nước tinh khiết', 'Mật ong', 'Vitamin B'],
-            usage: 'Ngày 1-2 gói, uống trực tiếp hoặc pha với nước ấm',
-            storage: 'Bảo quản nơi khô ráo, tránh ánh nắng',
-            weight: '10 gói x 20ml',
-            isNew: true,
-            isBestSeller: false,
-            isLimited: false,
-            stock: 60,
-            slug: 'hong-sam-nuoc-cao-cap'
+    // Load data from API
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                // Load categories and origins
+                const [categoriesResponse, originsResponse] = await Promise.all([
+                    getCategories(),
+                    getOrigins()
+                ]);
+
+                if (categoriesResponse.success) {
+                    setCategories(categoriesResponse.data);
+                }
+
+                if (originsResponse.success) {
+                    _setOrigins(originsResponse.data);
+                }
+
+                // Load products
+                await loadProducts();
+            } catch (err) {
+                console.error('Error loading data:', err);
+                setError('Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại sau.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, []);
+
+    const loadProducts = async (filters: ProductFilters = {}) => {
+        try {
+            const response = await getProducts({
+                page: 1,
+                limit: 50,
+                isActive: true,
+                ...filters
+            });
+
+            if (response.success) {
+                setProducts(response.data.products);
+                _setTotalPages(response.data.pagination.pages);
+                _setTotalProducts(response.data.pagination.total);
+            }
+        } catch (err) {
+            console.error('Error loading products:', err);
+            setError('Có lỗi xảy ra khi tải danh sách sản phẩm.');
         }
+    };
+
+    // Dynamic categories for filter
+    const categoryOptions = [
+        { value: 'all', label: 'Tất cả loại sâm' },
+        ...categories.map(cat => ({
+            value: cat._id,
+            label: cat.name
+        }))
     ];
 
-    const filteredProducts = samProducts.filter(product => {
-        const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    // Filter and sort products
+    const filteredProducts = products.filter(product => {
+        const matchesCategory = selectedCategory === 'all' || product.categoryId._id === selectedCategory;
         const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             product.description.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesCategory && matchesSearch;
@@ -267,22 +144,53 @@ const SamTypePage: React.FC = () => {
     const sortedProducts = [...filteredProducts].sort((a, b) => {
         switch (sortBy) {
             case 'price-low':
-                return a.price - b.price;
+                return (a.price || 0) - (b.price || 0);
             case 'price-high':
-                return b.price - a.price;
-            case 'rating':
-                return b.rating - a.rating;
+                return (b.price || 0) - (a.price || 0);
+            case 'stock':
+                return (b.stock || 0) - (a.stock || 0);
             case 'name':
             default:
                 return a.name.localeCompare(b.name);
         }
     });
 
+    // Handle search
+    const handleSearch = async () => {
+        if (searchTerm.trim()) {
+            try {
+                const response = await searchProducts(searchTerm, {
+                    category: selectedCategory !== 'all' ? selectedCategory : undefined,
+                    isActive: true
+                });
+
+                if (response.success) {
+                    setProducts(response.data.products);
+                }
+            } catch (err) {
+                console.error('Error searching products:', err);
+                setError('Có lỗi xảy ra khi tìm kiếm sản phẩm.');
+            }
+        } else {
+            await loadProducts({
+                category: selectedCategory !== 'all' ? selectedCategory : undefined
+            });
+        }
+    };
+
+    // Handle category change
+    const handleCategoryChange = async (categoryId: string) => {
+        setSelectedCategory(categoryId);
+        await loadProducts({
+            category: categoryId !== 'all' ? categoryId : undefined
+        });
+    };
+
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
         setActiveTab(newValue);
     };
 
-    const toggleFavorite = (productId: number) => {
+    const toggleFavorite = (productId: string) => {
         setFavorites(prev =>
             prev.includes(productId)
                 ? prev.filter(id => id !== productId)
@@ -290,19 +198,26 @@ const SamTypePage: React.FC = () => {
         );
     };
 
-    const getCategoryColor = (category: string) => {
-        switch (category) {
-            case 'hong-sam': return '#E7C873';
-            case 'nhat-sam': return '#4CAF50';
-            case 'han-quoc-sam': return '#F44336';
-            case 'my-sam': return '#2196F3';
-            case 'canada-sam': return '#9C27B0';
-            default: return '#666';
-        }
+    const getCategoryColor = (categoryId: string) => {
+        const category = categories.find(cat => cat._id === categoryId);
+        if (!category) return '#666';
+
+        // Use category name to determine color
+        const name = category.name.toLowerCase();
+        if (name.includes('hồng') || name.includes('hong')) return '#E7C873';
+        if (name.includes('nhật') || name.includes('nhat')) return '#4CAF50';
+        if (name.includes('hàn') || name.includes('han')) return '#F44336';
+        if (name.includes('mỹ') || name.includes('my')) return '#2196F3';
+        if (name.includes('canada')) return '#9C27B0';
+        return '#666';
     };
 
-    const getCategoryLabel = (category: string) => {
-        return categories.find(cat => cat.value === category)?.label || category;
+
+    const formatPrice = (price: number | undefined) => {
+        if (!price || typeof price !== 'number') {
+            return 'Liên hệ';
+        }
+        return `${price.toLocaleString('vi-VN')} VND`;
     };
 
     return (
@@ -379,10 +294,10 @@ const SamTypePage: React.FC = () => {
             <Box sx={{ backgroundColor: '#f8f9fa', py: 2, borderBottom: '1px solid #e0e0e0' }}>
                 <Container maxWidth="lg">
                     <Breadcrumbs aria-label="breadcrumb">
-                        <MuiLink component={Link} href="/" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Link href="/" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
                             <Home sx={{ mr: 0.5 }} fontSize="inherit" />
                             Trang chủ
-                        </MuiLink>
+                        </Link>
                         <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', color: '#E7C873' }}>
                             <LocalFlorist sx={{ mr: 0.5 }} fontSize="inherit" />
                             Các Loại Sâm
@@ -431,10 +346,25 @@ const SamTypePage: React.FC = () => {
                                             placeholder="Tìm kiếm sản phẩm sâm..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    handleSearch();
+                                                }
+                                            }}
                                             InputProps={{
                                                 startAdornment: (
                                                     <InputAdornment position="start">
                                                         <Search sx={{ color: '#E7C873' }} />
+                                                    </InputAdornment>
+                                                ),
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <Button
+                                                            onClick={handleSearch}
+                                                            sx={{ color: '#E7C873', minWidth: 'auto' }}
+                                                        >
+                                                            Tìm
+                                                        </Button>
                                                     </InputAdornment>
                                                 ),
                                             }}
@@ -456,7 +386,7 @@ const SamTypePage: React.FC = () => {
                                             fullWidth
                                             label="Loại sâm"
                                             value={selectedCategory}
-                                            onChange={(e) => setSelectedCategory(e.target.value)}
+                                            onChange={(e) => handleCategoryChange(e.target.value)}
                                             SelectProps={{
                                                 native: true,
                                             }}
@@ -474,7 +404,7 @@ const SamTypePage: React.FC = () => {
                                                 },
                                             }}
                                         >
-                                            {categories.map((cat) => (
+                                            {categoryOptions.map((cat) => (
                                                 <option key={cat.value} value={cat.value}>
                                                     {cat.label}
                                                 </option>
@@ -508,254 +438,223 @@ const SamTypePage: React.FC = () => {
                                             <option value="name">Tên A-Z</option>
                                             <option value="price-low">Giá thấp đến cao</option>
                                             <option value="price-high">Giá cao đến thấp</option>
-                                            <option value="rating">Đánh giá cao nhất</option>
+                                            <option value="stock">Tồn kho cao nhất</option>
                                         </TextField>
                                     </Grid>
                                 </Grid>
                             </CardContent>
                         </Card>
 
+                        {/* Loading and Error States */}
+                        {loading && (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                                <CircularProgress sx={{ color: '#E7C873' }} />
+                            </Box>
+                        )}
+
+                        {error && (
+                            <Alert severity="error" sx={{ mb: 3 }}>
+                                {error}
+                            </Alert>
+                        )}
+
                         {/* Product Listings */}
-                        <Typography variant="h5" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
-                            Danh sách sản phẩm sâm ({sortedProducts.length})
-                        </Typography>
+                        {!loading && !error && (
+                            <>
+                                <Typography variant="h5" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
+                                    Danh sách sản phẩm sâm ({sortedProducts.length})
+                                </Typography>
 
-                        <Grid container spacing={{ xs: 2, sm: 3, md: 3 }}>
-                            {sortedProducts.map((product, index) => (
-                                <Grid item xs={12} sm={6} lg={4} xl={3} key={product.id}>
-                                    <Card
-                                        data-aos="fade-up"
-                                        data-aos-delay={index * 100}
-                                        sx={{
-                                            height: '100%',
-                                            transition: 'all 0.3s ease',
-                                            borderRadius: 1,
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                                            position: 'relative',
-                                            '&:hover': {
-                                                transform: 'translateY(-4px)',
-                                                boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                                            },
-                                        }}
-                                    >
-                                        <CardContent sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                            {/* Product Image */}
-                                            <Box sx={{ position: 'relative' }}>
-                                                <CardMedia
-                                                    component="img"
-                                                    height="200"
-                                                    image={product.image}
-                                                    alt={product.name}
-                                                    sx={{ objectFit: 'cover' }}
-                                                />
-                                                {/* Product badges */}
-                                                <Box sx={{ position: 'absolute', top: 8, left: 8, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                                    {product.isNew && (
-                                                        <Chip
-                                                            label="MỚI"
-                                                            size="small"
-                                                            sx={{
-                                                                backgroundColor: '#4CAF50',
-                                                                color: 'white',
-                                                                fontWeight: 600,
-                                                            }}
-                                                        />
+                                <Grid container spacing={3}>
+                                    {sortedProducts.map((product) => (
+                                        <Grid item xs={12} sm={6} md={4} key={product._id}>
+                                            <Card
+                                                sx={{
+                                                    height: '100%',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    borderRadius: 2,
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                    transition: 'box-shadow 0.3s ease',
+                                                    '&:hover': {
+                                                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                                                    },
+                                                }}
+                                            >
+                                                {/* Product Image */}
+                                                <Box sx={{ position: 'relative' }}>
+                                                    <CardMedia
+                                                        component="img"
+                                                        height="200"
+                                                        image={product.images?.[0] || '/placeholder-product.jpg'}
+                                                        alt={product.name}
+                                                        sx={{ objectFit: 'cover' }}
+                                                    />
+
+                                                    {/* Stock badge */}
+                                                    {product.stock < 10 && (
+                                                        <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
+                                                            <Chip
+                                                                label="SẮP HẾT"
+                                                                size="small"
+                                                                sx={{
+                                                                    backgroundColor: '#f44336',
+                                                                    color: 'white',
+                                                                    fontWeight: 600,
+                                                                }}
+                                                            />
+                                                        </Box>
                                                     )}
-                                                    {product.isBestSeller && (
-                                                        <Chip
-                                                            label="BÁN CHẠY"
+
+                                                    {/* Favorite button */}
+                                                    <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
+                                                        <IconButton
                                                             size="small"
+                                                            onClick={() => toggleFavorite(product._id)}
                                                             sx={{
-                                                                backgroundColor: '#FF5722',
-                                                                color: 'white',
-                                                                fontWeight: 600,
-                                                            }}
-                                                        />
-                                                    )}
-                                                    {product.isLimited && (
-                                                        <Chip
-                                                            label="CÓ HẠN"
-                                                            size="small"
-                                                            sx={{
-                                                                backgroundColor: '#9C27B0',
-                                                                color: 'white',
-                                                                fontWeight: 600,
-                                                            }}
-                                                        />
-                                                    )}
-                                                </Box>
-                                                {/* Favorite button */}
-                                                <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
-                                                    <Button
-                                                        size="small"
-                                                        onClick={() => toggleFavorite(product.id)}
-                                                        sx={{
-                                                            minWidth: 'auto',
-                                                            p: 1,
-                                                            backgroundColor: 'rgba(255,255,255,0.9)',
-                                                            '&:hover': {
-                                                                backgroundColor: 'rgba(255,255,255,1)',
-                                                            },
-                                                        }}
-                                                    >
-                                                        {favorites.includes(product.id) ? (
-                                                            <Favorite sx={{ color: '#F44336' }} />
-                                                        ) : (
-                                                            <FavoriteBorder sx={{ color: '#666' }} />
-                                                        )}
-                                                    </Button>
-                                                </Box>
-                                            </Box>
-
-                                            <Box sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                                {/* Category */}
-                                                <Chip
-                                                    label={getCategoryLabel(product.category)}
-                                                    size="small"
-                                                    sx={{
-                                                        backgroundColor: getCategoryColor(product.category),
-                                                        color: 'white',
-                                                        fontWeight: 600,
-                                                        mb: 2,
-                                                        alignSelf: 'flex-start',
-                                                    }}
-                                                />
-
-                                                {/* Product name */}
-                                                <Typography
-                                                    variant="h6"
-                                                    sx={{
-                                                        fontWeight: 600,
-                                                        mb: 1,
-                                                        color: '#333',
-                                                        fontSize: '1.1rem',
-                                                        lineHeight: 1.3,
-                                                    }}
-                                                >
-                                                    {product.name}
-                                                </Typography>
-
-                                                {/* Rating */}
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                                    <Rating value={product.rating} precision={0.1} size="small" readOnly />
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        ({product.reviewCount})
-                                                    </Typography>
-                                                </Box>
-
-                                                {/* Product details */}
-                                                <Stack spacing={1} sx={{ mb: 2, flex: 1 }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <HealthAndSafety sx={{ fontSize: 16, color: '#666' }} />
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Xuất xứ: {product.origin}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Spa sx={{ fontSize: 16, color: '#666' }} />
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Tuổi: {product.age}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Inventory sx={{ fontSize: 16, color: '#666' }} />
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Trọng lượng: {product.weight}
-                                                        </Typography>
-                                                    </Box>
-                                                </Stack>
-
-                                                {/* Price */}
-                                                <Box sx={{ mb: 2 }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Typography
-                                                            variant="h6"
-                                                            sx={{
-                                                                fontWeight: 700,
-                                                                color: '#E7C873',
-                                                                fontSize: '1.3rem',
+                                                                backgroundColor: 'rgba(255,255,255,0.9)',
+                                                                '&:hover': {
+                                                                    backgroundColor: 'rgba(255,255,255,1)',
+                                                                },
                                                             }}
                                                         >
-                                                            {product.price.toLocaleString('vi-VN')} VNĐ
-                                                        </Typography>
-                                                        {product.originalPrice && (
-                                                            <Typography
-                                                                variant="body2"
-                                                                sx={{
-                                                                    textDecoration: 'line-through',
-                                                                    color: 'text.secondary',
-                                                                }}
-                                                            >
-                                                                {product.originalPrice.toLocaleString('vi-VN')} VNĐ
-                                                            </Typography>
-                                                        )}
+                                                            {favorites.includes(product._id) ? (
+                                                                <Favorite sx={{ color: '#f44336', fontSize: 20 }} />
+                                                            ) : (
+                                                                <FavoriteBorder sx={{ color: '#666', fontSize: 20 }} />
+                                                            )}
+                                                        </IconButton>
                                                     </Box>
                                                 </Box>
 
-                                                {/* Stock status */}
-                                                <Typography
-                                                    variant="caption"
-                                                    color={product.stock > 10 ? 'success.main' : 'error.main'}
-                                                    sx={{ mb: 2, display: 'block' }}
-                                                >
-                                                    {product.stock > 10 ? 'Còn hàng' : `Chỉ còn ${product.stock} sản phẩm`}
-                                                </Typography>
+                                                <CardContent sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                                    {/* Category */}
+                                                    <Chip
+                                                        label={product.categoryId.name}
+                                                        size="small"
+                                                        sx={{
+                                                            backgroundColor: getCategoryColor(product.categoryId._id),
+                                                            color: 'white',
+                                                            fontWeight: 600,
+                                                            mb: 1,
+                                                            alignSelf: 'flex-start',
+                                                        }}
+                                                    />
 
-                                                {/* Action buttons */}
-                                                <Stack
-                                                    direction={{ xs: 'column', sm: 'row' }}
-                                                    spacing={{ xs: 1, sm: 1 }}
-                                                >
-                                                    <Button
-                                                        variant="outlined"
-                                                        component={Link}
-                                                        href={`/SamType/${product.slug}`}
-                                                        startIcon={<Visibility />}
-                                                        fullWidth
+                                                    {/* Product name */}
+                                                    <Typography
+                                                        variant="h6"
                                                         sx={{
-                                                            borderColor: '#E7C873',
+                                                            fontWeight: 600,
+                                                            mb: 1,
+                                                            color: '#333',
+                                                            fontSize: '1.1rem',
+                                                            lineHeight: 1.3,
+                                                        }}
+                                                    >
+                                                        {product.name}
+                                                    </Typography>
+
+                                                    {/* Grade */}
+                                                    <Chip
+                                                        label={product.grade.toUpperCase()}
+                                                        size="small"
+                                                        sx={{
+                                                            backgroundColor: product.grade === 'premium' ? '#ffd700' : '#4caf50',
+                                                            color: product.grade === 'premium' ? '#333' : 'white',
+                                                            fontWeight: 600,
+                                                            mb: 2,
+                                                            alignSelf: 'flex-start',
+                                                        }}
+                                                    />
+
+                                                    {/* Product details */}
+                                                    <Box sx={{ mb: 2, flex: 1 }}>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                                            <strong>Xuất xứ:</strong> {product.originId.name}
+                                                        </Typography>
+                                                        {product.specifications.age && (
+                                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                                                <strong>Tuổi:</strong> {product.specifications.age} năm
+                                                            </Typography>
+                                                        )}
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            <strong>Trọng lượng:</strong> {product.weight} {product.weightUnit}
+                                                        </Typography>
+                                                    </Box>
+
+                                                    {/* Price */}
+                                                    <Typography
+                                                        variant="h6"
+                                                        sx={{
+                                                            fontWeight: 700,
                                                             color: '#E7C873',
-                                                            py: 1,
-                                                            '&:hover': {
-                                                                backgroundColor: '#E7C873',
-                                                                color: 'white',
-                                                            },
+                                                            fontSize: '1.4rem',
+                                                            mb: 1,
                                                         }}
                                                     >
-                                                        <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                                                            Xem chi tiết
-                                                        </Box>
-                                                        <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                                                            Xem
-                                                        </Box>
-                                                    </Button>
-                                                    <Button
-                                                        variant="contained"
-                                                        startIcon={<ShoppingCart />}
-                                                        fullWidth
-                                                        disabled={product.stock === 0}
+                                                        {formatPrice(product.price)}
+                                                    </Typography>
+
+                                                    {/* Stock status */}
+                                                    <Typography
+                                                        variant="body2"
                                                         sx={{
-                                                            backgroundColor: '#E7C873',
-                                                            py: 1,
-                                                            '&:hover': {
-                                                                backgroundColor: '#d4b85a',
-                                                            },
+                                                            mb: 2,
+                                                            color: product.stock > 10 ? '#4caf50' : '#f44336',
+                                                            fontWeight: 600,
                                                         }}
                                                     >
-                                                        <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                                                            Mua ngay
-                                                        </Box>
-                                                        <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                                                        {product.stock > 10 ? '✓ Còn hàng' : `⚠ Chỉ còn ${product.stock} sản phẩm`}
+                                                    </Typography>
+
+                                                    {/* Action buttons */}
+                                                    <Stack direction="row" spacing={1}>
+                                                        <Button
+                                                            variant="outlined"
+                                                            component={Link}
+                                                            href={`/SamType/${product.slug}`}
+                                                            startIcon={<Visibility />}
+                                                            fullWidth
+                                                            sx={{
+                                                                borderColor: '#E7C873',
+                                                                color: '#E7C873',
+                                                                fontWeight: 600,
+                                                                '&:hover': {
+                                                                    backgroundColor: '#E7C873',
+                                                                    color: 'white',
+                                                                },
+                                                            }}
+                                                        >
+                                                            Xem
+                                                        </Button>
+                                                        <Button
+                                                            variant="contained"
+                                                            startIcon={<ShoppingCart />}
+                                                            fullWidth
+                                                            disabled={product.stock === 0}
+                                                            sx={{
+                                                                backgroundColor: '#E7C873',
+                                                                fontWeight: 600,
+                                                                '&:hover': {
+                                                                    backgroundColor: '#d4b85a',
+                                                                },
+                                                                '&:disabled': {
+                                                                    backgroundColor: '#e0e0e0',
+                                                                    color: '#9e9e9e',
+                                                                }
+                                                            }}
+                                                        >
                                                             Mua
-                                                        </Box>
-                                                    </Button>
-                                                </Stack>
-                                            </Box>
-                                        </CardContent>
-                                    </Card>
+                                                        </Button>
+                                                    </Stack>
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                    ))}
                                 </Grid>
-                            ))}
-                        </Grid>
+                            </>
+                        )}
                     </Box>
                 )}
 
@@ -836,14 +735,16 @@ const SamTypePage: React.FC = () => {
                                             Các loại sâm phổ biến
                                         </Typography>
                                         <List>
-                                            {categories.slice(1).map((category) => (
-                                                <ListItem key={category.value}>
+                                            {categories.map((category) => (
+                                                <ListItem key={category._id}>
                                                     <ListItemIcon>
-                                                        <LocalFlorist sx={{ color: getCategoryColor(category.value) }} />
+                                                        <LocalFlorist sx={{ color: getCategoryColor(category._id) }} />
                                                     </ListItemIcon>
                                                     <ListItemText
-                                                        primary={category.label}
-                                                        primaryTypographyProps={{ fontSize: '0.9rem' }}
+                                                        primary={category.name}
+                                                        secondary={category.description}
+                                                        primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }}
+                                                        secondaryTypographyProps={{ fontSize: '0.8rem' }}
                                                     />
                                                 </ListItem>
                                             ))}

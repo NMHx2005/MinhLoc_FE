@@ -12,9 +12,9 @@ import {
     ListItemText,
     ListItemIcon,
     Avatar,
-    LinearProgress,
     Divider,
 } from '@mui/material';
+import CustomProgressBar from './CustomProgressBar';
 import {
     AccessTime as TimeIcon,
     Devices as DeviceIcon,
@@ -69,29 +69,17 @@ const UserBehavior: React.FC = () => {
 
                         {deviceData.map((device, index) => (
                             <Box key={index} sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                        {device.device}
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        {device.percentage}%
-                                    </Typography>
-                                </Box>
-                                <LinearProgress
-                                    variant="determinate"
+                                <CustomProgressBar
                                     value={device.percentage}
-                                    sx={{
-                                        height: 8,
-                                        borderRadius: 4,
-                                        backgroundColor: 'rgba(0,0,0,0.1)',
-                                        '& .MuiLinearProgress-bar': {
-                                            backgroundColor: device.color,
-                                        },
-                                    }}
+                                    height={8}
+                                    color={device.color}
+                                    backgroundColor="rgba(0,0,0,0.1)"
+                                    borderRadius={4}
+                                    label={device.device}
+                                    valueLabel={`${device.users.toLocaleString()} người dùng`}
+                                    percentagePosition="right"
+                                    animated={true}
                                 />
-                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                    {device.users.toLocaleString()} người dùng
-                                </Typography>
                             </Box>
                         ))}
                     </CardContent>
@@ -109,25 +97,15 @@ const UserBehavior: React.FC = () => {
 
                         {timeSpentData.map((time, index) => (
                             <Box key={index} sx={{ mb: 2 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                        {time.range}
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        {time.percentage}%
-                                    </Typography>
-                                </Box>
-                                <LinearProgress
-                                    variant="determinate"
+                                <CustomProgressBar
                                     value={time.percentage}
-                                    sx={{
-                                        height: 6,
-                                        borderRadius: 3,
-                                        backgroundColor: 'rgba(0,0,0,0.1)',
-                                        '& .MuiLinearProgress-bar': {
-                                            backgroundColor: time.color,
-                                        },
-                                    }}
+                                    height={6}
+                                    color={time.color}
+                                    backgroundColor="rgba(0,0,0,0.1)"
+                                    borderRadius={3}
+                                    label={time.range}
+                                    percentagePosition="right"
+                                    animated={true}
                                 />
                             </Box>
                         ))}
@@ -212,16 +190,17 @@ const UserBehavior: React.FC = () => {
                                             {step.users.toLocaleString()} ({step.percentage}%)
                                         </Typography>
                                     </Box>
-                                    <Box
-                                        sx={{
-                                            height: 20,
-                                            backgroundColor: step.color,
-                                            borderRadius: 2,
-                                            width: `${step.percentage}%`,
-                                            position: 'relative',
-                                            transition: 'width 0.3s ease-in-out',
-                                        }}
-                                    />
+                                    <Box sx={{ position: 'relative', width: '100%' }}>
+                                        <Box
+                                            sx={{
+                                                height: 20,
+                                                backgroundColor: step.color,
+                                                borderRadius: 2,
+                                                width: `${step.percentage}%`,
+                                                transition: 'width 0.3s ease-in-out',
+                                            }}
+                                        />
+                                    </Box>
                                 </Box>
                             ))}
                         </Box>

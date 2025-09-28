@@ -48,8 +48,8 @@ const CompanyDesire: React.FC = () => {
                             variant="h2"
                             component="h1"
                             className="title-home"
-                            data-aos="fade-up"
-                            data-aos-duration="1000"
+
+
                             sx={{
                                 textAlign: 'center',
                                 color: '#E7C873',
@@ -74,9 +74,9 @@ const CompanyDesire: React.FC = () => {
                         >
                             {/* Left Column - Description */}
                             <Box
-                                data-aos="fade-right"
-                                data-aos-duration="1000"
-                                data-aos-delay="200"
+
+
+
                                 sx={{
                                     width: { xs: '100%', lg: '40%' },
                                     maxWidth: { xs: '100%', lg: '400px' }
@@ -158,9 +158,9 @@ const CompanyDesire: React.FC = () => {
 
                             {/* Right Column - Desire Items */}
                             <Box
-                                data-aos="fade-left"
-                                data-aos-duration="1000"
-                                data-aos-delay="400"
+
+
+
                                 sx={{
                                     width: { xs: '100%', lg: '60%' },
                                     flex: 1
@@ -180,9 +180,8 @@ const CompanyDesire: React.FC = () => {
                                         <Box
                                             key={item.id}
                                             component="figure"
-                                            data-aos="zoom-in"
-                                            data-aos-duration="800"
-                                            data-aos-delay={600 + index * 150}
+
+
                                             sx={{
                                                 m: 0,
                                                 p: 3,

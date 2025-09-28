@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Container,
     Typography,
@@ -24,6 +24,7 @@ import {
     ListItemText,
     Avatar,
     Paper,
+    CircularProgress,
 } from '@mui/material';
 import {
     Home,
@@ -47,209 +48,88 @@ import {
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Layout from '@/components/client/shared/Layout';
+import { careersService, type JobPosition, type Department } from '@/services/client/careersService';
 
-interface JobPosition {
-    id: number;
-    title: string;
-    department: string;
-    location: string;
-    type: 'full-time' | 'part-time' | 'contract' | 'internship';
-    salary: string;
-    experience: string;
-    deadline: string;
-    description: string;
-    requirements: string[];
-    benefits: string[];
-    isHot: boolean;
-    isUrgent: boolean;
-}
+// JobPosition interface is now imported from careersService
 
 const CareersPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDepartment, setSelectedDepartment] = useState('all');
-
-    const departments = [
-        { value: 'all', label: 'Tất cả phòng ban' },
-        { value: 'sales', label: 'Kinh doanh' },
-        { value: 'marketing', label: 'Marketing' },
-        { value: 'construction', label: 'Xây dựng' },
-        { value: 'finance', label: 'Tài chính' },
-        { value: 'hr', label: 'Nhân sự' },
-        { value: 'it', label: 'Công nghệ thông tin' },
-    ];
-
-    const jobPositions: JobPosition[] = [
-        {
-            id: 1,
-            title: 'Chuyên viên Kinh doanh Bất động sản',
-            department: 'sales',
-            location: 'TP. Hồ Chí Minh',
-            type: 'full-time',
-            salary: '15-30 triệu VNĐ',
-            experience: '1-3 năm',
-            deadline: '2025-05-15',
-            description: 'Tìm kiếm và tư vấn khách hàng về các sản phẩm bất động sản của công ty. Xây dựng mối quan hệ khách hàng và đạt chỉ tiêu kinh doanh.',
-            requirements: [
-                'Tốt nghiệp Đại học các chuyên ngành liên quan',
-                'Có kinh nghiệm 1-3 năm trong lĩnh vực bất động sản',
-                'Kỹ năng giao tiếp và thuyết phục tốt',
-                'Có khả năng làm việc độc lập và theo nhóm',
-                'Thành thạo tin học văn phòng'
-            ],
-            benefits: [
-                'Lương cơ bản + hoa hồng hấp dẫn',
-                'Thưởng tháng 13, thưởng hiệu quả',
-                'Bảo hiểm xã hội, y tế đầy đủ',
-                'Du lịch công ty hàng năm',
-                'Đào tạo nâng cao chuyên môn'
-            ],
-            isHot: true,
-            isUrgent: false
-        },
-        {
-            id: 2,
-            title: 'Kỹ sư Xây dựng',
-            department: 'construction',
-            location: 'TP. Hồ Chí Minh, Bình Dương',
-            type: 'full-time',
-            salary: '20-35 triệu VNĐ',
-            experience: '2-5 năm',
-            deadline: '2025-04-30',
-            description: 'Tham gia thiết kế, giám sát thi công các dự án bất động sản. Đảm bảo chất lượng và tiến độ công trình.',
-            requirements: [
-                'Tốt nghiệp Đại học chuyên ngành Xây dựng',
-                'Có kinh nghiệm 2-5 năm trong lĩnh vực xây dựng',
-                'Thành thạo AutoCAD, Revit, MS Project',
-                'Có chứng chỉ hành nghề xây dựng',
-                'Khả năng đọc hiểu bản vẽ kỹ thuật'
-            ],
-            benefits: [
-                'Lương thỏa thuận theo năng lực',
-                'Phụ cấp xăng xe, điện thoại',
-                'Bảo hiểm tai nạn 24/7',
-                'Cơ hội thăng tiến rõ ràng',
-                'Môi trường làm việc chuyên nghiệp'
-            ],
-            isHot: false,
-            isUrgent: true
-        },
-        {
-            id: 3,
-            title: 'Chuyên viên Marketing Digital',
-            department: 'marketing',
-            location: 'TP. Hồ Chí Minh',
-            type: 'full-time',
-            salary: '12-20 triệu VNĐ',
-            experience: '1-2 năm',
-            deadline: '2025-05-20',
-            description: 'Phát triển và thực hiện các chiến lược marketing online. Quản lý các kênh truyền thông xã hội và website.',
-            requirements: [
-                'Tốt nghiệp Đại học Marketing, Truyền thông',
-                'Có kinh nghiệm với Google Ads, Facebook Ads',
-                'Kỹ năng viết content và thiết kế cơ bản',
-                'Hiểu biết về SEO, SEM',
-                'Sáng tạo và cập nhật xu hướng'
-            ],
-            benefits: [
-                'Lương cạnh tranh + KPI',
-                'Được đào tạo các khóa học marketing',
-                'Môi trường năng động, sáng tạo',
-                'Cơ hội học hỏi từ chuyên gia',
-                'Team building định kỳ'
-            ],
-            isHot: true,
-            isUrgent: false
-        },
-        {
-            id: 4,
-            title: 'Kế toán Tổng hợp',
-            department: 'finance',
-            location: 'TP. Hồ Chí Minh',
-            type: 'full-time',
-            salary: '10-15 triệu VNĐ',
-            experience: 'Từ 1 năm',
-            deadline: '2025-05-10',
-            description: 'Thực hiện công tác kế toán tổng hợp, lập báo cáo tài chính, quản lý thu chi và ngân sách công ty.',
-            requirements: [
-                'Tốt nghiệp Đại học Kế toán, Tài chính',
-                'Có chứng chỉ kế toán trưởng (ưu tiên)',
-                'Thành thạo Excel, phần mềm kế toán',
-                'Hiểu biết về luật thuế và kế toán',
-                'Tỉ mỉ, cẩn thận, trung thực'
-            ],
-            benefits: [
-                'Lương ổn định theo bậc lương',
-                'Làm việc giờ hành chính',
-                'Bảo hiểm đầy đủ theo quy định',
-                'Môi trường làm việc ổn định',
-                'Cơ hội học tập nâng cao'
-            ],
-            isHot: false,
-            isUrgent: false
-        },
-        {
-            id: 5,
-            title: 'Thực tập sinh Marketing',
-            department: 'marketing',
-            location: 'TP. Hồ Chí Minh',
-            type: 'internship',
-            salary: '3-5 triệu VNĐ',
-            experience: 'Không yêu cầu',
-            deadline: '2025-06-01',
-            description: 'Hỗ trợ team marketing trong các hoạt động truyền thông, sự kiện và nghiên cứu thị trường.',
-            requirements: [
-                'Sinh viên năm 3, 4 hoặc mới tốt nghiệp',
-                'Chuyên ngành Marketing, Kinh tế, Truyền thông',
-                'Có kiến thức cơ bản về marketing',
-                'Kỹ năng tin học văn phòng',
-                'Nhiệt tình, học hỏi'
-            ],
-            benefits: [
-                'Trợ cấp thực tập hấp dẫn',
-                'Được đào tạo bài bản',
-                'Cơ hội trở thành nhân viên chính thức',
-                'Môi trường học tập tốt',
-                'Chế độ nghỉ phép linh hoạt'
-            ],
-            isHot: false,
-            isUrgent: false
-        },
-        {
-            id: 6,
-            title: 'Trưởng phòng Nhân sự',
-            department: 'hr',
-            location: 'TP. Hồ Chí Minh',
-            type: 'full-time',
-            salary: '25-40 triệu VNĐ',
-            experience: '5+ năm',
-            deadline: '2025-04-25',
-            description: 'Quản lý toàn bộ hoạt động nhân sự, xây dựng chính sách nhân sự, tuyển dụng và phát triển nhân tài.',
-            requirements: [
-                'Tốt nghiệp Đại học chuyên ngành Nhân sự, Tâm lý',
-                'Có kinh nghiệm 5+ năm ở vị trí quản lý HR',
-                'Kỹ năng lãnh đạo và quản lý nhóm',
-                'Hiểu biết về luật lao động',
-                'Khả năng lập kế hoạch chiến lược'
-            ],
-            benefits: [
-                'Lương cao + thưởng quản lý',
-                'Quyền ký quyết định nhân sự',
-                'Cơ hội phát triển sự nghiệp cao',
-                'Đào tạo lãnh đạo cao cấp',
-                'Phụ cấp xe xăng, điện thoại'
-            ],
-            isHot: true,
-            isUrgent: true
-        }
-    ];
-
-    const filteredJobs = jobPositions.filter(job => {
-        const matchesDepartment = selectedDepartment === 'all' || job.department === selectedDepartment;
-        const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            job.description.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesDepartment && matchesSearch;
+    const [jobPositions, setJobPositions] = useState<JobPosition[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 10,
+        total: 0,
+        pages: 0
     });
+
+    // Load data from API
+    useEffect(() => {
+        loadJobPositions();
+        loadDepartments();
+    }, []);
+
+    const loadJobPositions = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const filters = {
+                department: selectedDepartment === 'all' ? undefined : selectedDepartment,
+                search: searchTerm || undefined
+            };
+
+            const response = await careersService.getJobPositions(pagination.page, pagination.limit, filters);
+            console.log(response);
+            setJobPositions(response.positions || []);
+            setPagination(response.pagination || {
+                page: 1,
+                limit: 10,
+                total: 0,
+                pages: 0
+            });
+        } catch (err) {
+            console.error('Error loading job positions:', err);
+            setError('Không thể tải danh sách việc làm');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadDepartments = async () => {
+        try {
+            const deptList = await careersService.getDepartments();
+            setDepartments([
+                { value: 'all', label: 'Tất cả phòng ban' },
+                ...(deptList || [])
+            ]);
+        } catch (err) {
+            console.error('Error loading departments:', err);
+        }
+    };
+
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            loadJobPositions();
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm, selectedDepartment]);
+
+    // Handle search and filter changes
+    const handleSearchChange = (value: string) => {
+        setSearchTerm(value);
+        setPagination(prev => ({ ...prev, page: 1 }));
+    };
+
+    const handleDepartmentChange = (value: string) => {
+        setSelectedDepartment(value);
+        setPagination(prev => ({ ...prev, page: 1 }));
+    };
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
         setActiveTab(newValue);
@@ -390,15 +270,32 @@ const CareersPage: React.FC = () => {
                 {activeTab === 0 && (
                     <Box>
                         {/* Search and Filter */}
-                        <Card sx={{ mb: 4, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                            <CardContent sx={{ p: 3 }}>
+                        <Card sx={{
+                            mb: 4,
+                            borderRadius: 3,
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                            background: 'linear-gradient(135deg, rgba(231, 200, 115, 0.05) 0%, rgba(255,255,255,1) 100%)',
+                            border: '1px solid rgba(231, 200, 115, 0.1)'
+                        }}>
+                            <CardContent sx={{ p: 4 }}>
+                                <Typography variant="h6" sx={{
+                                    fontWeight: 600,
+                                    mb: 3,
+                                    color: '#E7C873',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1
+                                }}>
+                                    <Search sx={{ fontSize: 24 }} />
+                                    Tìm kiếm và lọc vị trí tuyển dụng
+                                </Typography>
                                 <Grid container spacing={3}>
-                                    <Grid item xs={12} md={6}>
+                                    <Grid item xs={12} md={8}>
                                         <TextField
                                             fullWidth
-                                            placeholder="Tìm kiếm vị trí công việc..."
+                                            placeholder="Nhập từ khóa tìm kiếm (ví dụ: Kỹ sư, Marketing, Kế toán...)"
                                             value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            onChange={(e) => handleSearchChange(e.target.value)}
                                             InputProps={{
                                                 startAdornment: (
                                                     <InputAdornment position="start">
@@ -408,33 +305,37 @@ const CareersPage: React.FC = () => {
                                             }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
                                                     '&:hover fieldset': {
                                                         borderColor: '#E7C873',
                                                     },
                                                     '&.Mui-focused fieldset': {
                                                         borderColor: '#E7C873',
+                                                        borderWidth: 2,
                                                     },
                                                 },
                                             }}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={6}>
+                                    <Grid item xs={12} md={4}>
                                         <TextField
                                             select
                                             fullWidth
-                                            label="Phòng ban"
+                                            label="Chọn phòng ban"
                                             value={selectedDepartment}
-                                            onChange={(e) => setSelectedDepartment(e.target.value)}
+                                            onChange={(e) => handleDepartmentChange(e.target.value)}
                                             SelectProps={{
                                                 native: true,
                                             }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
                                                     '&:hover fieldset': {
                                                         borderColor: '#E7C873',
                                                     },
                                                     '&.Mui-focused fieldset': {
                                                         borderColor: '#E7C873',
+                                                        borderWidth: 2,
                                                     },
                                                 },
                                                 '& .MuiInputLabel-root.Mui-focused': {
@@ -454,149 +355,377 @@ const CareersPage: React.FC = () => {
                         </Card>
 
                         {/* Job Listings */}
-                        <Typography variant="h5" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
-                            Danh sách vị trí tuyển dụng ({filteredJobs.length})
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                            <Typography variant="h5" sx={{ fontWeight: 600, color: '#E7C873' }}>
+                                Danh sách vị trí tuyển dụng
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Tìm thấy
+                                </Typography>
+                                <Chip
+                                    label={`${pagination.total} vị trí`}
+                                    sx={{
+                                        backgroundColor: '#E7C873',
+                                        color: 'white',
+                                        fontWeight: 600
+                                    }}
+                                />
+                            </Box>
+                        </Box>
 
-                        <Grid container spacing={3}>
-                            {filteredJobs.map((job, index) => (
-                                <Grid item xs={12} md={6} key={job.id}>
-                                    <Card
-                                        data-aos="fade-up"
-                                        data-aos-delay={index * 100}
+                        {loading && (
+                            <Box sx={{
+                                textAlign: 'center',
+                                py: 6,
+                                backgroundColor: 'rgba(231, 200, 115, 0.05)',
+                                borderRadius: 3,
+                                border: '1px solid rgba(231, 200, 115, 0.1)'
+                            }}>
+                                <CircularProgress sx={{ color: '#E7C873', mb: 3, width: 48, height: 48 }} />
+                                <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                    Đang tải danh sách việc làm...
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                    Vui lòng chờ trong giây lát
+                                </Typography>
+                            </Box>
+                        )}
+
+                        {error && (
+                            <Box sx={{
+                                textAlign: 'center',
+                                py: 6,
+                                backgroundColor: 'rgba(244, 67, 54, 0.05)',
+                                borderRadius: 3,
+                                border: '1px solid rgba(244, 67, 54, 0.1)'
+                            }}>
+                                <Typography variant="h6" color="error" sx={{ fontWeight: 600 }}>
+                                    {error}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                    Vui lòng thử lại sau
+                                </Typography>
+                            </Box>
+                        )}
+
+                        {!loading && !error && jobPositions.length === 0 && (
+                            <Box sx={{
+                                textAlign: 'center',
+                                py: 6,
+                                backgroundColor: 'rgba(231, 200, 115, 0.05)',
+                                borderRadius: 3,
+                                border: '1px solid rgba(231, 200, 115, 0.1)'
+                            }}>
+                                <Work sx={{ fontSize: 64, color: '#E7C873', mb: 2 }} />
+                                <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500, mb: 1 }}>
+                                    Không tìm thấy vị trí tuyển dụng nào
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc phòng ban
+                                </Typography>
+                            </Box>
+                        )}
+
+                        {!loading && !error && jobPositions.length > 0 && (
+                            <Grid container spacing={3}>
+                                {jobPositions.map((job, index) => (
+                                    <Grid item xs={12} md={6} key={job._id}>
+                                        <Card
+                                            data-aos="fade-up"
+                                            data-aos-delay={index * 100}
+                                            sx={{
+                                                height: '100%',
+                                                transition: 'all 0.3s ease',
+                                                borderRadius: 2,
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                                position: 'relative',
+                                                border: '1px solid rgba(231, 200, 115, 0.1)',
+                                                '&:hover': {
+                                                    transform: 'translateY(-6px)',
+                                                    boxShadow: '0 12px 30px rgba(231, 200, 115, 0.2)',
+                                                    border: '1px solid rgba(231, 200, 115, 0.3)',
+                                                },
+                                            }}
+                                        >
+                                            <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                                {/* Job badges */}
+                                                <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                                                    {job.isHot && (
+                                                        <Chip
+                                                            label="🔥 HOT"
+                                                            size="small"
+                                                            sx={{
+                                                                backgroundColor: '#FF5722',
+                                                                color: 'white',
+                                                                fontWeight: 600,
+                                                                fontSize: '0.75rem',
+                                                            }}
+                                                        />
+                                                    )}
+                                                    {job.isUrgent && (
+                                                        <Chip
+                                                            label="⚡ URGENT"
+                                                            size="small"
+                                                            sx={{
+                                                                backgroundColor: '#F44336',
+                                                                color: 'white',
+                                                                fontWeight: 600,
+                                                                fontSize: '0.75rem',
+                                                            }}
+                                                        />
+                                                    )}
+                                                    <Chip
+                                                        label={getTypeLabel(job.type)}
+                                                        size="small"
+                                                        sx={{
+                                                            backgroundColor: getTypeColor(job.type),
+                                                            color: 'white',
+                                                            fontWeight: 600,
+                                                            fontSize: '0.75rem',
+                                                        }}
+                                                    />
+                                                </Box>
+
+                                                {/* Job title */}
+                                                <Typography
+                                                    variant="h6"
+                                                    sx={{
+                                                        fontWeight: 600,
+                                                        mb: 2,
+                                                        color: '#333',
+                                                        fontSize: '1.1rem',
+                                                    }}
+                                                >
+                                                    {job.title}
+                                                </Typography>
+
+                                                {/* Job details */}
+                                                <Stack spacing={1.5} sx={{ mb: 2, flex: 1 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                        <Box sx={{
+                                                            backgroundColor: 'rgba(231, 200, 115, 0.1)',
+                                                            borderRadius: '50%',
+                                                            p: 0.5,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}>
+                                                            <Business sx={{ fontSize: 16, color: '#E7C873' }} />
+                                                        </Box>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                                            {departments.find(d => d.value === job.department)?.label}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                        <Box sx={{
+                                                            backgroundColor: 'rgba(231, 200, 115, 0.1)',
+                                                            borderRadius: '50%',
+                                                            p: 0.5,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}>
+                                                            <LocationOn sx={{ fontSize: 16, color: '#E7C873' }} />
+                                                        </Box>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                                            {job.location}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                        <Box sx={{
+                                                            backgroundColor: 'rgba(231, 200, 115, 0.1)',
+                                                            borderRadius: '50%',
+                                                            p: 0.5,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}>
+                                                            <AttachMoney sx={{ fontSize: 16, color: '#E7C873' }} />
+                                                        </Box>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                                            {job.salary}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                        <Box sx={{
+                                                            backgroundColor: 'rgba(231, 200, 115, 0.1)',
+                                                            borderRadius: '50%',
+                                                            p: 0.5,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}>
+                                                            <AccessTime sx={{ fontSize: 16, color: '#E7C873' }} />
+                                                        </Box>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                                            Kinh nghiệm: {job.experience}
+                                                        </Typography>
+                                                    </Box>
+                                                </Stack>
+
+                                                {/* Job description */}
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                    sx={{
+                                                        mb: 3,
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 3,
+                                                        WebkitBoxOrient: 'vertical',
+                                                        overflow: 'hidden',
+                                                    }}
+                                                >
+                                                    {job.description}
+                                                </Typography>
+
+                                                {/* Apply button */}
+                                                <Button
+                                                    component={Link}
+                                                    href="/contact"
+                                                    variant="contained"
+                                                    startIcon={<Send />}
+                                                    fullWidth
+                                                    sx={{
+                                                        backgroundColor: '#E7C873',
+                                                        fontWeight: 600,
+                                                        py: 1.5,
+                                                        borderRadius: 2,
+                                                        textTransform: 'none',
+                                                        fontSize: '1rem',
+                                                        boxShadow: '0 4px 12px rgba(231, 200, 115, 0.3)',
+                                                        '&:hover': {
+                                                            backgroundColor: '#d4b85a',
+                                                            boxShadow: '0 6px 16px rgba(231, 200, 115, 0.4)',
+                                                            transform: 'translateY(-1px)',
+                                                        },
+                                                    }}
+                                                >
+                                                    Ứng tuyển ngay
+                                                </Button>
+
+                                                {/* Deadline */}
+                                                <Box sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    mt: 2,
+                                                    p: 1,
+                                                    backgroundColor: 'rgba(244, 67, 54, 0.05)',
+                                                    borderRadius: 1,
+                                                    border: '1px solid rgba(244, 67, 54, 0.1)'
+                                                }}>
+                                                    <AccessTime sx={{ fontSize: 16, color: '#F44336', mr: 0.5 }} />
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            color: '#F44336',
+                                                            fontWeight: 600,
+                                                            fontSize: '0.8rem'
+                                                        }}
+                                                    >
+                                                        Hạn nộp: {new Date(job.deadline).toLocaleDateString('vi-VN')}
+                                                    </Typography>
+                                                </Box>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        )}
+
+                        {/* Pagination */}
+                        {!loading && !error && pagination.pages > 1 && (
+                            <Box sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                mt: 6,
+                                py: 3,
+                                backgroundColor: 'rgba(231, 200, 115, 0.05)',
+                                borderRadius: 3,
+                                border: '1px solid rgba(231, 200, 115, 0.1)'
+                            }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Button
+                                        variant="outlined"
+                                        disabled={pagination.page === 1}
+                                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                                         sx={{
-                                            height: '100%',
-                                            transition: 'all 0.3s ease',
-                                            borderRadius: 1,
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                                            position: 'relative',
+                                            borderColor: '#E7C873',
+                                            color: '#E7C873',
+                                            borderRadius: 2,
+                                            px: 3,
+                                            fontWeight: 600,
                                             '&:hover': {
-                                                transform: 'translateY(-4px)',
-                                                boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                                                backgroundColor: '#E7C873',
+                                                color: 'white',
+                                                transform: 'translateY(-1px)',
                                             },
+                                            '&:disabled': {
+                                                borderColor: 'rgba(231, 200, 115, 0.3)',
+                                                color: 'rgba(231, 200, 115, 0.3)',
+                                            }
                                         }}
                                     >
-                                        <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                            {/* Job badges */}
-                                            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                                                {job.isHot && (
-                                                    <Chip
-                                                        label="HOT"
-                                                        size="small"
-                                                        sx={{
-                                                            backgroundColor: '#FF5722',
-                                                            color: 'white',
-                                                            fontWeight: 600,
-                                                        }}
-                                                    />
-                                                )}
-                                                {job.isUrgent && (
-                                                    <Chip
-                                                        label="URGENT"
-                                                        size="small"
-                                                        sx={{
-                                                            backgroundColor: '#F44336',
-                                                            color: 'white',
-                                                            fontWeight: 600,
-                                                        }}
-                                                    />
-                                                )}
-                                                <Chip
-                                                    label={getTypeLabel(job.type)}
-                                                    size="small"
-                                                    sx={{
-                                                        backgroundColor: getTypeColor(job.type),
-                                                        color: 'white',
-                                                        fontWeight: 600,
-                                                    }}
-                                                />
-                                            </Box>
-
-                                            {/* Job title */}
-                                            <Typography
-                                                variant="h6"
-                                                sx={{
-                                                    fontWeight: 600,
-                                                    mb: 2,
-                                                    color: '#333',
-                                                    fontSize: '1.1rem',
-                                                }}
-                                            >
-                                                {job.title}
-                                            </Typography>
-
-                                            {/* Job details */}
-                                            <Stack spacing={1} sx={{ mb: 2, flex: 1 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <Business sx={{ fontSize: 18, color: '#666' }} />
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {departments.find(d => d.value === job.department)?.label}
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <LocationOn sx={{ fontSize: 18, color: '#666' }} />
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {job.location}
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <AttachMoney sx={{ fontSize: 18, color: '#666' }} />
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {job.salary}
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <AccessTime sx={{ fontSize: 18, color: '#666' }} />
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Kinh nghiệm: {job.experience}
-                                                    </Typography>
-                                                </Box>
-                                            </Stack>
-
-                                            {/* Job description */}
-                                            <Typography
-                                                variant="body2"
-                                                color="text.secondary"
-                                                sx={{
-                                                    mb: 3,
-                                                    display: '-webkit-box',
-                                                    WebkitLineClamp: 3,
-                                                    WebkitBoxOrient: 'vertical',
-                                                    overflow: 'hidden',
-                                                }}
-                                            >
-                                                {job.description}
-                                            </Typography>
-
-                                            {/* Apply button */}
-                                            <Button
-                                                variant="contained"
-                                                startIcon={<Send />}
-                                                fullWidth
-                                                sx={{
+                                        Trước
+                                    </Button>
+                                    {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(page => (
+                                        <Button
+                                            key={page}
+                                            variant={pagination.page === page ? "contained" : "outlined"}
+                                            onClick={() => setPagination(prev => ({ ...prev, page }))}
+                                            sx={{
+                                                borderRadius: 2,
+                                                px: 2,
+                                                minWidth: 40,
+                                                fontWeight: 600,
+                                                ...(pagination.page === page ? {
                                                     backgroundColor: '#E7C873',
-                                                    fontWeight: 600,
+                                                    boxShadow: '0 4px 12px rgba(231, 200, 115, 0.3)',
                                                     '&:hover': {
                                                         backgroundColor: '#d4b85a',
+                                                        transform: 'translateY(-1px)',
                                                     },
-                                                }}
-                                            >
-                                                Ứng tuyển ngay
-                                            </Button>
-
-                                            {/* Deadline */}
-                                            <Typography
-                                                variant="caption"
-                                                color="error"
-                                                sx={{ textAlign: 'center', mt: 1 }}
-                                            >
-                                                Hạn nộp: {new Date(job.deadline).toLocaleDateString('vi-VN')}
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            ))}
-                        </Grid>
+                                                } : {
+                                                    borderColor: '#E7C873',
+                                                    color: '#E7C873',
+                                                    '&:hover': {
+                                                        backgroundColor: '#E7C873',
+                                                        color: 'white',
+                                                        transform: 'translateY(-1px)',
+                                                    },
+                                                }),
+                                            }}
+                                        >
+                                            {page}
+                                        </Button>
+                                    ))}
+                                    <Button
+                                        variant="outlined"
+                                        disabled={pagination.page === pagination.pages}
+                                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                                        sx={{
+                                            borderColor: '#E7C873',
+                                            color: '#E7C873',
+                                            borderRadius: 2,
+                                            px: 3,
+                                            fontWeight: 600,
+                                            '&:hover': {
+                                                backgroundColor: '#E7C873',
+                                                color: 'white',
+                                                transform: 'translateY(-1px)',
+                                            },
+                                            '&:disabled': {
+                                                borderColor: 'rgba(231, 200, 115, 0.3)',
+                                                color: 'rgba(231, 200, 115, 0.3)',
+                                            }
+                                        }}
+                                    >
+                                        Sau
+                                    </Button>
+                                </Stack>
+                            </Box>
+                        )}
                     </Box>
                 )}
 

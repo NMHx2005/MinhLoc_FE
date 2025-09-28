@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Container,
     Typography,
@@ -14,180 +14,136 @@ import {
     Tabs,
     Tab,
     Pagination,
+    CircularProgress,
+    Alert,
+    TextField,
+    InputAdornment,
 } from '@mui/material';
 import {
     Home,
     Business,
     Search,
+    LocationOn,
+    AttachMoney,
+    SquareFoot,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Layout from '@/components/client/shared/Layout';
-
-interface Project {
-    id: number;
-    title: string;
-    image: string;
-    scale: string;
-    area: string;
-    category: number;
-    slug: string;
-}
+import TruncatedDescription from '@/components/client/shared/TruncatedDescription';
+import {
+    getProjects,
+    getProjectTypes,
+    type Project,
+    type ProjectFilters
+} from '@/services/client/projectService';
 
 const ProjectsPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [projectTypes, setProjectTypes] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalProjects, setTotalProjects] = useState(0);
     const projectsPerPage = 6;
 
+    // Load projects and types from API
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                // Load project types
+                const typesResponse = await getProjectTypes();
+                if (typesResponse.success) {
+                    setProjectTypes(typesResponse.data);
+                }
+
+                // Load projects
+                await loadProjects();
+            } catch (err) {
+                console.error('Error loading data:', err);
+                setError('Không thể tải dữ liệu dự án');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Load projects based on current filters
+    const loadProjects = async () => {
+        try {
+            const filters: ProjectFilters = {};
+
+            // Map tab to type
+            if (activeTab > 0 && projectTypes.length > 0) {
+                const typeMapping: { [key: number]: string } = {
+                    1: 'apartment',
+                    2: 'villa',
+                    3: 'commercial',
+                    4: 'villa',
+                    5: 'office'
+                };
+                filters.type = typeMapping[activeTab];
+            }
+
+            if (searchQuery) {
+                filters.search = searchQuery;
+            }
+
+            // Get all projects first (no pagination from API)
+            const response = await getProjects(1, 1000, filters); // Get large number to get all
+
+            if (response.success) {
+                const allProjects = response.data;
+
+                // Client-side pagination
+                const startIndex = (currentPage - 1) * projectsPerPage;
+                const endIndex = startIndex + projectsPerPage;
+                const paginatedProjects = allProjects.slice(startIndex, endIndex);
+
+                setProjects(paginatedProjects);
+                setTotalPages(Math.ceil(allProjects.length / projectsPerPage));
+                setTotalProjects(allProjects.length);
+            } else {
+                setError('Không thể tải danh sách dự án');
+            }
+        } catch (err) {
+            console.error('Error loading projects:', err);
+            setError('Không thể tải danh sách dự án');
+        }
+    };
+
+    // Reload projects when filters change
+    useEffect(() => {
+        if (projectTypes.length > 0) {
+            loadProjects();
+        }
+    }, [activeTab, currentPage, searchQuery, projectTypes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Create project categories from API types
     const projectCategories = [
-        { id: 0, name: 'TẤT CẢ DỰ ÁN', icon: 'null' },
-        { id: 1, name: 'Căn hộ', icon: 'https://datxanhmiennam.com.vn/Data/Sites/1/media/du-an/canho.png' },
-        { id: 2, name: 'Đất nền', icon: 'https://datxanhmiennam.com.vn/Data/Sites/1/media/du-an/datnen.png' },
-        { id: 3, name: 'BĐS nghỉ dưỡng', icon: 'https://datxanhmiennam.com.vn/Data/Sites/1/media/du-an/bds.png' },
-        { id: 4, name: 'Nhà phố biệt thự', icon: 'https://datxanhmiennam.com.vn/Data/Sites/1/media/du-an/nhapho.png' },
-        { id: 5, name: 'Officetel', icon: 'https://datxanhmiennam.com.vn/Data/Sites/1/media/du-an/off.png' },
+        { id: 0, name: 'TẤT CẢ DỰ ÁN', icon: 'null', type: null },
+        ...projectTypes.map((type, index) => {
+            const typeNames: { [key: string]: string } = {
+                'apartment': 'CĂN HỘ',
+                'villa': 'BIỆT THỰ',
+                'office': 'VĂN PHÒNG',
+                'commercial': 'THƯƠNG MẠI'
+            };
+            return {
+                id: index + 1,
+                name: typeNames[type] || type.toUpperCase(),
+                icon: 'null',
+                type: type
+            };
+        })
     ];
-
-    const projects: Project[] = [
-        // Căn hộ
-        {
-            id: 1,
-            title: 'The Privé',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/87/phoi-canh-tu-can-ho-the-prive-quan-2-anh-theprive-net-vn.jpg',
-            scale: '3175 căn hộ',
-            area: '49 m2 – 95 m2',
-            category: 1,
-            slug: 'the-prive',
-        },
-        {
-            id: 2,
-            title: 'Stown Gateway',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/86/th%C3%B4ng-tin-d%E1%BB%B1-%C3%A1n-stown-gateway-h%C3%ACnh-%E1%BA%A3nh-5_6.jpg',
-            scale: '942 căn hộ',
-            area: '47 m2 – 79 m2',
-            category: 1,
-            slug: 'stown-gateway',
-        },
-        {
-            id: 3,
-            title: 'The Gió Riverside',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/85/phoi-canh-the-gio-riverside.jpg',
-            scale: '2905 căn hộ',
-            area: '41 m2 – 76 m2',
-            category: 1,
-            slug: 'the-gio-riverside',
-        },
-        {
-            id: 4,
-            title: 'Masteri Grand View',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/84/b%E1%BA%A3n-sao-c%E1%BB%A7a-db06e9991a33a36dfa22.jpg',
-            scale: '616 căn hộ',
-            area: '57 m2 – 372 m2',
-            category: 1,
-            slug: 'masteri-grand-view',
-        },
-        {
-            id: 5,
-            title: 'King Crown Infinity',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/83/photo-3-1728871003192740345375-1728874764904-17288747649761796268016.png',
-            scale: '776 căn hộ',
-            area: '54 m2 – 103 m2',
-            category: 1,
-            slug: 'king-crown-infinity',
-        },
-        {
-            id: 6,
-            title: 'TT Avio',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/81/hinh-anh-tt-avio-3.jpg',
-            scale: '2000 căn hộ',
-            area: '37 m2 – 82 m2',
-            category: 1,
-            slug: 'tt-avio',
-        },
-        {
-            id: 7,
-            title: 'Benhill',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/80/photo-1-17237952011711905094232.jpg',
-            scale: '841 căn hộ',
-            area: '37 m2 – 95 m2',
-            category: 1,
-            slug: 'benhill',
-        },
-        {
-            id: 8,
-            title: 'The Felix',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/78/ph%E1%BB%91i-c%E1%BA%A3nh-t%E1%BB%95-th%E1%BB%83.jpg',
-            scale: '1206 căn hộ',
-            area: '48 m2 – 86 m2',
-            category: 1,
-            slug: 'the-felix',
-        },
-        {
-            id: 9,
-            title: 'Eaton Park',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/77/eaton-park-8.jpg',
-            scale: '1980 căn hộ',
-            area: '55 m2 – 90 m2',
-            category: 1,
-            slug: 'eaton-park',
-        },
-        // Đất nền
-        {
-            id: 10,
-            title: 'Lộc Phát Residence',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/39/avatar-loc-phat-residence.jpg',
-            scale: '478 sản phẩm',
-            area: 'Tổng diện tích : 53,300.9m2',
-            category: 2,
-            slug: 'loc-phat-residence',
-        },
-        {
-            id: 11,
-            title: 'Garden Riverside',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/54/h%C3%ACnh-t%E1%BB%95ng-quan-d%E1%BB%B1-%C3%A1n.jpg',
-            scale: 'nhà liền kế 538 lô, biệt thự 155 lô',
-            area: 'Diện tích đất toàn khu: 26,44 ha',
-            category: 2,
-            slug: 'garden-riverside',
-        },
-        {
-            id: 12,
-            title: 'Lakeside Palace',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/5/5.jpg',
-            scale: '46ha',
-            area: 'Dự án đất nền thương mại',
-            category: 2,
-            slug: 'lakeside-palace',
-        },
-        // BĐS nghỉ dưỡng
-        {
-            id: 13,
-            title: 'Diamond Bay Condotel',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/4/7.jpg',
-            scale: '1442 căn hộ du lịch và khách sạn',
-            area: 'Tổng diện tích: hơn 300ha',
-            category: 3,
-            slug: 'diamond-bay-condotel',
-        },
-        // Nhà phố biệt thự
-        {
-            id: 14,
-            title: 'Gem Sky World',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/65/lt_pv_01_birdviewa.jpg',
-            scale: '92.2 ha',
-            area: 'Số lượng sản phẩm: 4.026',
-            category: 4,
-            slug: 'gem-sky-world',
-        },
-    ];
-
-    const filteredProjects = activeTab === 0
-        ? projects
-        : projects.filter(project => project.category === activeTab);
-
-    const totalPages = Math.ceil(filteredProjects.length / projectsPerPage);
-    const startIndex = (currentPage - 1) * projectsPerPage;
-    const endIndex = startIndex + projectsPerPage;
-    const currentProjects = filteredProjects.slice(startIndex, endIndex);
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
         setActiveTab(newValue);
@@ -197,6 +153,15 @@ const ProjectsPage: React.FC = () => {
     const handlePageChange = (_event: React.ChangeEvent<unknown>, page: number) => {
         setCurrentPage(page);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleSearch = async () => {
+        setCurrentPage(1);
+        await loadProjects();
+    };
+
+    const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(event.target.value);
     };
 
     return (
@@ -289,12 +254,15 @@ const ProjectsPage: React.FC = () => {
                                 value={category.id}
                                 label={category.name}
                                 icon={
-                                    <Box
-                                        component="img"
-                                        src={category.icon}
-                                        alt={category.name}
-                                        sx={{ width: 24, height: 24, mr: 1 }}
-                                    />
+                                    category.id === 0 ? (
+                                        <Business sx={{ width: 20, height: 20, mr: 1 }} />
+                                    ) : category.type === 'apartment' ? (
+                                        <Box sx={{ width: 20, height: 20, mr: 1, backgroundColor: '#1976d2', borderRadius: 0.5 }} />
+                                    ) : category.type === 'villa' ? (
+                                        <Box sx={{ width: 20, height: 20, mr: 1, backgroundColor: '#4caf50', borderRadius: 0.5 }} />
+                                    ) : (
+                                        <Box sx={{ width: 20, height: 20, mr: 1, backgroundColor: '#ff9800', borderRadius: 0.5 }} />
+                                    )
                                 }
                                 iconPosition="start"
                             />
@@ -302,11 +270,32 @@ const ProjectsPage: React.FC = () => {
                     </Tabs>
                 </Box>
 
-                {/* Search Button */}
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 4 }}>
+                {/* Search Section */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, gap: 2 }}>
+                    <TextField
+                        placeholder="Tìm kiếm dự án..."
+                        value={searchQuery}
+                        onChange={handleSearchInputChange}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                        sx={{
+                            flexGrow: 1,
+                            maxWidth: 400,
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 1,
+                            },
+                        }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Search />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
                     <Button
                         variant="contained"
-                        startIcon={<Search />}
+                        onClick={handleSearch}
+                        disabled={loading}
                         sx={{
                             backgroundColor: '#E7C873',
                             color: 'white',
@@ -320,106 +309,260 @@ const ProjectsPage: React.FC = () => {
                             },
                         }}
                     >
-                        Tìm kiếm
+                        {loading ? <CircularProgress size={20} color="inherit" /> : 'Tìm kiếm'}
                     </Button>
                 </Box>
 
-                {/* Projects Grid */}
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                            xs: '1fr',
-                            sm: 'repeat(2, 1fr)',
-                            md: 'repeat(3, 1fr)',
-                        },
-                        gap: 3,
-                        mb: 6,
-                    }}
-                >
-                    {currentProjects.map((project, index) => (
-                        <Card
-                            key={project.id}
-                            component={Link}
-                            href={`/projects/${project.slug}`}
-                            data-aos="fade-up"
-                            data-aos-duration="800"
-                            data-aos-delay={index * 100}
+                {/* Error Alert */}
+                {error && (
+                    <Alert severity="error" sx={{ mb: 4 }}>
+                        {error}
+                    </Alert>
+                )}
+
+                {/* Loading State */}
+                {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                        <CircularProgress size={60} />
+                    </Box>
+                ) : (
+                    <>
+                        {/* Projects Grid */}
+                        <Box
                             sx={{
-                                transition: 'all 0.3s ease',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                textDecoration: 'none',
-                                color: 'inherit',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                    boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                                display: 'grid',
+                                gridTemplateColumns: {
+                                    xs: '1fr',
+                                    sm: 'repeat(2, 1fr)',
+                                    md: 'repeat(3, 1fr)',
                                 },
+                                gap: 3,
+                                mb: 6,
                             }}
                         >
-                            <CardMedia
-                                component="img"
-                                height="200"
-                                image={project.image}
-                                alt={project.title}
-                                sx={{
-                                    objectFit: 'cover',
-                                }}
-                            />
-                            <CardContent sx={{ p: 3 }}>
-                                <Typography
-                                    variant="h6"
-                                    component="h3"
+                            {projects.map((project, index) => (
+                                <Card
+                                    key={project._id}
+                                    component={Link}
+                                    href={`/projects/${project.slug}`}
+                                    data-aos="fade-up"
+                                    data-aos-duration="800"
+                                    data-aos-delay={index * 100}
                                     sx={{
-                                        fontSize: '1.25rem',
-                                        fontWeight: 700,
-                                        mb: 2,
-                                        color: '#1a1a1a',
-                                        lineHeight: 1.2,
+                                        transition: 'all 0.3s ease',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                        textDecoration: 'none',
+                                        color: 'inherit',
+                                        '&:hover': {
+                                            transform: 'translateY(-4px)',
+                                            boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                                        },
                                     }}
                                 >
-                                    {project.title}
-                                </Typography>
-
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                                    <Business sx={{ fontSize: '1rem', color: '#666' }} />
-                                    <Typography
-                                        variant="body2"
+                                    <CardMedia
+                                        component="img"
+                                        height="200"
+                                        image={project.images?.[0] || '/images/placeholder-project.jpg'}
+                                        alt={project.name}
                                         sx={{
-                                            color: '#666',
-                                            fontSize: '0.9rem',
-                                        }}
-                                    >
-                                        Quy mô: {project.scale}
-                                    </Typography>
-                                </Box>
-
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <Box
-                                        sx={{
-                                            width: 16,
-                                            height: 16,
-                                            backgroundColor: '#666',
-                                            borderRadius: 0.5,
-                                            mr: 0.5,
+                                            objectFit: 'cover',
                                         }}
                                     />
-                                    <Typography
-                                        variant="body2"
-                                        sx={{
-                                            color: '#666',
-                                            fontSize: '0.9rem',
-                                        }}
-                                    >
-                                        {project.area}
-                                    </Typography>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </Box>
+                                    <CardContent sx={{ p: 3 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                            <Typography
+                                                variant="h6"
+                                                component="h3"
+                                                sx={{
+                                                    fontSize: '1.25rem',
+                                                    fontWeight: 700,
+                                                    color: '#1a1a1a',
+                                                    lineHeight: 1.2,
+                                                    flex: 1,
+                                                    mr: 1,
+                                                    height: '2.4em',
+                                                    overflow: 'hidden',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    textOverflow: 'ellipsis'
+                                                }}
+                                                title={project.name}
+                                            >
+                                                {project.name}
+                                            </Typography>
+                                            {project.isFeatured && (
+                                                <Box
+                                                    sx={{
+                                                        backgroundColor: '#E7C873',
+                                                        color: 'white',
+                                                        px: 1,
+                                                        py: 0.5,
+                                                        borderRadius: 0.5,
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        textTransform: 'uppercase'
+                                                    }}
+                                                >
+                                                    Nổi bật
+                                                </Box>
+                                            )}
+                                        </Box>
+
+                                        <TruncatedDescription
+                                            maxLines={4}
+                                            lineHeight={1.4}
+                                            fontSize="0.9rem"
+                                            sx={{
+                                                color: '#666',
+                                                mb: 2
+                                            }}
+                                        >
+                                            {project.description}
+                                        </TruncatedDescription>
+
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                            <LocationOn sx={{ fontSize: '1rem', color: '#666' }} />
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '0.9rem',
+                                                    flex: 1,
+                                                    height: '1.4em',
+                                                    overflow: 'hidden',
+                                                    whiteSpace: 'nowrap',
+                                                    textOverflow: 'ellipsis'
+                                                }}
+                                                title={project.location}
+                                            >
+                                                {project.location}
+                                            </Typography>
+                                        </Box>
+
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                            <SquareFoot sx={{ fontSize: '1rem', color: '#666' }} />
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '0.9rem',
+                                                }}
+                                            >
+                                                {project.area.min} - {project.area.max} {project.area.unit}
+                                            </Typography>
+                                        </Box>
+
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                            <AttachMoney sx={{ fontSize: '1rem', color: '#1976d2' }} />
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: '#1976d2',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: 600
+                                                }}
+                                            >
+                                                {(project.price.min / 1000000).toFixed(0)} - {(project.price.max / 1000000).toFixed(0)} triệu {project.price.currency}
+                                            </Typography>
+                                        </Box>
+
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                            <Business sx={{ fontSize: '1rem', color: '#666' }} />
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '0.9rem',
+                                                }}
+                                            >
+                                                {project.totalUnits} {project.type === 'apartment' ? 'căn hộ' : project.type === 'villa' ? 'biệt thự' : 'sản phẩm'}
+                                            </Typography>
+                                        </Box>
+
+                                        {/* Status Badge */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                            <Box
+                                                sx={{
+                                                    width: 8,
+                                                    height: 8,
+                                                    borderRadius: '50%',
+                                                    backgroundColor:
+                                                        project.status === 'completed' ? '#4caf50' :
+                                                            project.status === 'construction' ? '#ff9800' :
+                                                                project.status === 'planning' ? '#2196f3' : '#f44336'
+                                                }}
+                                            />
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '0.9rem',
+                                                    textTransform: 'capitalize'
+                                                }}
+                                            >
+                                                {project.status === 'completed' ? 'Hoàn thành' :
+                                                    project.status === 'construction' ? 'Đang xây dựng' :
+                                                        project.status === 'planning' ? 'Chuẩn bị' : 'Bán hết'}
+                                            </Typography>
+                                        </Box>
+
+                                        {/* Developer */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: '#666',
+                                                    fontSize: '0.8rem',
+                                                    fontStyle: 'italic',
+                                                    flex: 1,
+                                                    height: '1.4em',
+                                                    overflow: 'hidden',
+                                                    whiteSpace: 'nowrap',
+                                                    textOverflow: 'ellipsis'
+                                                }}
+                                                title={`Chủ đầu tư: ${project.developer}`}
+                                            >
+                                                {`Chủ đầu tư: ${project.developer}`}
+                                            </Typography>
+                                        </Box>
+
+                                        {/* Sales Rate */}
+                                        {project.salesRate > 0 && (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: '#1976d2',
+                                                        fontSize: '0.9rem',
+                                                        fontWeight: 500
+                                                    }}
+                                                >
+                                                    Đã bán: {project.salesRate.toFixed(1)}%
+                                                </Typography>
+                                            </Box>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </Box>
+
+                        {/* No Projects Message */}
+                        {projects.length === 0 && !loading && (
+                            <Box sx={{ textAlign: 'center', py: 8 }}>
+                                <Typography variant="h6" sx={{ color: '#666', mb: 2 }}>
+                                    Không tìm thấy dự án nào
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: '#999' }}>
+                                    Hãy thử thay đổi bộ lọc hoặc từ khóa tìm kiếm
+                                </Typography>
+                            </Box>
+                        )}
+                    </>
+                )}
 
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {totalPages > 1 && !loading && (
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
                         <Pagination
                             count={totalPages}
@@ -442,6 +585,15 @@ const ProjectsPage: React.FC = () => {
                                 },
                             }}
                         />
+                    </Box>
+                )}
+
+                {/* Results Summary */}
+                {!loading && projects.length > 0 && totalProjects > 0 && (
+                    <Box sx={{ textAlign: 'center', mt: 4, mb: 2 }}>
+                        <Typography variant="body2" sx={{ color: '#666' }}>
+                            Hiển thị {projects.length} trong tổng số {totalProjects} dự án
+                        </Typography>
                     </Box>
                 )}
             </Container>

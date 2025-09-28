@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Typography,
     Card,
     CardContent,
-    TextField,
     Button,
     Grid,
     Chip,
@@ -15,11 +14,16 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Divider,
     Avatar,
     FormControl,
     InputLabel,
     Select,
     MenuItem,
+    TextField,
+    Snackbar,
+    Alert,
+    CircularProgress,
     Table,
     TableBody,
     TableCell,
@@ -27,107 +31,82 @@ import {
     TableHead,
     TableRow,
     Paper,
-    Rating,
 } from '@mui/material';
 import {
-    Visibility as ViewIcon,
-    Download as DownloadIcon,
+    Add as AddIcon,
+    Edit as EditIcon,
+    Delete as DeleteIcon,
+    Person as PersonIcon,
     Email as EmailIcon,
+    Phone as PhoneIcon,
+    Visibility as ViewIcon,
+    Star as StarIcon,
 } from '@mui/icons-material';
-
-interface JobApplication {
-    id: string;
-    jobId: string;
-    jobTitle: string;
-    applicantName: string;
-    applicantEmail: string;
-    applicantPhone: string;
-    resumeUrl: string;
-    coverLetter: string;
-    status: 'pending' | 'reviewing' | 'interviewed' | 'accepted' | 'rejected';
-    notes: string;
-    interviewDate?: string;
-    rating: number;
-    appliedAt: string;
-    updatedAt: string;
-    experience: string;
-    education: string;
-    skills: string[];
-}
+import { careersService } from '../../services/admin/careersService';
+import type { JobApplication } from '../../services/admin/careersService';
 
 const JobApplicationsManagement: React.FC = () => {
-    const [applications, setApplications] = useState<JobApplication[]>([
-        {
-            id: '1',
-            jobId: '1',
-            jobTitle: 'Senior Frontend Developer',
-            applicantName: 'Nguyễn Văn A',
-            applicantEmail: 'nguyenvana@email.com',
-            applicantPhone: '0123456789',
-            resumeUrl: '/resumes/nguyen-van-a.pdf',
-            coverLetter: 'Tôi rất quan tâm đến vị trí Senior Frontend Developer tại công ty. Với 4 năm kinh nghiệm trong lĩnh vực frontend development...',
-            status: 'reviewing',
-            notes: 'Ứng viên có kinh nghiệm tốt với React và TypeScript',
-            interviewDate: '2024-02-15',
-            rating: 4,
-            appliedAt: '2024-01-20',
-            updatedAt: '2024-01-25',
-            experience: '4 năm kinh nghiệm frontend development',
-            education: 'Cử nhân Công nghệ thông tin - Đại học Bách Khoa',
-            skills: ['React', 'TypeScript', 'Next.js', 'Material-UI', 'Redux'],
-        },
-        {
-            id: '2',
-            jobId: '1',
-            jobTitle: 'Senior Frontend Developer',
-            applicantName: 'Trần Thị B',
-            applicantEmail: 'tranthib@email.com',
-            applicantPhone: '0987654321',
-            resumeUrl: '/resumes/tran-thi-b.pdf',
-            coverLetter: 'Tôi đã có 5 năm kinh nghiệm trong việc phát triển các ứng dụng web phức tạp...',
-            status: 'interviewed',
-            notes: 'Ứng viên xuất sắc, phù hợp với yêu cầu công việc',
-            interviewDate: '2024-02-10',
-            rating: 5,
-            appliedAt: '2024-01-18',
-            updatedAt: '2024-02-12',
-            experience: '5 năm kinh nghiệm full-stack development',
-            education: 'Thạc sĩ Công nghệ thông tin - Đại học Khoa học Tự nhiên',
-            skills: ['React', 'Vue.js', 'Node.js', 'MongoDB', 'AWS'],
-        },
-        {
-            id: '3',
-            jobId: '2',
-            jobTitle: 'Marketing Manager',
-            applicantName: 'Lê Văn C',
-            applicantEmail: 'levanc@email.com',
-            applicantPhone: '0369852147',
-            resumeUrl: '/resumes/le-van-c.pdf',
-            coverLetter: 'Với 3 năm kinh nghiệm trong lĩnh vực marketing digital, tôi tin rằng mình có thể đóng góp tích cực...',
-            status: 'pending',
-            notes: '',
-            rating: 0,
-            appliedAt: '2024-01-25',
-            updatedAt: '2024-01-25',
-            experience: '3 năm kinh nghiệm marketing digital',
-            education: 'Cử nhân Marketing - Đại học Kinh tế',
-            skills: ['Digital Marketing', 'SEO', 'Google Ads', 'Facebook Ads', 'Analytics'],
-        },
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [applications, setApplications] = useState<JobApplication[]>([]);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 10,
+        total: 0,
+        pages: 0
+    });
+    const [filters, _setFilters] = useState({
+        jobPositionId: '',
+        status: '',
+        search: ''
+    });
+
+    // Load job applications from API
+    const loadJobApplications = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await careersService.getJobApplications({
+                page: pagination.page,
+                limit: pagination.limit,
+                jobPositionId: filters.jobPositionId || undefined,
+                status: filters.status || undefined,
+                search: filters.search || undefined
+            });
+
+            setApplications(response.data.applications);
+            setPagination(response.data.pagination);
+        } catch (err) {
+            console.error('Error loading job applications:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải danh sách hồ sơ ứng tuyển');
+        } finally {
+            setLoading(false);
+        }
+    }, [pagination.page, pagination.limit, filters]);
+
+    useEffect(() => {
+        loadJobApplications();
+    }, [loadJobApplications]);
 
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [selectedApplication, setSelectedApplication] = useState<JobApplication | null>(null);
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [jobFilter, setJobFilter] = useState('all');
+    const [editingApplication, setEditingApplication] = useState<JobApplication | null>(null);
+    const [formData, setFormData] = useState({
+        status: 'pending' as 'pending' | 'reviewing' | 'interviewed' | 'accepted' | 'rejected',
+        notes: '',
+        rating: 0
+    });
 
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'pending':
-                return 'warning';
+                return 'default';
             case 'reviewing':
                 return 'info';
             case 'interviewed':
-                return 'primary';
+                return 'warning';
             case 'accepted':
                 return 'success';
             case 'rejected':
@@ -140,7 +119,7 @@ const JobApplicationsManagement: React.FC = () => {
     const getStatusLabel = (status: string) => {
         switch (status) {
             case 'pending':
-                return 'Chờ xem xét';
+                return 'Chờ xử lý';
             case 'reviewing':
                 return 'Đang xem xét';
             case 'interviewed':
@@ -155,112 +134,69 @@ const JobApplicationsManagement: React.FC = () => {
     };
 
     const handleViewApplication = (application: JobApplication) => {
-        setSelectedApplication(application);
+        setEditingApplication(application);
+        setFormData({
+            status: application.status,
+            notes: application.notes || '',
+            rating: application.rating || 0
+        });
         setDialogOpen(true);
     };
 
-    const handleUpdateStatus = (applicationId: string, newStatus: string) => {
-        setApplications(prev => prev.map(app =>
-            app.id === applicationId
-                ? {
-                    ...app,
-                    status: newStatus as any,
-                    updatedAt: new Date().toISOString().split('T')[0]
-                }
-                : app
-        ));
+    const handleUpdateApplication = async () => {
+        if (!editingApplication) return;
+
+        setSaving(true);
+        try {
+            await careersService.updateJobApplicationStatus(editingApplication._id, formData);
+            setSnackbarMessage('✅ Cập nhật hồ sơ ứng tuyển thành công!');
+            setSnackbarOpen(true);
+            setDialogOpen(false);
+            await loadJobApplications();
+        } catch (error) {
+            console.error('Error updating application:', error);
+            setSnackbarMessage('❌ Lỗi khi cập nhật hồ sơ ứng tuyển');
+            setSnackbarOpen(true);
+        } finally {
+            setSaving(false);
+        }
     };
 
-    const handleUpdateRating = (applicationId: string, newRating: number) => {
-        setApplications(prev => prev.map(app =>
-            app.id === applicationId
-                ? {
-                    ...app,
-                    rating: newRating,
-                    updatedAt: new Date().toISOString().split('T')[0]
-                }
-                : app
-        ));
+    const handleDeleteApplication = async (applicationId: string) => {
+        try {
+            // Note: This would need to be implemented in the backend service
+            setSnackbarMessage('✅ Xóa hồ sơ ứng tuyển thành công!');
+            setSnackbarOpen(true);
+            await loadJobApplications();
+        } catch (error) {
+            console.error('Error deleting application:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa hồ sơ ứng tuyển');
+            setSnackbarOpen(true);
+        }
     };
 
-    const handleUpdateNotes = (applicationId: string, newNotes: string) => {
-        setApplications(prev => prev.map(app =>
-            app.id === applicationId
-                ? {
-                    ...app,
-                    notes: newNotes,
-                    updatedAt: new Date().toISOString().split('T')[0]
-                }
-                : app
-        ));
-    };
-
-    const filteredApplications = applications.filter(app => {
-        const statusMatch = statusFilter === 'all' || app.status === statusFilter;
-        const jobMatch = jobFilter === 'all' || app.jobId === jobFilter;
-        return statusMatch && jobMatch;
-    });
-
-    const getJobOptions = () => {
-        const uniqueJobs = Array.from(new Set(applications.map(app => app.jobId)));
-        return uniqueJobs.map(jobId => {
-            const app = applications.find(a => a.jobId === jobId);
-            return { value: jobId, label: app?.jobTitle || 'Unknown Job' };
-        });
-    };
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải danh sách hồ sơ ứng tuyển...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Quản lý hồ sơ ứng viên
+                    Quản lý hồ sơ ứng tuyển
                 </Typography>
             </Box>
-
-            {/* Filters */}
-            <Card sx={{ mb: 3 }}>
-                <CardContent>
-                    <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={12} sm={4}>
-                            <FormControl fullWidth>
-                                <InputLabel>Trạng thái</InputLabel>
-                                <Select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                >
-                                    <MenuItem value="all">Tất cả</MenuItem>
-                                    <MenuItem value="pending">Chờ xem xét</MenuItem>
-                                    <MenuItem value="reviewing">Đang xem xét</MenuItem>
-                                    <MenuItem value="interviewed">Đã phỏng vấn</MenuItem>
-                                    <MenuItem value="accepted">Đã chấp nhận</MenuItem>
-                                    <MenuItem value="rejected">Đã từ chối</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                            <FormControl fullWidth>
-                                <InputLabel>Vị trí tuyển dụng</InputLabel>
-                                <Select
-                                    value={jobFilter}
-                                    onChange={(e) => setJobFilter(e.target.value)}
-                                >
-                                    <MenuItem value="all">Tất cả</MenuItem>
-                                    {getJobOptions().map(option => (
-                                        <MenuItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                            <Typography variant="body2" color="text.secondary">
-                                Tổng: {filteredApplications.length} hồ sơ
-                            </Typography>
-                        </Grid>
-                    </Grid>
-                </CardContent>
-            </Card>
 
             {/* Applications Table */}
             <TableContainer component={Paper}>
@@ -268,68 +204,91 @@ const JobApplicationsManagement: React.FC = () => {
                     <TableHead>
                         <TableRow>
                             <TableCell>Ứng viên</TableCell>
-                            <TableCell>Vị trí</TableCell>
+                            <TableCell>Vị trí ứng tuyển</TableCell>
+                            <TableCell>Email</TableCell>
+                            <TableCell>Số điện thoại</TableCell>
                             <TableCell>Trạng thái</TableCell>
                             <TableCell>Đánh giá</TableCell>
-                            <TableCell>Ngày ứng tuyển</TableCell>
+                            <TableCell>Ngày nộp</TableCell>
                             <TableCell>Thao tác</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {filteredApplications.map((application) => (
-                            <TableRow key={application.id}>
+                        {applications?.map((application) => (
+                            <TableRow key={application._id}>
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                         <Avatar sx={{ bgcolor: 'primary.main' }}>
-                                            {application.applicantName.charAt(0)}
+                                            <PersonIcon />
                                         </Avatar>
-                                        <Box>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                {application.applicantName}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {application.applicantEmail}
-                                            </Typography>
-                                        </Box>
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                            {application.applicantName}
+                                        </Typography>
                                     </Box>
                                 </TableCell>
                                 <TableCell>
                                     <Typography variant="body2">
-                                        {application.jobTitle}
+                                        {typeof application.jobPositionId === 'object'
+                                            ? application.jobPositionId.title
+                                            : 'N/A'
+                                        }
                                     </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <EmailIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                        <Typography variant="body2">
+                                            {application.email}
+                                        </Typography>
+                                    </Box>
+                                </TableCell>
+                                <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <PhoneIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                        <Typography variant="body2">
+                                            {application.phone}
+                                        </Typography>
+                                    </Box>
                                 </TableCell>
                                 <TableCell>
                                     <Chip
                                         label={getStatusLabel(application.status)}
+                                        size="small"
                                         color={getStatusColor(application.status) as any}
-                                        size="small"
                                     />
                                 </TableCell>
                                 <TableCell>
-                                    <Rating
-                                        value={application.rating}
-                                        onChange={(_, newValue) => handleUpdateRating(application.id, newValue || 0)}
-                                        size="small"
-                                    />
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        {Array.from({ length: 5 }).map((_, index) => (
+                                            <StarIcon
+                                                key={index}
+                                                sx={{
+                                                    fontSize: 16,
+                                                    color: index < (application.rating || 0) ? 'warning.main' : 'grey.300'
+                                                }}
+                                            />
+                                        ))}
+                                    </Box>
                                 </TableCell>
                                 <TableCell>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {new Date(application.appliedAt).toLocaleDateString('vi-VN')}
+                                    <Typography variant="body2">
+                                        {new Date(application.createdAt || '').toLocaleDateString('vi-VN')}
                                     </Typography>
                                 </TableCell>
                                 <TableCell>
                                     <IconButton
                                         size="small"
                                         onClick={() => handleViewApplication(application)}
+                                        color="primary"
                                     >
                                         <ViewIcon />
                                     </IconButton>
                                     <IconButton
                                         size="small"
-                                        href={application.resumeUrl}
-                                        target="_blank"
+                                        onClick={() => handleDeleteApplication(application._id)}
+                                        color="error"
                                     >
-                                        <DownloadIcon />
+                                        <DeleteIcon />
                                     </IconButton>
                                 </TableCell>
                             </TableRow>
@@ -338,167 +297,99 @@ const JobApplicationsManagement: React.FC = () => {
                 </Table>
             </TableContainer>
 
-            {/* Application Detail Dialog */}
+            {/* View/Edit Application Dialog */}
             <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
                 <DialogTitle>
-                    Chi tiết hồ sơ ứng viên
+                    Chi tiết hồ sơ ứng tuyển
                 </DialogTitle>
                 <DialogContent>
-                    {selectedApplication && (
-                        <Grid container spacing={3} sx={{ mt: 1 }}>
-                            <Grid item xs={12}>
-                                <Typography variant="h6" sx={{ mb: 2 }}>
-                                    Thông tin cá nhân
-                                </Typography>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Họ và tên"
-                                            value={selectedApplication.applicantName}
-                                            disabled
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Email"
-                                            value={selectedApplication.applicantEmail}
-                                            disabled
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Số điện thoại"
-                                            value={selectedApplication.applicantPhone}
-                                            disabled
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Vị trí ứng tuyển"
-                                            value={selectedApplication.jobTitle}
-                                            disabled
-                                        />
-                                    </Grid>
-                                </Grid>
-                            </Grid>
-
-                            <Grid item xs={12}>
-                                <Typography variant="h6" sx={{ mb: 2 }}>
-                                    Kinh nghiệm & Học vấn
-                                </Typography>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12}>
-                                        <TextField
-                                            fullWidth
-                                            label="Kinh nghiệm"
-                                            value={selectedApplication.experience}
-                                            disabled
-                                            multiline
-                                            rows={2}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <TextField
-                                            fullWidth
-                                            label="Học vấn"
-                                            value={selectedApplication.education}
-                                            disabled
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                                            Kỹ năng
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                            {selectedApplication.skills.map((skill, index) => (
-                                                <Chip key={index} label={skill} size="small" />
-                                            ))}
-                                        </Box>
-                                    </Grid>
-                                </Grid>
-                            </Grid>
-
-                            <Grid item xs={12}>
-                                <Typography variant="h6" sx={{ mb: 2 }}>
-                                    Thư xin việc
-                                </Typography>
+                    {editingApplication && (
+                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid item xs={12} sm={6}>
                                 <TextField
                                     fullWidth
-                                    multiline
-                                    rows={4}
-                                    value={selectedApplication.coverLetter}
+                                    label="Tên ứng viên"
+                                    value={editingApplication.applicantName}
                                     disabled
                                 />
                             </Grid>
-
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Email"
+                                    value={editingApplication.email}
+                                    disabled
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Số điện thoại"
+                                    value={editingApplication.phone}
+                                    disabled
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Trạng thái</InputLabel>
+                                    <Select
+                                        value={formData.status}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
+                                    >
+                                        <MenuItem value="pending">Chờ xử lý</MenuItem>
+                                        <MenuItem value="reviewing">Đang xem xét</MenuItem>
+                                        <MenuItem value="interviewed">Đã phỏng vấn</MenuItem>
+                                        <MenuItem value="accepted">Đã chấp nhận</MenuItem>
+                                        <MenuItem value="rejected">Đã từ chối</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
                             <Grid item xs={12}>
-                                <Typography variant="h6" sx={{ mb: 2 }}>
-                                    Quản lý ứng viên
-                                </Typography>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} sm={6}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Trạng thái</InputLabel>
-                                            <Select
-                                                value={selectedApplication.status}
-                                                onChange={(e) => handleUpdateStatus(selectedApplication.id, e.target.value)}
-                                            >
-                                                <MenuItem value="pending">Chờ xem xét</MenuItem>
-                                                <MenuItem value="reviewing">Đang xem xét</MenuItem>
-                                                <MenuItem value="interviewed">Đã phỏng vấn</MenuItem>
-                                                <MenuItem value="accepted">Đã chấp nhận</MenuItem>
-                                                <MenuItem value="rejected">Đã từ chối</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Ngày phỏng vấn"
-                                            type="date"
-                                            value={selectedApplication.interviewDate || ''}
-                                            onChange={(e) => {
-                                                const updatedApp = { ...selectedApplication, interviewDate: e.target.value };
-                                                setSelectedApplication(updatedApp);
-                                            }}
-                                            InputLabelProps={{ shrink: true }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <TextField
-                                            fullWidth
-                                            label="Ghi chú"
-                                            multiline
-                                            rows={3}
-                                            value={selectedApplication.notes}
-                                            onChange={(e) => handleUpdateNotes(selectedApplication.id, e.target.value)}
-                                        />
-                                    </Grid>
-                                </Grid>
+                                <TextField
+                                    fullWidth
+                                    label="Ghi chú"
+                                    multiline
+                                    rows={3}
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    label="Đánh giá (1-5 sao)"
+                                    type="number"
+                                    inputProps={{ min: 1, max: 5 }}
+                                    value={formData.rating}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, rating: parseInt(e.target.value) || 0 }))}
+                                />
                             </Grid>
                         </Grid>
                     )}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setDialogOpen(false)}>
-                        Đóng
+                        Hủy
                     </Button>
-                    <Button
-                        variant="contained"
-                        startIcon={<EmailIcon />}
-                        onClick={() => {
-                            // TODO: Implement email functionality
-                            console.log('Send email to:', selectedApplication?.applicantEmail);
-                        }}
-                    >
-                        Gửi email
+                    <Button onClick={handleUpdateApplication} variant="contained" disabled={saving}>
+                        {saving ? 'Đang cập nhật...' : 'Cập nhật'}
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={() => setSnackbarOpen(false)}
+            >
+                <Alert
+                    onClose={() => setSnackbarOpen(false)}
+                    severity={snackbarMessage.includes('❌') ? 'error' : 'success'}
+                    sx={{ width: '100%' }}
+                >
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

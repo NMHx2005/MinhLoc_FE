@@ -2,641 +2,460 @@
 
 import React, { useState } from 'react';
 import {
-    Box,
-    Card,
-    CardContent,
-    Typography,
-    Button,
-    Grid,
-    List,
-    ListItem,
-    ListItemText,
-    ListItemSecondaryAction,
-    IconButton,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Alert,
-    Snackbar,
-    LinearProgress,
-    Chip,
-    FormControlLabel,
-    Switch,
-    TextField,
-    Divider,
+    Box, Card, CardContent, Typography, Button, Grid,
+    Alert, Snackbar, CircularProgress, Divider, List,
+    ListItem, ListItemIcon, ListItemText, ListItemSecondaryAction,
+    IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
+    TextField, FormControl, InputLabel, Select, MenuItem,
+    FormControlLabel, Switch, Checkbox
 } from '@mui/material';
 import {
-    Backup as BackupIcon,
-    Restore as RestoreIcon,
-    Download as DownloadIcon,
-    Upload as UploadIcon,
-    Delete as DeleteIcon,
-    Storage as StorageIcon,
-    Settings as SettingsIcon,
+    Backup as BackupIcon, Restore as RestoreIcon, Download as DownloadIcon,
+    Upload as UploadIcon, Delete as DeleteIcon, Schedule as ScheduleIcon,
+    Storage as StorageIcon, Warning as WarningIcon, CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 
-interface BackupFile {
-    id: string;
-    name: string;
-    size: string;
-    date: string;
-    type: 'manual' | 'auto';
-    status: 'completed' | 'failed' | 'in_progress';
-    tables: string[];
-    description: string;
-}
-
-interface BackupConfig {
-    autoBackup: boolean;
-    backupSchedule: string;
-    retentionDays: number;
-    includeFiles: boolean;
-    includeDatabase: boolean;
-    backupLocation: 'local' | 'cloud';
-    cloudProvider: string;
-    maxBackupSize: number;
-}
-
 const BackupRestore: React.FC = () => {
-    const [backups, setBackups] = useState<BackupFile[]>([
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+
+    const [showBackupDialog, setShowBackupDialog] = useState(false);
+    const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+    const [backupData, setBackupData] = useState({
+        name: '',
+        description: '',
+        includeFiles: true,
+        includeDatabase: true,
+        includeSettings: true
+    });
+
+    const [restoreFile, setRestoreFile] = useState<File | null>(null);
+
+    // Mock data for backup history
+    const [backupHistory] = useState([
         {
             id: '1',
-            name: 'full_backup_20240122_150000',
-            size: '156.7 MB',
-            date: '2024-01-22T15:00:00',
-            type: 'auto',
-            status: 'completed',
-            tables: ['users', 'projects', 'products', 'contacts', 'orders'],
-            description: 'Sao lưu tự động hàng ngày'
+            name: 'Full Backup - 2024-01-15',
+            date: '2024-01-15T10:30:00Z',
+            size: '2.5 GB',
+            type: 'Full',
+            status: 'Completed'
         },
         {
             id: '2',
-            name: 'manual_backup_20240121_093000',
-            size: '142.3 MB',
-            date: '2024-01-21T09:30:00',
-            type: 'manual',
-            status: 'completed',
-            tables: ['users', 'projects', 'products'],
-            description: 'Sao lưu thủ công trước khi cập nhật'
+            name: 'Database Only - 2024-01-14',
+            date: '2024-01-14T18:00:00Z',
+            size: '150 MB',
+            type: 'Database',
+            status: 'Completed'
         },
         {
             id: '3',
-            name: 'full_backup_20240120_150000',
-            size: '139.8 MB',
-            date: '2024-01-20T15:00:00',
-            type: 'auto',
-            status: 'completed',
-            tables: ['users', 'projects', 'products', 'contacts', 'orders'],
-            description: 'Sao lưu tự động hàng ngày'
-        },
-        {
-            id: '4',
-            name: 'full_backup_20240119_150000',
-            size: '0 MB',
-            date: '2024-01-19T15:00:00',
-            type: 'auto',
-            status: 'failed',
-            tables: [],
-            description: 'Sao lưu thất bại - lỗi kết nối database'
+            name: 'Files Only - 2024-01-13',
+            date: '2024-01-13T12:00:00Z',
+            size: '1.8 GB',
+            type: 'Files',
+            status: 'Completed'
         }
     ]);
 
-    const [config, setConfig] = useState<BackupConfig>({
-        autoBackup: true,
-        backupSchedule: 'daily',
-        retentionDays: 30,
-        includeFiles: true,
-        includeDatabase: true,
-        backupLocation: 'local',
-        cloudProvider: 'aws-s3',
-        maxBackupSize: 1024
-    });
-
-    const [loading, setLoading] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [saved, setSaved] = useState(false);
-    const [backupDialog, setBackupDialog] = useState(false);
-    const [restoreDialog, setRestoreDialog] = useState(false);
-    const [selectedBackup, setSelectedBackup] = useState<BackupFile | null>(null);
-    const [deleteDialog, setDeleteDialog] = useState(false);
-
-    const handleConfigChange = (field: keyof BackupConfig) => (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = ['retentionDays', 'maxBackupSize'].includes(field)
-            ? parseInt(event.target.value)
-            : event.target.value;
-
-        setConfig({
-            ...config,
-            [field]: value,
-        });
-    };
-
-    const handleSwitchChange = (field: keyof BackupConfig) => (event: React.ChangeEvent<HTMLInputElement>) => {
-        setConfig({
-            ...config,
-            [field]: event.target.checked,
-        });
-    };
-
-    const handleSaveConfig = async () => {
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setLoading(false);
-        setSaved(true);
-    };
-
     const handleCreateBackup = async () => {
-        setBackupDialog(false);
-        setLoading(true);
-        setProgress(0);
+        try {
+            setSaving(true);
+            setError(null);
 
-        // Simulate backup progress
-        const interval = setInterval(() => {
-            setProgress(prev => {
-                if (prev >= 100) {
-                    clearInterval(interval);
-                    setLoading(false);
+            // Simulate backup creation
+            await new Promise(resolve => setTimeout(resolve, 3000));
 
-                    // Add new backup to list
-                    const newBackup: BackupFile = {
-                        id: (backups.length + 1).toString(),
-                        name: `manual_backup_${new Date().toISOString().replace(/[:.]/g, '').slice(0, 15)}`,
-                        size: `${(Math.random() * 200 + 50).toFixed(1)} MB`,
-                        date: new Date().toISOString(),
-                        type: 'manual',
-                        status: 'completed',
-                        tables: ['users', 'projects', 'products', 'contacts', 'orders'],
-                        description: 'Sao lưu thủ công'
-                    };
-                    setBackups([newBackup, ...backups]);
-                    return 100;
-                }
-                return prev + 10;
+            setSnackbarMessage('✅ Tạo backup thành công!');
+            setSnackbarOpen(true);
+            setShowBackupDialog(false);
+            setBackupData({
+                name: '',
+                description: '',
+                includeFiles: true,
+                includeDatabase: true,
+                includeSettings: true
             });
-        }, 300);
+        } catch (err) {
+            console.error('Error creating backup:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tạo backup');
+        } finally {
+            setSaving(false);
+        }
     };
 
-    const handleRestore = async () => {
-        if (!selectedBackup) return;
+    const handleRestoreBackup = async () => {
+        if (!restoreFile) return;
 
-        setRestoreDialog(false);
-        setLoading(true);
-        setProgress(0);
+        try {
+            setSaving(true);
+            setError(null);
 
-        // Simulate restore progress
-        const interval = setInterval(() => {
-            setProgress(prev => {
-                if (prev >= 100) {
-                    clearInterval(interval);
-                    setLoading(false);
-                    return 100;
-                }
-                return prev + 15;
-            });
-        }, 400);
+            // Simulate restore process
+            await new Promise(resolve => setTimeout(resolve, 5000));
+
+            setSnackbarMessage('✅ Khôi phục backup thành công!');
+            setSnackbarOpen(true);
+            setShowRestoreDialog(false);
+            setRestoreFile(null);
+        } catch (err) {
+            console.error('Error restoring backup:', err);
+            setError(err instanceof Error ? err.message : 'Không thể khôi phục backup');
+        } finally {
+            setSaving(false);
+        }
     };
 
-    const handleDownload = (backup: BackupFile) => {
+    const handleDownloadBackup = (backupId: string) => {
         // Simulate download
-        const link = document.createElement('a');
-        link.href = '#';
-        link.download = `${backup.name}.sql`;
-        link.click();
+        setSnackbarMessage('✅ Bắt đầu tải xuống backup...');
+        setSnackbarOpen(true);
     };
 
-    const handleDelete = async () => {
-        if (!selectedBackup) return;
-
-        setBackups(backups.filter(b => b.id !== selectedBackup.id));
-        setDeleteDialog(false);
-        setSelectedBackup(null);
+    const handleDeleteBackup = (backupId: string) => {
+        // Simulate delete
+        setSnackbarMessage('✅ Xóa backup thành công!');
+        setSnackbarOpen(true);
     };
 
-    const getStatusColor = (status: BackupFile['status']) => {
-        switch (status) {
-            case 'completed': return 'success';
-            case 'failed': return 'error';
-            case 'in_progress': return 'warning';
-            default: return 'default';
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setRestoreFile(file);
         }
-    };
-
-    const getStatusLabel = (status: BackupFile['status']) => {
-        switch (status) {
-            case 'completed': return 'Hoàn thành';
-            case 'failed': return 'Thất bại';
-            case 'in_progress': return 'Đang xử lý';
-            default: return status;
-        }
-    };
-
-    const getTypeLabel = (type: BackupFile['type']) => {
-        return type === 'auto' ? 'Tự động' : 'Thủ công';
     };
 
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
+
             <Grid container spacing={3}>
-                {/* Backup Configuration */}
+                {/* Backup Actions */}
                 <Grid item xs={12} md={6}>
                     <Card>
                         <CardContent>
-                            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                                <SettingsIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                                Cấu hình Sao lưu
+                            <Typography variant="h6" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                                <BackupIcon sx={{ mr: 1 }} />
+                                Tạo Backup
                             </Typography>
 
-                            <Grid container spacing={3}>
-                                <Grid item xs={12}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={config.autoBackup}
-                                                onChange={handleSwitchChange('autoBackup')}
-                                            />
-                                        }
-                                        label="Sao lưu tự động"
-                                    />
-                                </Grid>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                Tạo bản sao lưu toàn bộ dữ liệu hệ thống bao gồm database, files và cài đặt.
+                            </Typography>
 
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        fullWidth
-                                        select
-                                        label="Lịch sao lưu"
-                                        value={config.backupSchedule}
-                                        onChange={handleConfigChange('backupSchedule')}
-                                        disabled={!config.autoBackup}
-                                        SelectProps={{ native: true }}
-                                    >
-                                        <option value="hourly">Mỗi giờ</option>
-                                        <option value="daily">Hàng ngày</option>
-                                        <option value="weekly">Hàng tuần</option>
-                                        <option value="monthly">Hàng tháng</option>
-                                    </TextField>
-                                </Grid>
-
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        fullWidth
-                                        label="Lưu trữ (ngày)"
-                                        type="number"
-                                        value={config.retentionDays}
-                                        onChange={handleConfigChange('retentionDays')}
-                                        helperText="Tự động xóa backup cũ"
-                                    />
-                                </Grid>
-
-                                <Grid item xs={12}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={config.includeDatabase}
-                                                onChange={handleSwitchChange('includeDatabase')}
-                                            />
-                                        }
-                                        label="Bao gồm Database"
-                                    />
-                                </Grid>
-
-                                <Grid item xs={12}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={config.includeFiles}
-                                                onChange={handleSwitchChange('includeFiles')}
-                                            />
-                                        }
-                                        label="Bao gồm Files"
-                                    />
-                                </Grid>
-
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        fullWidth
-                                        select
-                                        label="Vị trí lưu trữ"
-                                        value={config.backupLocation}
-                                        onChange={handleConfigChange('backupLocation')}
-                                        SelectProps={{ native: true }}
-                                    >
-                                        <option value="local">Local Server</option>
-                                        <option value="cloud">Cloud Storage</option>
-                                    </TextField>
-                                </Grid>
-
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        fullWidth
-                                        label="Kích thước tối đa (MB)"
-                                        type="number"
-                                        value={config.maxBackupSize}
-                                        onChange={handleConfigChange('maxBackupSize')}
-                                    />
-                                </Grid>
-
-                                {config.backupLocation === 'cloud' && (
-                                    <Grid item xs={12}>
-                                        <TextField
-                                            fullWidth
-                                            select
-                                            label="Cloud Provider"
-                                            value={config.cloudProvider}
-                                            onChange={handleConfigChange('cloudProvider')}
-                                            SelectProps={{ native: true }}
-                                        >
-                                            <option value="aws-s3">AWS S3</option>
-                                            <option value="google-cloud">Google Cloud</option>
-                                            <option value="azure">Azure Blob</option>
-                                            <option value="dropbox">Dropbox</option>
-                                        </TextField>
-                                    </Grid>
-                                )}
-                            </Grid>
-
-                            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                                <Button
-                                    variant="contained"
-                                    onClick={handleSaveConfig}
-                                    disabled={loading}
-                                    sx={{
-                                        backgroundColor: '#E7C873',
-                                        color: '#000',
-                                        '&:hover': {
-                                            backgroundColor: '#d4b86a',
-                                        },
-                                    }}
-                                >
-                                    Lưu cấu hình
-                                </Button>
-                            </Box>
+                            <Button
+                                variant="contained"
+                                fullWidth
+                                startIcon={<BackupIcon />}
+                                onClick={() => setShowBackupDialog(true)}
+                                sx={{
+                                    backgroundColor: '#E7C873',
+                                    color: '#000',
+                                    '&:hover': {
+                                        backgroundColor: '#d4b86a',
+                                    },
+                                }}
+                            >
+                                Tạo Backup Mới
+                            </Button>
                         </CardContent>
                     </Card>
                 </Grid>
 
-                {/* Quick Actions */}
+                {/* Restore Actions */}
                 <Grid item xs={12} md={6}>
                     <Card>
                         <CardContent>
-                            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                                <StorageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                                Thao tác nhanh
+                            <Typography variant="h6" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                                <RestoreIcon sx={{ mr: 1 }} />
+                                Khôi phục Backup
                             </Typography>
 
-                            <Grid container spacing={2}>
-                                <Grid item xs={12}>
-                                    <Button
-                                        fullWidth
-                                        variant="contained"
-                                        size="large"
-                                        startIcon={<BackupIcon />}
-                                        onClick={() => setBackupDialog(true)}
-                                        disabled={loading}
-                                        sx={{
-                                            backgroundColor: '#4caf50',
-                                            '&:hover': {
-                                                backgroundColor: '#388e3c',
-                                            },
-                                            mb: 2
-                                        }}
-                                    >
-                                        Tạo Backup ngay
-                                    </Button>
-                                </Grid>
-
-                                <Grid item xs={12}>
-                                    <Button
-                                        fullWidth
-                                        variant="outlined"
-                                        size="large"
-                                        startIcon={<UploadIcon />}
-                                        component="label"
-                                        disabled={loading}
-                                    >
-                                        Tải lên Backup file
-                                        <input
-                                            type="file"
-                                            accept=".sql,.zip"
-                                            hidden
-                                            onChange={(e) => {
-                                                // Handle file upload
-                                                if (e.target.files?.[0]) {
-                                                    // Process file upload
-                                                }
-                                            }}
-                                        />
-                                    </Button>
-                                </Grid>
-                            </Grid>
-
-                            <Divider sx={{ my: 3 }} />
-
-                            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-                                Thống kê Storage:
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                Khôi phục dữ liệu từ file backup. Hãy cẩn thận vì thao tác này sẽ ghi đè dữ liệu hiện tại.
                             </Typography>
 
-                            <Box sx={{ mb: 2 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2">Tổng dung lượng</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        438.8 MB / 2 GB
-                                    </Typography>
-                                </Box>
-                                <LinearProgress
-                                    variant="determinate"
-                                    value={22}
-                                    sx={{ height: 8, borderRadius: 4 }}
-                                />
-                            </Box>
-
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                    Tổng số backup: {backups.length}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    Backup cuối: {new Date(backups[0]?.date).toLocaleDateString('vi-VN')}
-                                </Typography>
-                            </Box>
+                            <Button
+                                variant="outlined"
+                                fullWidth
+                                startIcon={<RestoreIcon />}
+                                onClick={() => setShowRestoreDialog(true)}
+                                color="warning"
+                            >
+                                Khôi phục từ File
+                            </Button>
                         </CardContent>
                     </Card>
                 </Grid>
 
-                {/* Backup Files List */}
+                {/* Backup History */}
                 <Grid item xs={12}>
                     <Card>
                         <CardContent>
-                            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                                Danh sách Backup Files
+                            <Typography variant="h6" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                                <StorageIcon sx={{ mr: 1 }} />
+                                Lịch sử Backup
                             </Typography>
 
-                            {loading && (
-                                <Box sx={{ mb: 3 }}>
-                                    <Typography variant="body2" sx={{ mb: 1 }}>
-                                        {progress < 100 ? 'Đang xử lý...' : 'Hoàn thành!'}
-                                    </Typography>
-                                    <LinearProgress
-                                        variant="determinate"
-                                        value={progress}
-                                        sx={{ height: 8, borderRadius: 4 }}
-                                    />
-                                </Box>
-                            )}
-
                             <List>
-                                {backups.map((backup) => (
-                                    <ListItem key={backup.id} divider>
-                                        <ListItemText
-                                            primary={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                                        {backup.name}
-                                                    </Typography>
-                                                    <Chip
-                                                        label={getStatusLabel(backup.status)}
-                                                        color={getStatusColor(backup.status)}
-                                                        size="small"
-                                                    />
-                                                    <Chip
-                                                        label={getTypeLabel(backup.type)}
-                                                        variant="outlined"
-                                                        size="small"
-                                                    />
-                                                </Box>
-                                            }
-                                            secondary={
-                                                `${backup.description} • Kích thước: ${backup.size} • Ngày: ${new Date(backup.date).toLocaleString('vi-VN')} • Tables: ${backup.tables.join(', ')}`
-                                            }
-                                        />
-                                        <ListItemSecondaryAction>
-                                            <IconButton
-                                                onClick={() => handleDownload(backup)}
-                                                color="primary"
-                                                disabled={backup.status !== 'completed'}
-                                            >
-                                                <DownloadIcon />
-                                            </IconButton>
-                                            <IconButton
-                                                onClick={() => {
-                                                    setSelectedBackup(backup);
-                                                    setRestoreDialog(true);
-                                                }}
-                                                color="warning"
-                                                disabled={backup.status !== 'completed'}
-                                            >
-                                                <RestoreIcon />
-                                            </IconButton>
-                                            <IconButton
-                                                onClick={() => {
-                                                    setSelectedBackup(backup);
-                                                    setDeleteDialog(true);
-                                                }}
-                                                color="error"
-                                            >
-                                                <DeleteIcon />
-                                            </IconButton>
-                                        </ListItemSecondaryAction>
-                                    </ListItem>
+                                {backupHistory.map((backup, index) => (
+                                    <React.Fragment key={backup.id}>
+                                        <ListItem>
+                                            <ListItemIcon>
+                                                <BackupIcon color="primary" />
+                                            </ListItemIcon>
+                                            <ListItemText
+                                                primary={backup.name}
+                                                secondary={
+                                                    <Box component="div">
+                                                        <Box component="div" sx={{ mb: 0.5 }}>
+                                                            {new Date(backup.date).toLocaleString('vi-VN')} • {backup.size} • {backup.type}
+                                                        </Box>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                            <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main', mr: 0.5 }} />
+                                                            <Box component="span" sx={{ fontSize: '0.75rem', color: 'success.main' }}>
+                                                                {backup.status}
+                                                            </Box>
+                                                        </Box>
+                                                    </Box>
+                                                }
+                                            />
+                                            <ListItemSecondaryAction>
+                                                <IconButton
+                                                    edge="end"
+                                                    onClick={() => handleDownloadBackup(backup.id)}
+                                                    sx={{ mr: 1 }}
+                                                >
+                                                    <DownloadIcon />
+                                                </IconButton>
+                                                <IconButton
+                                                    edge="end"
+                                                    onClick={() => handleDeleteBackup(backup.id)}
+                                                    color="error"
+                                                >
+                                                    <DeleteIcon />
+                                                </IconButton>
+                                            </ListItemSecondaryAction>
+                                        </ListItem>
+                                        {index < backupHistory.length - 1 && <Divider />}
+                                    </React.Fragment>
                                 ))}
                             </List>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                {/* Auto Backup Settings */}
+                <Grid item xs={12}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="h6" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                                <ScheduleIcon sx={{ mr: 1 }} />
+                                Cài đặt Backup Tự động
+                            </Typography>
+
+                            <Alert severity="info" sx={{ mb: 3 }}>
+                                Tính năng backup tự động sẽ được phát triển trong phiên bản tiếp theo.
+                            </Alert>
+
+                            <Grid container spacing={3}>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth>
+                                        <InputLabel>Tần suất backup</InputLabel>
+                                        <Select value="daily" disabled>
+                                            <MenuItem value="daily">Hàng ngày</MenuItem>
+                                            <MenuItem value="weekly">Hàng tuần</MenuItem>
+                                            <MenuItem value="monthly">Hàng tháng</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+
+                                <Grid item xs={12} md={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Giờ backup"
+                                        type="time"
+                                        value="02:00"
+                                        disabled
+                                        InputLabelProps={{ shrink: true }}
+                                    />
+                                </Grid>
+
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth
+                                        label="Số lượng backup giữ lại"
+                                        type="number"
+                                        value="30"
+                                        disabled
+                                    />
+                                </Grid>
+                            </Grid>
                         </CardContent>
                     </Card>
                 </Grid>
             </Grid>
 
             {/* Create Backup Dialog */}
-            <Dialog
-                open={backupDialog}
-                onClose={() => setBackupDialog(false)}
-                maxWidth="sm"
-                fullWidth
-            >
-                <DialogTitle>Tạo Backup mới</DialogTitle>
+            <Dialog open={showBackupDialog} onClose={() => setShowBackupDialog(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Tạo Backup Mới</DialogTitle>
                 <DialogContent>
-                    <Typography variant="body1" sx={{ mb: 2 }}>
-                        Bạn có muốn tạo một backup file mới không?
-                    </Typography>
-                    <Alert severity="info">
-                        Quá trình backup có thể mất vài phút tùy thuộc vào kích thước dữ liệu.
-                    </Alert>
+                    <Grid container spacing={3} sx={{ mt: 1 }}>
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                label="Tên backup"
+                                value={backupData.name}
+                                onChange={(e) => setBackupData(prev => ({ ...prev, name: e.target.value }))}
+                                placeholder="Backup - 2024-01-15"
+                            />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                label="Mô tả"
+                                multiline
+                                rows={3}
+                                value={backupData.description}
+                                onChange={(e) => setBackupData(prev => ({ ...prev, description: e.target.value }))}
+                                placeholder="Mô tả về backup này..."
+                            />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                                Bao gồm:
+                            </Typography>
+                            <Grid container spacing={1}>
+                                <Grid item xs={12}>
+                                    <FormControlLabel
+                                        control={
+                                            <input
+                                                type="checkbox"
+                                                checked={backupData.includeDatabase}
+                                                onChange={(e) => setBackupData(prev => ({ ...prev, includeDatabase: e.target.checked }))}
+                                            />
+                                        }
+                                        label="Database"
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <FormControlLabel
+                                        control={
+                                            <input
+                                                type="checkbox"
+                                                checked={backupData.includeFiles}
+                                                onChange={(e) => setBackupData(prev => ({ ...prev, includeFiles: e.target.checked }))}
+                                            />
+                                        }
+                                        label="Files & Media"
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <FormControlLabel
+                                        control={
+                                            <input
+                                                type="checkbox"
+                                                checked={backupData.includeSettings}
+                                                onChange={(e) => setBackupData(prev => ({ ...prev, includeSettings: e.target.checked }))}
+                                            />
+                                        }
+                                        label="Settings & Configuration"
+                                    />
+                                </Grid>
+                            </Grid>
+                        </Grid>
+                    </Grid>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setBackupDialog(false)}>Hủy</Button>
+                    <Button onClick={() => setShowBackupDialog(false)}>Hủy</Button>
                     <Button
                         onClick={handleCreateBackup}
                         variant="contained"
-                        startIcon={<BackupIcon />}
+                        disabled={saving || !backupData.name}
+                        startIcon={saving ? <CircularProgress size={20} /> : <BackupIcon />}
                     >
-                        Tạo Backup
+                        {saving ? 'Đang tạo...' : 'Tạo Backup'}
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            {/* Restore Dialog */}
-            <Dialog
-                open={restoreDialog}
-                onClose={() => setRestoreDialog(false)}
-                maxWidth="sm"
-                fullWidth
-            >
-                <DialogTitle>Khôi phục dữ liệu</DialogTitle>
+            {/* Restore Backup Dialog */}
+            <Dialog open={showRestoreDialog} onClose={() => setShowRestoreDialog(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Khôi phục từ Backup</DialogTitle>
                 <DialogContent>
-                    <Typography variant="body1" sx={{ mb: 2 }}>
-                        Bạn có chắc muốn khôi phục dữ liệu từ backup "{selectedBackup?.name}"?
-                    </Typography>
-                    <Alert severity="warning">
-                        <strong>Cảnh báo:</strong> Tất cả dữ liệu hiện tại sẽ bị ghi đè.
-                        Hành động này không thể hoàn tác.
+                    <Alert severity="warning" sx={{ mb: 3 }}>
+                        <Typography variant="body2">
+                            <strong>Cảnh báo:</strong> Thao tác này sẽ ghi đè toàn bộ dữ liệu hiện tại.
+                            Hãy đảm bảo bạn đã tạo backup trước khi thực hiện.
+                        </Typography>
                     </Alert>
+
+                    <Box sx={{ textAlign: 'center', py: 3 }}>
+                        <input
+                            accept=".zip,.tar,.gz"
+                            style={{ display: 'none' }}
+                            id="restore-file-upload"
+                            type="file"
+                            onChange={handleFileUpload}
+                        />
+                        <label htmlFor="restore-file-upload">
+                            <Button
+                                variant="outlined"
+                                component="span"
+                                startIcon={<UploadIcon />}
+                                size="large"
+                            >
+                                Chọn file backup
+                            </Button>
+                        </label>
+                        {restoreFile && (
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    File đã chọn: {restoreFile.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    Kích thước: {(restoreFile.size / 1024 / 1024).toFixed(2)} MB
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setRestoreDialog(false)}>Hủy</Button>
+                    <Button onClick={() => setShowRestoreDialog(false)}>Hủy</Button>
                     <Button
-                        onClick={handleRestore}
+                        onClick={handleRestoreBackup}
                         variant="contained"
                         color="warning"
-                        startIcon={<RestoreIcon />}
+                        disabled={saving || !restoreFile}
+                        startIcon={saving ? <CircularProgress size={20} /> : <RestoreIcon />}
                     >
-                        Khôi phục
+                        {saving ? 'Đang khôi phục...' : 'Khôi phục'}
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            {/* Delete Dialog */}
-            <Dialog
-                open={deleteDialog}
-                onClose={() => setDeleteDialog(false)}
-                maxWidth="sm"
-                fullWidth
-            >
-                <DialogTitle>Xóa Backup</DialogTitle>
-                <DialogContent>
-                    <Typography variant="body1">
-                        Bạn có chắc muốn xóa backup "{selectedBackup?.name}"?
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteDialog(false)}>Hủy</Button>
-                    <Button
-                        onClick={handleDelete}
-                        variant="contained"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                    >
-                        Xóa
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Success Snackbar */}
+            {/* Snackbar */}
             <Snackbar
-                open={saved}
-                autoHideDuration={3000}
-                onClose={() => setSaved(false)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={() => setSnackbarOpen(false)}
             >
-                <Alert onClose={() => setSaved(false)} severity="success">
-                    Cấu hình backup đã được lưu thành công!
+                <Alert
+                    onClose={() => setSnackbarOpen(false)}
+                    severity="success"
+                    sx={{ width: '100%' }}
+                >
+                    {snackbarMessage}
                 </Alert>
             </Snackbar>
         </Box>

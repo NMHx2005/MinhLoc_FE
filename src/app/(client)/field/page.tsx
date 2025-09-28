@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Container,
     Typography,
@@ -18,6 +18,8 @@ import {
     ListItem,
     ListItemIcon,
     ListItemText,
+    CircularProgress,
+    Alert,
 } from '@mui/material';
 import {
     Home,
@@ -31,99 +33,104 @@ import {
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Layout from '@/components/client/shared/Layout';
+import { getBusinessFields, type BusinessField, getStatusLabel, getStatusColor } from '@/services/client/businessFieldService';
 
 const FieldPage: React.FC = () => {
     const [activeField, setActiveField] = useState(0);
+    const [businessFields, setBusinessFields] = useState<BusinessField[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const businessFields = [
-        {
-            id: 0,
-            title: 'Xây Dựng',
-            subtitle: 'Chuyên nghiệp - Chất lượng - Uy tín',
-            description: 'Minh Lộc Group là đơn vị tiên phong trong lĩnh vực xây dựng với hơn 15 năm kinh nghiệm. Chúng tôi cam kết mang đến những công trình chất lượng cao, đáp ứng mọi nhu cầu từ nhà ở đến các dự án thương mại quy mô lớn.',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/media/du-an/canho.png',
-            icon: <Construction />,
-            color: '#E7C873',
-            features: [
-                'Thiết kế kiến trúc chuyên nghiệp',
-                'Thi công đúng tiến độ cam kết',
-                'Vật liệu chất lượng cao',
-                'Bảo hành dài hạn',
-                'Đội ngũ kỹ sư giàu kinh nghiệm',
-                'Tuân thủ quy chuẩn an toàn'
-            ],
-            projects: [
-                { name: 'Khu đô thị Minh Lộc', scale: '500 căn hộ', status: 'Hoàn thành' },
-                { name: 'Tòa nhà văn phòng A', scale: '20 tầng', status: 'Đang thi công' },
-                { name: 'Chung cư cao cấp B', scale: '300 căn hộ', status: 'Hoàn thành' }
-            ],
-            stats: {
-                projects: '50+',
-                area: '1.2M m²',
-                experience: '15+ năm'
+    // Load business fields from API
+    useEffect(() => {
+        const loadBusinessFields = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const response = await getBusinessFields();
+
+                if (response) {
+                    setBusinessFields(response);
+                } else {
+                    setError('Không thể tải danh sách lĩnh vực hoạt động');
+                }
+            } catch (err) {
+                console.error('Error loading business fields:', err);
+                setError('Không thể tải danh sách lĩnh vực hoạt động');
+            } finally {
+                setLoading(false);
             }
-        },
-        {
-            id: 1,
-            title: 'Đầu Tư Tài Chính',
-            subtitle: 'Tăng trưởng bền vững - Lợi nhuận cao',
-            description: 'Với chiến lược đầu tư thông minh và đa dạng hóa danh mục, Minh Lộc Group đã tạo ra những cơ hội đầu tư sinh lời cao cho khách hàng. Chúng tôi tập trung vào các lĩnh vực có tiềm năng tăng trưởng mạnh mẽ.',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/media/du-an/datnen.png',
-            icon: <AccountBalance />,
-            color: '#2E7D32',
-            features: [
-                'Phân tích thị trường chuyên sâu',
-                'Đa dạng hóa danh mục đầu tư',
-                'Quản lý rủi ro hiệu quả',
-                'Tư vấn tài chính cá nhân',
-                'Báo cáo minh bạch',
-                'Hỗ trợ 24/7'
-            ],
-            projects: [
-                { name: 'Quỹ đầu tư BĐS', scale: '500 tỷ VNĐ', status: 'Đang hoạt động' },
-                { name: 'Dự án cổ phiếu', scale: '200 tỷ VNĐ', status: 'Hoàn thành' },
-                { name: 'Đầu tư vàng', scale: '100 tỷ VNĐ', status: 'Đang hoạt động' }
-            ],
-            stats: {
-                return: '15-25%',
-                clients: '1000+',
-                experience: '10+ năm'
-            }
-        },
-        {
-            id: 2,
-            title: 'Bất Động Sản',
-            subtitle: 'Không gian sống lý tưởng - Giá trị bền vững',
-            description: 'Minh Lộc Group là cầu nối giữa khách hàng và những bất động sản chất lượng cao. Chúng tôi không chỉ bán nhà mà còn tạo ra những không gian sống hoàn hảo, mang đến giá trị lâu dài cho cộng đồng.',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/media/du-an/bds.png',
-            icon: <Business />,
-            color: '#1976D2',
-            features: [
-                'Tư vấn BĐS chuyên nghiệp',
-                'Pháp lý minh bạch',
-                'Hỗ trợ vay vốn',
-                'Dịch vụ sau bán hàng',
-                'Đánh giá thị trường',
-                'Môi giới uy tín'
-            ],
-            projects: [
-                { name: 'Khu đô thị ven sông', scale: '1000 căn hộ', status: 'Đang bán' },
-                { name: 'Biệt thự cao cấp', scale: '200 căn', status: 'Hoàn thành' },
-                { name: 'Shophouse thương mại', scale: '500 căn', status: 'Sắp mở bán' }
-            ],
-            stats: {
-                properties: '2000+',
-                clients: '5000+',
-                experience: '12+ năm'
-            }
-        }
-    ];
+        };
+
+        loadBusinessFields();
+    }, []);
+
+    // Icon mapping function
+    const getIconComponent = (iconName: string) => {
+        const iconMap: { [key: string]: React.ReactElement } = {
+            'Construction': <Construction />,
+            'AccountBalance': <AccountBalance />,
+            'Business': <Business />,
+            'construction': <Construction />,
+            'account_balance': <AccountBalance />,
+            'business': <Business />,
+            'trending_up': <TrendingUp />,
+            'home': <Home />,
+        };
+        return iconMap[iconName] || <Business />;
+    };
+
+    // Get stats display labels
+    const getStatsLabel = (key: string) => {
+        const labelMap: { [key: string]: string } = {
+            'projects': 'Dự án',
+            'area': 'Diện tích',
+            'experience': 'Kinh nghiệm',
+            'return': 'Lợi nhuận',
+            'clients': 'Khách hàng',
+            'properties': 'Bất động sản',
+        };
+        return labelMap[key] || key;
+    };
 
     const handleFieldChange = (fieldId: number) => {
         setActiveField(fieldId);
     };
 
     const currentField = businessFields[activeField];
+
+    // Loading state
+    if (loading) {
+        return (
+            <Layout>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+                    <CircularProgress size={60} sx={{ color: '#E7C873' }} />
+                </Box>
+            </Layout>
+        );
+    }
+
+    // Error state
+    if (error || businessFields.length === 0) {
+        return (
+            <Layout>
+                <Container maxWidth="lg" sx={{ py: 6, textAlign: 'center' }}>
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                        {error || 'Không có lĩnh vực hoạt động nào'}
+                    </Alert>
+                    <Button
+                        component={Link}
+                        href="/"
+                        variant="contained"
+                        sx={{ backgroundColor: '#E7C873', '&:hover': { backgroundColor: '#d4b05a' } }}
+                    >
+                        Về trang chủ
+                    </Button>
+                </Container>
+            </Layout>
+        );
+    }
 
     return (
         <Layout>
@@ -205,14 +212,14 @@ const FieldPage: React.FC = () => {
                     </Typography>
 
                     <Grid container spacing={2} justifyContent="center">
-                        {businessFields.map((field) => (
-                            <Grid item xs={12} sm={6} md={4} key={field.id}>
+                        {businessFields.map((field, index) => (
+                            <Grid item xs={12} sm={6} md={4} key={field._id}>
                                 <Card
-                                    onClick={() => handleFieldChange(field.id)}
+                                    onClick={() => handleFieldChange(index)}
                                     sx={{
                                         cursor: 'pointer',
                                         transition: 'all 0.3s ease',
-                                        border: activeField === field.id ? `2px solid ${field.color}` : '2px solid transparent',
+                                        border: activeField === index ? `2px solid ${field.color}` : '2px solid transparent',
                                         borderRadius: 1,
                                         '&:hover': {
                                             transform: 'translateY(-2px)',
@@ -228,17 +235,17 @@ const FieldPage: React.FC = () => {
                                                 mb: 2,
                                             }}
                                         >
-                                            {field.icon}
+                                            {getIconComponent(field.icon)}
                                         </Box>
                                         <Typography
                                             variant="h6"
                                             sx={{
                                                 fontWeight: 600,
                                                 mb: 1,
-                                                color: activeField === field.id ? field.color : 'inherit',
+                                                color: activeField === index ? field.color : 'inherit',
                                             }}
                                         >
-                                            {field.title}
+                                            {field.name}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
                                             {field.subtitle}
@@ -259,7 +266,7 @@ const FieldPage: React.FC = () => {
                                     component="img"
                                     height="400"
                                     image={currentField.image}
-                                    alt={currentField.title}
+                                    alt={currentField.name}
                                     sx={{ objectFit: 'cover' }}
                                 />
                             </Grid>
@@ -273,7 +280,7 @@ const FieldPage: React.FC = () => {
                                                 mr: 2,
                                             }}
                                         >
-                                            {currentField.icon}
+                                            {getIconComponent(currentField.icon)}
                                         </Box>
                                         <Box>
                                             <Typography
@@ -285,7 +292,7 @@ const FieldPage: React.FC = () => {
                                                     mb: 0.5,
                                                 }}
                                             >
-                                                {currentField.title}
+                                                {currentField.name}
                                             </Typography>
                                             <Typography variant="h6" color="text.secondary">
                                                 {currentField.subtitle}
@@ -293,25 +300,54 @@ const FieldPage: React.FC = () => {
                                         </Box>
                                     </Box>
 
-                                    <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', lineHeight: 1.8, mb: 3 }}>
-                                        {currentField.description}
+                                    <Typography
+                                        variant="body1"
+                                        paragraph
+                                        sx={{
+                                            fontSize: '1.1rem',
+                                            lineHeight: 1.6,
+                                            mb: 3,
+                                            maxHeight: '4.8rem', // 3 lines * 1.6 line-height
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 3,
+                                            WebkitBoxOrient: 'vertical',
+                                            wordBreak: 'break-word',
+                                            whiteSpace: 'normal'
+                                        }}
+                                    >
+                                        {currentField.description && currentField.description.length > 200
+                                            ? currentField.description.substring(0, 200) + '...'
+                                            : currentField.description}
                                     </Typography>
 
                                     <Box sx={{ mt: 'auto' }}>
                                         <Grid container spacing={2}>
                                             {Object.entries(currentField.stats).map(([key, value]) => (
                                                 <Grid item xs={4} key={key}>
-                                                    <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                                                        <Typography variant="h5" sx={{ fontWeight: 700, color: currentField.color }}>
+                                                    <Box sx={{
+                                                        textAlign: 'center',
+                                                        p: 2,
+                                                        backgroundColor: '#f8f9fa',
+                                                        borderRadius: 2,
+                                                        border: `1px solid ${currentField.color}20`,
+                                                        transition: 'all 0.3s ease',
+                                                        '&:hover': {
+                                                            backgroundColor: `${currentField.color}10`,
+                                                            transform: 'translateY(-2px)',
+                                                            boxShadow: `0 4px 12px ${currentField.color}30`,
+                                                        }
+                                                    }}>
+                                                        <Typography variant="h5" sx={{
+                                                            fontWeight: 700,
+                                                            color: currentField.color,
+                                                            mb: 0.5
+                                                        }}>
                                                             {value}
                                                         </Typography>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            {key === 'projects' ? 'Dự án' :
-                                                                key === 'area' ? 'Diện tích' :
-                                                                    key === 'experience' ? 'Kinh nghiệm' :
-                                                                        key === 'return' ? 'Lợi nhuận' :
-                                                                            key === 'clients' ? 'Khách hàng' :
-                                                                                key === 'properties' ? 'Bất động sản' : key}
+                                                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                                            {getStatsLabel(key)}
                                                         </Typography>
                                                     </Box>
                                                 </Grid>
@@ -344,9 +380,22 @@ const FieldPage: React.FC = () => {
                                     </Typography>
                                     <List>
                                         {currentField.features.map((feature, index) => (
-                                            <ListItem key={index} sx={{ px: 0 }}>
+                                            <ListItem key={index} sx={{
+                                                px: 0,
+                                                py: 1,
+                                                borderRadius: 1,
+                                                transition: 'all 0.2s ease',
+                                                '&:hover': {
+                                                    backgroundColor: `${currentField.color}10`,
+                                                    transform: 'translateX(4px)',
+                                                }
+                                            }}>
                                                 <ListItemIcon>
-                                                    <CheckCircle sx={{ color: currentField.color, fontSize: 20 }} />
+                                                    <CheckCircle sx={{
+                                                        color: currentField.color,
+                                                        fontSize: 20,
+                                                        transition: 'all 0.2s ease',
+                                                    }} />
                                                 </ListItemIcon>
                                                 <ListItemText
                                                     primary={feature}
@@ -354,6 +403,7 @@ const FieldPage: React.FC = () => {
                                                         '& .MuiListItemText-primary': {
                                                             fontSize: '1rem',
                                                             fontWeight: 500,
+                                                            color: '#2c3e50',
                                                         },
                                                     }}
                                                 />
@@ -386,30 +436,50 @@ const FieldPage: React.FC = () => {
                                             <Box
                                                 key={index}
                                                 sx={{
-                                                    p: 2,
+                                                    p: 3,
                                                     backgroundColor: '#f8f9fa',
-                                                    borderRadius: 1,
+                                                    borderRadius: 2,
                                                     border: `1px solid ${currentField.color}20`,
+                                                    transition: 'all 0.3s ease',
+                                                    cursor: 'pointer',
+                                                    '&:hover': {
+                                                        backgroundColor: `${currentField.color}10`,
+                                                        transform: 'translateY(-2px)',
+                                                        boxShadow: `0 4px 12px ${currentField.color}30`,
+                                                        border: `1px solid ${currentField.color}40`,
+                                                    }
                                                 }}
                                             >
-                                                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                <Typography variant="subtitle1" sx={{
+                                                    fontWeight: 600,
+                                                    mb: 1,
+                                                    color: '#2c3e50',
+                                                    fontSize: '1.1rem'
+                                                }}>
                                                     {project.name}
                                                 </Typography>
+                                                {project.description && (
+                                                    <Typography variant="body2" color="text.secondary" sx={{
+                                                        mb: 1.5,
+                                                        fontSize: '0.9rem',
+                                                        lineHeight: 1.4
+                                                    }}>
+                                                        {project.description}
+                                                    </Typography>
+                                                )}
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <Typography variant="body2" color="text.secondary">
+                                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                                                         {project.scale}
                                                     </Typography>
                                                     <Chip
-                                                        label={project.status}
+                                                        label={getStatusLabel(project.status)}
                                                         size="small"
                                                         sx={{
-                                                            backgroundColor: project.status === 'Hoàn thành' ? '#4CAF50' :
-                                                                project.status === 'Đang hoạt động' ? '#2196F3' :
-                                                                    project.status === 'Đang thi công' ? '#FF9800' :
-                                                                        project.status === 'Đang bán' ? '#E7C873' :
-                                                                            project.status === 'Sắp mở bán' ? '#9C27B0' : '#757575',
+                                                            backgroundColor: getStatusColor(project.status),
                                                             color: 'white',
-                                                            fontWeight: 500,
+                                                            fontWeight: 600,
+                                                            fontSize: '0.75rem',
+                                                            height: 24,
                                                         }}
                                                     />
                                                 </Box>
@@ -427,64 +497,98 @@ const FieldPage: React.FC = () => {
                     sx={{
                         mt: 8,
                         p: 6,
-                        backgroundColor: 'linear-gradient(135deg, #E7C873 0%, #d4b85a 100%)',
-                        borderRadius: 1,
+                        background: 'linear-gradient(135deg, #E7C873 0%, #d4b85a 100%)',
+                        borderRadius: 3,
                         textAlign: 'center',
                         color: 'white',
-                        boxShadow: '0 4px 20px rgba(231, 200, 115, 0.3)',
+                        boxShadow: '0 8px 32px rgba(231, 200, 115, 0.4)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                            zIndex: 1,
+                        }
                     }}
                     data-aos="fade-up" data-aos-delay="600"
                 >
-                    <Typography variant="h4" component="h3" sx={{ fontWeight: 700, mb: 2 }}>
-                        Bạn Quan Tâm Đến Lĩnh Vực Nào?
-                    </Typography>
-                    <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-                        Hãy để chúng tôi tư vấn và hỗ trợ bạn tìm ra giải pháp phù hợp nhất
-                    </Typography>
-                    <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
-                        spacing={2}
-                        justifyContent="center"
-                        alignItems="center"
-                    >
-                        <Button
-                            variant="contained"
-                            size="large"
-                            startIcon={<Phone />}
-                            sx={{
-                                backgroundColor: 'white',
-                                color: '#E7C873',
-                                px: 4,
-                                py: 1.5,
-                                borderRadius: 1,
-                                fontWeight: 600,
-                                '&:hover': {
-                                    backgroundColor: '#f5f5f5',
-                                },
-                            }}
+                    <Box sx={{ position: 'relative', zIndex: 2 }}>
+                        <Typography variant="h4" component="h3" sx={{
+                            fontWeight: 700,
+                            mb: 2,
+                            fontSize: { xs: '1.8rem', md: '2.5rem' }
+                        }}>
+                            Bạn Quan Tâm Đến Lĩnh Vực Nào?
+                        </Typography>
+                        <Typography variant="h6" sx={{
+                            mb: 4,
+                            opacity: 0.9,
+                            fontSize: { xs: '1rem', md: '1.2rem' },
+                            maxWidth: '600px',
+                            mx: 'auto'
+                        }}>
+                            Hãy để chúng tôi tư vấn và hỗ trợ bạn tìm ra giải pháp phù hợp nhất
+                        </Typography>
+                        <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={3}
+                            justifyContent="center"
+                            alignItems="center"
                         >
-                            Gọi tư vấn ngay
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            size="large"
-                            endIcon={<ArrowForward />}
-                            sx={{
-                                borderColor: 'white',
-                                color: 'white',
-                                px: 4,
-                                py: 1.5,
-                                borderRadius: 1,
-                                fontWeight: 600,
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                            <Button
+                                variant="contained"
+                                size="large"
+                                startIcon={<Phone />}
+                                sx={{
+                                    backgroundColor: 'white',
+                                    color: '#E7C873',
+                                    px: 5,
+                                    py: 2,
+                                    borderRadius: 2,
+                                    fontWeight: 700,
+                                    fontSize: '1.1rem',
+                                    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                        backgroundColor: '#f8f9fa',
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
+                                    },
+                                }}
+                            >
+                                Gọi tư vấn ngay
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                size="large"
+                                endIcon={<ArrowForward />}
+                                sx={{
                                     borderColor: 'white',
-                                },
-                            }}
-                        >
-                            Xem thêm dự án
-                        </Button>
-                    </Stack>
+                                    color: 'white',
+                                    px: 5,
+                                    py: 2,
+                                    borderRadius: 2,
+                                    fontWeight: 700,
+                                    fontSize: '1.1rem',
+                                    borderWidth: 2,
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255,255,255,0.15)',
+                                        borderColor: 'white',
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: '0 4px 16px rgba(255,255,255,0.2)',
+                                    },
+                                }}
+                            >
+                                Xem thêm dự án
+                            </Button>
+                        </Stack>
+                    </Box>
                 </Box>
             </Container>
         </Layout>

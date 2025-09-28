@@ -21,9 +21,9 @@ import {
     History as ActivityIcon,
 } from '@mui/icons-material';
 import AdminLayout from '../../../../components/admin/AdminLayout';
-import CustomerList from '../../../../components/admin/CustomerList';
-import UserRoles from '../../../../components/admin/UserRoles';
-import ActivityLogs from '../../../../components/admin/ActivityLogs';
+import CustomerList from '../../../../components/admin/CustomerListNew';
+import UserRoles from '../../../../components/admin/UserRolesNew';
+import ActivityLogs from '../../../../components/admin/ActivityLogsNew';
 
 interface TabPanelProps {
     children?: React.ReactNode;

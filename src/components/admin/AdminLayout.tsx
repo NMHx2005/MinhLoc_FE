@@ -15,6 +15,7 @@ import {
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import { useDisableScrollLock } from '../../lib/useDisableScrollLock';
+import { useAuth } from '../../contexts/AuthContext';
 
 const drawerWidth = 280;
 
@@ -24,6 +25,7 @@ interface AdminLayoutProps {
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     const [mobileOpen, setMobileOpen] = useState(false);
+    const { user, logout } = useAuth();
     useDisableScrollLock();
 
     const handleDrawerToggle = () => {

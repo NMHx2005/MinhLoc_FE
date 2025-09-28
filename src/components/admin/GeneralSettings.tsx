@@ -1,182 +1,328 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    Box,
-    Card,
-    CardContent,
-    Typography,
-    Button,
-    TextField,
-    Grid,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    Switch,
-    FormControlLabel,
-    Divider,
-    Avatar,
-    IconButton,
-    Alert,
-    Snackbar,
+    Box, Card, CardContent, Typography, TextField, Button, Grid,
+    Switch, FormControlLabel, Alert, Snackbar, CircularProgress,
+    Divider, Avatar, Chip, Dialog, DialogTitle, DialogContent, DialogActions,
+    Tabs, Tab, IconButton
 } from '@mui/material';
 import {
-    Save as SaveIcon,
-    Upload as UploadIcon,
-    Image as ImageIcon,
-    Language as LanguageIcon,
-    Palette as ThemeIcon,
-    Public as FaviconIcon,
+    Save as SaveIcon, Upload as UploadIcon, Refresh as RefreshIcon,
+    Business as BusinessIcon, Language as LanguageIcon, Schedule as ScheduleIcon,
+    CloudUpload as CloudUploadIcon, Link as LinkIcon, Close as CloseIcon
 } from '@mui/icons-material';
-
-interface GeneralConfig {
-    companyName: string;
-    companyDescription: string;
-    companyAddress: string;
-    companyPhone: string;
-    companyEmail: string;
-    website: string;
-    language: string;
-    timezone: string;
-    currency: string;
-    dateFormat: string;
-    theme: string;
-    maintenanceMode: boolean;
-    logo: string;
-    favicon: string;
-    footerText: string;
-    metaTitle: string;
-    metaDescription: string;
-    metaKeywords: string;
-}
+import { settingsService, type GeneralSettings } from '../../services/admin/settingsService';
+import { api } from '../../services/api';
 
 const GeneralSettings: React.FC = () => {
-    const [config, setConfig] = useState<GeneralConfig>({
-        companyName: 'Minh Lộc Group',
-        companyDescription: 'Chuyên cung cấp bất động sản cao cấp và sản phẩm sâm Ngọc Linh chất lượng',
-        companyAddress: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-        companyPhone: '028 1234 5678',
-        companyEmail: 'info@minhloc.vn',
-        website: 'https://minhloc.vn',
-        language: 'vi',
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+
+    const [settings, setSettings] = useState<GeneralSettings>({
+        sitename: '',
+        sitedescription: '',
+        siteurl: '',
+        site_logo: '',
+        favicon: '',
+        contactemail: '',
+        contactphone: '',
+        address: '',
         timezone: 'Asia/Ho_Chi_Minh',
+        language: 'vi',
         currency: 'VND',
-        dateFormat: 'DD/MM/YYYY',
-        theme: 'light',
-        maintenanceMode: false,
-        logo: '/logo.png',
-        favicon: '/favicon.ico',
-        footerText: '© 2024 Minh Lộc Group. All rights reserved.',
-        metaTitle: 'Minh Lộc Group - BDS & Sâm Ngọc Linh',
-        metaDescription: 'Chuyên cung cấp bất động sản cao cấp và sản phẩm sâm Ngọc Linh chất lượng cao',
-        metaKeywords: 'bất động sản, sâm ngọc linh, minh lộc, BDS cao cấp'
+        dateformat: 'DD/MM/YYYY',
+        timeformat: '24',
+        maintenancemode: false,
+        maintenancemessage: '',
+        allowregistration: true,
+        requireemailverification: true,
+        defaultlanguage: 'vi'
     });
 
-    const [saved, setSaved] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [faviconFile, setFaviconFile] = useState<File | null>(null);
 
-    const handleInputChange = (field: keyof GeneralConfig) => (event: React.ChangeEvent<HTMLInputElement>) => {
-        setConfig({
-            ...config,
-            [field]: event.target.value,
-        });
-    };
+    // Upload dialog states
+    const [showLogoDialog, setShowLogoDialog] = useState(false);
+    const [showFaviconDialog, setShowFaviconDialog] = useState(false);
+    const [uploadTab, setUploadTab] = useState(0);
+    const [imageUrl, setImageUrl] = useState('');
+    const [uploading, setUploading] = useState(false);
 
-    const handleSelectChange = (field: keyof GeneralConfig) => (event: any) => {
-        setConfig({
-            ...config,
-            [field]: event.target.value,
-        });
-    };
+    useEffect(() => {
+        loadSettings();
+    }, []);
 
-    const handleSwitchChange = (field: keyof GeneralConfig) => (event: React.ChangeEvent<HTMLInputElement>) => {
-        setConfig({
-            ...config,
-            [field]: event.target.checked,
-        });
-    };
-
-    const handleSave = async () => {
-        setLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setLoading(false);
-        setSaved(true);
-    };
-
-    const handleFileUpload = (field: 'logo' | 'favicon') => (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            const url = URL.createObjectURL(file);
-            setConfig({
-                ...config,
-                [field]: url,
-            });
+    const loadSettings = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const data = await settingsService.getGeneralSettings();
+            setSettings(prev => ({
+                ...prev,
+                ...data,
+                sitename: data.sitename || '',
+                sitedescription: data.sitedescription || '',
+                siteurl: data.siteurl || '',
+                site_logo: data.site_logo || '',
+                favicon: data.favicon || '',
+                contactemail: data.contactemail || '',
+                contactphone: data.contactphone || '',
+                address: data.address || '',
+                timezone: data.timezone || 'Asia/Ho_Chi_Minh',
+                language: data.language || 'vi',
+                currency: data.currency || 'VND',
+                dateformat: data.dateformat || 'DD/MM/YYYY',
+                timeformat: data.timeformat || '24',
+                maintenancemode: data.maintenancemode || false,
+                maintenancemessage: data.maintenancemessage || '',
+                allowregistration: data.allowregistration ?? true,
+                requireemailverification: data.requireemailverification ?? true,
+                defaultlanguage: data.defaultlanguage || 'vi'
+            }));
+        } catch (err) {
+            console.error('Error loading settings:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải cài đặt');
+        } finally {
+            setLoading(false);
         }
     };
 
+    const handleInputChange = (field: keyof GeneralSettings, value: string | boolean) => {
+        setSettings(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setLogoFile(file);
+        }
+    };
+
+    const handleFaviconUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setFaviconFile(file);
+        }
+    };
+
+    const handleUploadImage = async (type: 'logo' | 'favicon') => {
+        try {
+            setUploading(true);
+            setError(null);
+            let imageUrl = '';
+
+            if (uploadTab === 0 && (type === 'logo' ? logoFile : faviconFile)) {
+                // Upload to backend API using api service
+                const file = type === 'logo' ? logoFile : faviconFile;
+                if (file) {
+                    const formData = new FormData();
+                    formData.append(type, file);
+
+                    const response = await api.post(`/admin/settings/upload-${type}`, formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                        },
+                    });
+
+
+                    if (!response.data.success) {
+                        throw new Error(response.data.message || 'Upload failed');
+                    }
+
+                    // Backend returns data.logoUrl or data.faviconUrl
+                    const urlField = type === 'logo' ? 'logoUrl' : 'faviconUrl';
+                    if (!response.data.data || !response.data.data[urlField]) {
+                        throw new Error('No URL returned from upload');
+                    }
+
+                    imageUrl = response.data.data[urlField];
+                }
+            } else if (uploadTab === 1 && imageUrl.trim()) {
+                // Use provided URL
+                imageUrl = imageUrl.trim();
+            } else {
+                throw new Error(uploadTab === 0 ? 'Vui lòng chọn file để upload' : 'Vui lòng nhập URL ảnh');
+            }
+
+            if (imageUrl) {
+                if (type === 'logo') {
+                    setSettings(prev => ({ ...prev, site_logo: imageUrl }));
+                    setLogoFile(null);
+                } else {
+                    setSettings(prev => ({ ...prev, favicon: imageUrl }));
+                    setFaviconFile(null);
+                }
+
+                setSnackbarMessage(`✅ Cập nhật ${type === 'logo' ? 'logo' : 'favicon'} thành công!`);
+                setSnackbarOpen(true);
+            }
+        } catch (err) {
+            console.error('Error uploading image:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Không thể upload ảnh';
+            setError(errorMessage);
+            setSnackbarMessage(`❌ ${errorMessage}`);
+            setSnackbarOpen(true);
+        } finally {
+            setUploading(false);
+            setImageUrl('');
+            setUploadTab(0);
+            if (type === 'logo') {
+                setShowLogoDialog(false);
+            } else {
+                setShowFaviconDialog(false);
+            }
+        }
+    };
+
+    const handleCloseDialog = () => {
+        setShowLogoDialog(false);
+        setShowFaviconDialog(false);
+        setImageUrl('');
+        setUploadTab(0);
+        setLogoFile(null);
+        setFaviconFile(null);
+    };
+
+    const handleSave = async () => {
+        try {
+            setSaving(true);
+            setError(null);
+
+            // Upload logo if selected
+            if (logoFile) {
+                const logoResponse = await settingsService.uploadLogo(logoFile);
+                settings.site_logo = logoResponse.url;
+            }
+
+            // Upload favicon if selected
+            if (faviconFile) {
+                const faviconResponse = await settingsService.uploadFavicon(faviconFile);
+                settings.favicon = faviconResponse.url;
+            }
+
+            // Update settings
+            await settingsService.updateGeneralSettings(settings);
+
+            setSnackbarMessage('✅ Cập nhật cài đặt thành công!');
+            setSnackbarOpen(true);
+            setLogoFile(null);
+            setFaviconFile(null);
+        } catch (err) {
+            console.error('Error saving settings:', err);
+            setError(err instanceof Error ? err.message : 'Không thể lưu cài đặt');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải cài đặt...</Typography>
+            </Box>
+        );
+    }
+
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+                    {error}
+                    {error.includes('Upload failed') && (
+                        <Box sx={{ mt: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                                <strong>Lỗi upload ảnh:</strong>
+                            </Typography>
+                            <Typography variant="body2" component="div">
+                                • Kiểm tra kết nối backend
+                            </Typography>
+                            <Typography variant="body2" component="div">
+                                • Kiểm tra token authentication
+                            </Typography>
+                            <Typography variant="body2" component="div">
+                                • Kiểm tra cấu hình Cloudinary ở backend
+                            </Typography>
+                        </Box>
+                    )}
+                </Alert>
+            )}
+
             <Grid container spacing={3}>
-                {/* Company Information */}
+                {/* Basic Information */}
                 <Grid item xs={12} md={8}>
                     <Card>
                         <CardContent>
-                            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                                Thông tin Công ty
+                            <Typography variant="h6" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                                <BusinessIcon sx={{ mr: 1 }} />
+                                Thông tin cơ bản
                             </Typography>
 
                             <Grid container spacing={3}>
                                 <Grid item xs={12}>
                                     <TextField
                                         fullWidth
-                                        label="Tên công ty"
-                                        value={config.companyName}
-                                        onChange={handleInputChange('companyName')}
+                                        label="Tên website"
+                                        value={settings.sitename}
+                                        onChange={(e) => handleInputChange('sitename', e.target.value)}
+                                        required
                                     />
                                 </Grid>
+
                                 <Grid item xs={12}>
                                     <TextField
                                         fullWidth
+                                        label="Mô tả website"
+                                        value={settings.sitedescription}
+                                        onChange={(e) => handleInputChange('sitedescription', e.target.value)}
                                         multiline
                                         rows={3}
-                                        label="Mô tả công ty"
-                                        value={config.companyDescription}
-                                        onChange={handleInputChange('companyDescription')}
                                     />
                                 </Grid>
-                                <Grid item xs={12}>
+
+                                <Grid item xs={12} md={6}>
                                     <TextField
                                         fullWidth
-                                        label="Địa chỉ"
-                                        value={config.companyAddress}
-                                        onChange={handleInputChange('companyAddress')}
+                                        label="URL website"
+                                        value={settings.siteurl}
+                                        onChange={(e) => handleInputChange('siteurl', e.target.value)}
+                                        placeholder="https://example.com"
                                     />
                                 </Grid>
+
+                                <Grid item xs={12} md={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Email liên hệ"
+                                        value={settings.contactemail}
+                                        onChange={(e) => handleInputChange('contactemail', e.target.value)}
+                                        type="email"
+                                    />
+                                </Grid>
+
                                 <Grid item xs={12} md={6}>
                                     <TextField
                                         fullWidth
                                         label="Số điện thoại"
-                                        value={config.companyPhone}
-                                        onChange={handleInputChange('companyPhone')}
+                                        value={settings.contactphone}
+                                        onChange={(e) => handleInputChange('contactphone', e.target.value)}
                                     />
                                 </Grid>
+
                                 <Grid item xs={12} md={6}>
                                     <TextField
                                         fullWidth
-                                        label="Email"
-                                        type="email"
-                                        value={config.companyEmail}
-                                        onChange={handleInputChange('companyEmail')}
-                                    />
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="Website"
-                                        value={config.website}
-                                        onChange={handleInputChange('website')}
+                                        label="Địa chỉ"
+                                        value={settings.address}
+                                        onChange={(e) => handleInputChange('address', e.target.value)}
                                     />
                                 </Grid>
                             </Grid>
@@ -188,273 +334,379 @@ const GeneralSettings: React.FC = () => {
                 <Grid item xs={12} md={4}>
                     <Card>
                         <CardContent>
-                            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+                            <Typography variant="h6" sx={{ mb: 3 }}>
                                 Logo & Favicon
                             </Typography>
 
-                            {/* Logo Upload */}
-                            <Box sx={{ mb: 3 }}>
-                                <Typography variant="subtitle2" sx={{ mb: 1 }}>Logo</Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Avatar
-                                        src={config.logo}
-                                        variant="square"
-                                        sx={{ width: 80, height: 80 }}
-                                    >
-                                        <ImageIcon />
-                                    </Avatar>
-                                    <Box>
-                                        <input
-                                            accept="image/*"
-                                            style={{ display: 'none' }}
-                                            id="logo-upload"
-                                            type="file"
-                                            onChange={handleFileUpload('logo')}
-                                        />
-                                        <label htmlFor="logo-upload">
-                                            <IconButton color="primary" component="span">
-                                                <UploadIcon />
-                                            </IconButton>
-                                        </label>
-                                        <Typography variant="caption" display="block">
-                                            PNG, JPG (max 2MB)
-                                        </Typography>
-                                    </Box>
-                                </Box>
+                            <Box sx={{ textAlign: 'center', mb: 3 }}>
+                                <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                                    Logo
+                                </Typography>
+                                <Avatar
+                                    src={settings.site_logo}
+                                    sx={{ width: 120, height: 60, mx: 'auto', mb: 2 }}
+                                    variant="rounded"
+                                >
+                                    <BusinessIcon sx={{ fontSize: 40 }} />
+                                </Avatar>
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<UploadIcon />}
+                                    size="small"
+                                    onClick={() => setShowLogoDialog(true)}
+                                >
+                                    Cập nhật Logo
+                                </Button>
+                                {logoFile && (
+                                    <Chip
+                                        label={logoFile.name}
+                                        size="small"
+                                        sx={{ ml: 1 }}
+                                    />
+                                )}
                             </Box>
 
                             <Divider sx={{ my: 2 }} />
 
-                            {/* Favicon Upload */}
-                            <Box>
-                                <Typography variant="subtitle2" sx={{ mb: 1 }}>Favicon</Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Avatar
-                                        src={config.favicon}
-                                        variant="square"
-                                        sx={{ width: 32, height: 32 }}
-                                    >
-                                        <FaviconIcon />
-                                    </Avatar>
-                                    <Box>
-                                        <input
-                                            accept="image/*"
-                                            style={{ display: 'none' }}
-                                            id="favicon-upload"
-                                            type="file"
-                                            onChange={handleFileUpload('favicon')}
-                                        />
-                                        <label htmlFor="favicon-upload">
-                                            <IconButton color="primary" component="span">
-                                                <UploadIcon />
-                                            </IconButton>
-                                        </label>
-                                        <Typography variant="caption" display="block">
-                                            ICO, PNG (32x32px)
-                                        </Typography>
-                                    </Box>
-                                </Box>
+                            <Box sx={{ textAlign: 'center' }}>
+                                <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                                    Favicon
+                                </Typography>
+                                <Avatar
+                                    src={settings.favicon}
+                                    sx={{ width: 32, height: 32, mx: 'auto', mb: 2 }}
+                                >
+                                    <LanguageIcon />
+                                </Avatar>
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<UploadIcon />}
+                                    size="small"
+                                    onClick={() => setShowFaviconDialog(true)}
+                                >
+                                    Cập nhật Favicon
+                                </Button>
+                                {faviconFile && (
+                                    <Chip
+                                        label={faviconFile.name}
+                                        size="small"
+                                        sx={{ ml: 1 }}
+                                    />
+                                )}
                             </Box>
                         </CardContent>
                     </Card>
                 </Grid>
 
-                {/* Localization Settings */}
+                {/* Regional Settings */}
                 <Grid item xs={12} md={6}>
                     <Card>
                         <CardContent>
-                            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                                <LanguageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                                Bản địa hóa
+                            <Typography variant="h6" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                                <LanguageIcon sx={{ mr: 1 }} />
+                                Cài đặt khu vực
                             </Typography>
 
                             <Grid container spacing={3}>
-                                <Grid item xs={12}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Ngôn ngữ</InputLabel>
-                                        <Select
-                                            value={config.language}
-                                            label="Ngôn ngữ"
-                                            onChange={handleSelectChange('language')}
-                                        >
-                                            <MenuItem value="vi">Tiếng Việt</MenuItem>
-                                            <MenuItem value="en">English</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Múi giờ</InputLabel>
-                                        <Select
-                                            value={config.timezone}
-                                            label="Múi giờ"
-                                            onChange={handleSelectChange('timezone')}
-                                        >
-                                            <MenuItem value="Asia/Ho_Chi_Minh">GMT+7 (Việt Nam)</MenuItem>
-                                            <MenuItem value="Asia/Bangkok">GMT+7 (Bangkok)</MenuItem>
-                                            <MenuItem value="Asia/Singapore">GMT+8 (Singapore)</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
                                 <Grid item xs={12} md={6}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Tiền tệ</InputLabel>
-                                        <Select
-                                            value={config.currency}
-                                            label="Tiền tệ"
-                                            onChange={handleSelectChange('currency')}
-                                        >
-                                            <MenuItem value="VND">VND (₫)</MenuItem>
-                                            <MenuItem value="USD">USD ($)</MenuItem>
-                                        </Select>
-                                    </FormControl>
+                                    <TextField
+                                        fullWidth
+                                        select
+                                        label="Múi giờ"
+                                        value={settings.timezone}
+                                        onChange={(e) => handleInputChange('timezone', e.target.value)}
+                                        SelectProps={{ native: true }}
+                                    >
+                                        <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh</option>
+                                        <option value="UTC">UTC</option>
+                                        <option value="America/New_York">America/New_York</option>
+                                        <option value="Europe/London">Europe/London</option>
+                                    </TextField>
                                 </Grid>
+
                                 <Grid item xs={12} md={6}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Định dạng ngày</InputLabel>
-                                        <Select
-                                            value={config.dateFormat}
-                                            label="Định dạng ngày"
-                                            onChange={handleSelectChange('dateFormat')}
-                                        >
-                                            <MenuItem value="DD/MM/YYYY">DD/MM/YYYY</MenuItem>
-                                            <MenuItem value="MM/DD/YYYY">MM/DD/YYYY</MenuItem>
-                                            <MenuItem value="YYYY-MM-DD">YYYY-MM-DD</MenuItem>
-                                        </Select>
-                                    </FormControl>
+                                    <TextField
+                                        fullWidth
+                                        select
+                                        label="Ngôn ngữ"
+                                        value={settings.language}
+                                        onChange={(e) => handleInputChange('language', e.target.value)}
+                                        SelectProps={{ native: true }}
+                                    >
+                                        <option value="vi">Tiếng Việt</option>
+                                        <option value="en">English</option>
+                                    </TextField>
+                                </Grid>
+
+                                <Grid item xs={12} md={6}>
+                                    <TextField
+                                        fullWidth
+                                        select
+                                        label="Tiền tệ"
+                                        value={settings.currency}
+                                        onChange={(e) => handleInputChange('currency', e.target.value)}
+                                        SelectProps={{ native: true }}
+                                    >
+                                        <option value="VND">VND</option>
+                                        <option value="USD">USD</option>
+                                        <option value="EUR">EUR</option>
+                                    </TextField>
+                                </Grid>
+
+                                <Grid item xs={12} md={6}>
+                                    <TextField
+                                        fullWidth
+                                        select
+                                        label="Định dạng ngày"
+                                        value={settings.dateformat}
+                                        onChange={(e) => handleInputChange('dateformat', e.target.value)}
+                                        SelectProps={{ native: true }}
+                                    >
+                                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                                    </TextField>
+                                </Grid>
+
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth
+                                        select
+                                        label="Định dạng giờ"
+                                        value={settings.timeformat}
+                                        onChange={(e) => handleInputChange('timeformat', e.target.value)}
+                                        SelectProps={{ native: true }}
+                                    >
+                                        <option value="24">24 giờ</option>
+                                        <option value="12">12 giờ (AM/PM)</option>
+                                    </TextField>
                                 </Grid>
                             </Grid>
                         </CardContent>
                     </Card>
                 </Grid>
 
-                {/* Theme & System */}
+                {/* Maintenance Mode */}
                 <Grid item xs={12} md={6}>
                     <Card>
                         <CardContent>
-                            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                                <ThemeIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                                Giao diện & Hệ thống
+                            <Typography variant="h6" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                                <ScheduleIcon sx={{ mr: 1 }} />
+                                Chế độ bảo trì
                             </Typography>
 
-                            <Grid container spacing={3}>
-                                <Grid item xs={12}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Chủ đề</InputLabel>
-                                        <Select
-                                            value={config.theme}
-                                            label="Chủ đề"
-                                            onChange={handleSelectChange('theme')}
-                                        >
-                                            <MenuItem value="light">Sáng</MenuItem>
-                                            <MenuItem value="dark">Tối</MenuItem>
-                                            <MenuItem value="auto">Tự động</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={config.maintenanceMode}
-                                                onChange={handleSwitchChange('maintenanceMode')}
-                                            />
-                                        }
-                                        label="Chế độ bảo trì"
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={settings.maintenancemode}
+                                        onChange={(e) => handleInputChange('maintenancemode', e.target.checked)}
                                     />
-                                    <Typography variant="caption" display="block" color="text.secondary">
-                                        Khi bật, website sẽ hiển thị trang bảo trì cho người dùng
-                                    </Typography>
-                                </Grid>
-                            </Grid>
+                                }
+                                label="Bật chế độ bảo trì"
+                            />
+
+                            {settings.maintenancemode && (
+                                <TextField
+                                    fullWidth
+                                    label="Thông báo bảo trì"
+                                    value={settings.maintenancemessage || ''}
+                                    onChange={(e) => handleInputChange('maintenancemessage', e.target.value)}
+                                    multiline
+                                    rows={3}
+                                    sx={{ mt: 2 }}
+                                    placeholder="Website đang được bảo trì. Vui lòng quay lại sau..."
+                                />
+                            )}
                         </CardContent>
                     </Card>
-                </Grid>
-
-                {/* SEO Settings */}
-                <Grid item xs={12}>
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                                Cài đặt SEO
-                            </Typography>
-
-                            <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        fullWidth
-                                        label="Meta Title"
-                                        value={config.metaTitle}
-                                        onChange={handleInputChange('metaTitle')}
-                                        helperText="Tối đa 60 ký tự"
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        fullWidth
-                                        label="Meta Keywords"
-                                        value={config.metaKeywords}
-                                        onChange={handleInputChange('metaKeywords')}
-                                        helperText="Các từ khóa cách nhau bằng dấu phẩy"
-                                    />
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        multiline
-                                        rows={3}
-                                        label="Meta Description"
-                                        value={config.metaDescription}
-                                        onChange={handleInputChange('metaDescription')}
-                                        helperText="Tối đa 160 ký tự"
-                                    />
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="Footer Text"
-                                        value={config.footerText}
-                                        onChange={handleInputChange('footerText')}
-                                    />
-                                </Grid>
-                            </Grid>
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                {/* Save Button */}
-                <Grid item xs={12}>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button
-                            variant="contained"
-                            size="large"
-                            startIcon={<SaveIcon />}
-                            onClick={handleSave}
-                            disabled={loading}
-                            sx={{
-                                backgroundColor: '#E7C873',
-                                color: '#000',
-                                '&:hover': {
-                                    backgroundColor: '#d4b86a',
-                                },
-                                minWidth: 150,
-                            }}
-                        >
-                            {loading ? 'Đang lưu...' : 'Lưu cài đặt'}
-                        </Button>
-                    </Box>
                 </Grid>
             </Grid>
 
-            {/* Success Snackbar */}
+            {/* Action Buttons */}
+            <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                <Button
+                    variant="outlined"
+                    startIcon={<RefreshIcon />}
+                    onClick={loadSettings}
+                    disabled={saving}
+                >
+                    Làm mới
+                </Button>
+                <Button
+                    variant="contained"
+                    startIcon={<SaveIcon />}
+                    onClick={handleSave}
+                    disabled={saving}
+                    sx={{
+                        backgroundColor: '#E7C873',
+                        color: '#000',
+                        '&:hover': {
+                            backgroundColor: '#d4b86a',
+                        },
+                    }}
+                >
+                    {saving ? 'Đang lưu...' : 'Lưu cài đặt'}
+                </Button>
+            </Box>
+
+            {/* Logo Upload Dialog */}
+            <Dialog open={showLogoDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+                <DialogTitle>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        Cập nhật Logo
+                        <IconButton onClick={handleCloseDialog} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Tabs value={uploadTab} onChange={(_, newValue) => setUploadTab(newValue)} sx={{ mb: 3 }}>
+                        <Tab icon={<CloudUploadIcon />} label="Upload từ máy" />
+                        <Tab icon={<LinkIcon />} label="Nhập URL" />
+                    </Tabs>
+
+                    {uploadTab === 0 && (
+                        <Box>
+                            <input
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                id="logo-file-upload"
+                                type="file"
+                                onChange={handleLogoUpload}
+                            />
+                            <label htmlFor="logo-file-upload">
+                                <Button
+                                    variant="outlined"
+                                    component="span"
+                                    startIcon={<CloudUploadIcon />}
+                                    fullWidth
+                                    sx={{ mb: 2 }}
+                                >
+                                    Chọn file từ máy
+                                </Button>
+                            </label>
+                            {logoFile && (
+                                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        File đã chọn: {logoFile.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Kích thước: {(logoFile.size / 1024 / 1024).toFixed(2)} MB
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+
+                    {uploadTab === 1 && (
+                        <TextField
+                            fullWidth
+                            label="URL ảnh"
+                            value={imageUrl}
+                            onChange={(e) => setImageUrl(e.target.value)}
+                            placeholder="https://example.com/image.png"
+                            sx={{ mt: 2 }}
+                        />
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDialog}>Hủy</Button>
+                    <Button
+                        onClick={() => handleUploadImage('logo')}
+                        variant="contained"
+                        disabled={uploading || (uploadTab === 0 && !logoFile) || (uploadTab === 1 && !imageUrl.trim())}
+                        startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
+                    >
+                        {uploading ? 'Đang upload...' : 'Cập nhật Logo'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Favicon Upload Dialog */}
+            <Dialog open={showFaviconDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+                <DialogTitle>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        Cập nhật Favicon
+                        <IconButton onClick={handleCloseDialog} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Tabs value={uploadTab} onChange={(_, newValue) => setUploadTab(newValue)} sx={{ mb: 3 }}>
+                        <Tab icon={<CloudUploadIcon />} label="Upload từ máy" />
+                        <Tab icon={<LinkIcon />} label="Nhập URL" />
+                    </Tabs>
+
+                    {uploadTab === 0 && (
+                        <Box>
+                            <input
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                id="favicon-file-upload"
+                                type="file"
+                                onChange={handleFaviconUpload}
+                            />
+                            <label htmlFor="favicon-file-upload">
+                                <Button
+                                    variant="outlined"
+                                    component="span"
+                                    startIcon={<CloudUploadIcon />}
+                                    fullWidth
+                                    sx={{ mb: 2 }}
+                                >
+                                    Chọn file từ máy
+                                </Button>
+                            </label>
+                            {faviconFile && (
+                                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        File đã chọn: {faviconFile.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Kích thước: {(faviconFile.size / 1024 / 1024).toFixed(2)} MB
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+
+                    {uploadTab === 1 && (
+                        <TextField
+                            fullWidth
+                            label="URL ảnh"
+                            value={imageUrl}
+                            onChange={(e) => setImageUrl(e.target.value)}
+                            placeholder="https://example.com/favicon.ico"
+                            sx={{ mt: 2 }}
+                        />
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDialog}>Hủy</Button>
+                    <Button
+                        onClick={() => handleUploadImage('favicon')}
+                        variant="contained"
+                        disabled={uploading || (uploadTab === 0 && !faviconFile) || (uploadTab === 1 && !imageUrl.trim())}
+                        startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
+                    >
+                        {uploading ? 'Đang upload...' : 'Cập nhật Favicon'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Snackbar */}
             <Snackbar
-                open={saved}
-                autoHideDuration={3000}
-                onClose={() => setSaved(false)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={() => setSnackbarOpen(false)}
             >
-                <Alert onClose={() => setSaved(false)} severity="success">
-                    Cài đặt đã được lưu thành công!
+                <Alert
+                    onClose={() => setSnackbarOpen(false)}
+                    severity="success"
+                    sx={{ width: '100%' }}
+                >
+                    {snackbarMessage}
                 </Alert>
             </Snackbar>
         </Box>

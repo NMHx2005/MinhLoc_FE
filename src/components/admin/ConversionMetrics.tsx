@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     CardContent,
@@ -14,74 +14,134 @@ import {
     ListItemIcon,
     Avatar,
     Divider,
+    CircularProgress,
+    Alert,
 } from '@mui/material';
 import {
     TrendingUp as TrendingUpIcon,
-    Email as EmailIcon,
-    Phone as PhoneIcon,
     Visibility as ViewIcon,
-    Mouse as ClickIcon,
 } from '@mui/icons-material';
+import { analyticsService } from '../../services/admin/analyticsService';
+import type { AnalyticsOverview, TopPagesData } from '../../services/admin/analyticsService';
 
-const ConversionMetrics: React.FC = () => {
+interface ConversionMetricsProps {
+    filters?: {
+        timeRange?: string;
+        device?: string;
+        source?: string;
+        page?: string;
+    };
+}
+
+const ConversionMetrics: React.FC<ConversionMetricsProps> = ({ filters }) => {
+    const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+    const [topPages, setTopPages] = useState<TopPagesData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const params = {
+                    timeRange: filters?.timeRange || '7d',
+                    device: filters?.device || 'all',
+                    source: filters?.source || 'all',
+                    page: filters?.page || 'all',
+                };
+
+                const [overviewData, topPagesData] = await Promise.all([
+                    analyticsService.getOverview(params),
+                    analyticsService.getTopPages(params),
+                ]);
+
+                setOverview(overviewData);
+                setTopPages(topPagesData);
+            } catch (err) {
+                console.error('Error loading conversion data:', err);
+                setError('Không thể tải dữ liệu conversion');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [filters]);
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (error) {
+        return (
+            <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+            </Alert>
+        );
+    }
+
+    if (!overview) {
+        return (
+            <Alert severity="info" sx={{ mb: 3 }}>
+                Không có dữ liệu conversion
+            </Alert>
+        );
+    }
     const conversionData = [
         {
             metric: 'Conversion Rate',
-            value: '3.2%',
-            change: '+0.8%',
+            value: `${overview.conversionRate.toFixed(1)}%`,
+            change: 'Dữ liệu thực',
             trend: 'up',
             color: '#4caf50',
             icon: <TrendingUpIcon />,
         },
         {
-            metric: 'Lead Generation',
-            value: '156',
-            change: '+12%',
+            metric: 'Bounce Rate',
+            value: `${overview.bounceRate.toFixed(1)}%`,
+            change: 'Tỷ lệ thoát',
+            trend: 'down',
+            color: '#f44336',
+            icon: <TrendingUpIcon />,
+        },
+        {
+            metric: 'Avg Session Duration',
+            value: `${overview.averageSessionDuration.toFixed(0)}s`,
+            change: 'Thời gian trung bình',
             trend: 'up',
             color: '#2196f3',
-            icon: <EmailIcon />,
+            icon: <ViewIcon />,
         },
         {
-            metric: 'Contact Forms',
-            value: '89',
-            change: '+5.2%',
-            trend: 'up',
-            color: '#ff9800',
-            icon: <PhoneIcon />,
-        },
-        {
-            metric: 'Page Views/Visit',
-            value: '2.8',
-            change: '+0.3',
+            metric: 'Total Page Views',
+            value: overview.totalPageViews.toLocaleString(),
+            change: 'Tổng lượt xem',
             trend: 'up',
             color: '#9c27b0',
             icon: <ViewIcon />,
         },
         {
-            metric: 'CTR (Click Rate)',
-            value: '1.8%',
-            change: '-0.2%',
-            trend: 'down',
-            color: '#f44336',
-            icon: <ClickIcon />,
-        },
-        {
-            metric: 'Bounce Rate',
-            value: '28.5%',
-            change: '-2.1%',
+            metric: 'Unique Visitors',
+            value: overview.uniqueVisitors.toLocaleString(),
+            change: 'Người dùng duy nhất',
             trend: 'up',
-            color: '#607d8b',
+            color: '#ff9800',
             icon: <TrendingUpIcon />,
         },
     ];
 
-    const topPages = [
-        { page: '/', views: 1240, conversion: '4.2%', color: '#4caf50' },
-        { page: '/projects', views: 890, conversion: '3.8%', color: '#2196f3' },
-        { page: '/about', views: 650, conversion: '2.1%', color: '#ff9800' },
-        { page: '/contact', views: 420, conversion: '5.5%', color: '#9c27b0' },
-        { page: '/news', views: 380, conversion: '1.8%', color: '#607d8b' },
-    ];
+    const topPagesData = topPages.slice(0, 5).map((page, index) => ({
+        page: page.page,
+        views: page.views,
+        conversion: `${page.bounceRate.toFixed(1)}%`,
+        color: ['#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#607d8b'][index % 5]
+    }));
 
     const conversionFunnel = [
         { stage: 'Visitors', count: 1240, percentage: 100, color: '#1976d2' },
@@ -215,7 +275,7 @@ const ConversionMetrics: React.FC = () => {
                         </Typography>
 
                         <List>
-                            {topPages.map((page, index) => (
+                            {topPagesData.map((page, index) => (
                                 <React.Fragment key={index}>
                                     <ListItem sx={{ px: 0, py: 1.5 }}>
                                         <ListItemIcon>

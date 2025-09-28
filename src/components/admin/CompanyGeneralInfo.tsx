@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Typography,
@@ -12,8 +12,6 @@ import {
     Alert,
     Snackbar,
     CircularProgress,
-    Divider,
-    Chip,
 } from '@mui/material';
 import {
     Save as SaveIcon,
@@ -24,8 +22,11 @@ import {
     LocationOn as LocationIcon,
     Language as WebsiteIcon,
 } from '@mui/icons-material';
+import { companyService } from '../../services/admin/companyService';
 
-interface CompanyGeneralInfo {
+import type { CompanyInfo } from '../../services/admin/companyService';
+
+interface CompanyGeneralInfoData {
     companyName: string;
     shortDescription: string;
     fullDescription: string;
@@ -45,51 +46,93 @@ interface CompanyGeneralInfo {
     mission: string;
     vision: string;
     values: string[];
-    achievements: string[];
+    achievements: Array<{ number: string; label: string }>;
 }
 
 const CompanyGeneralInfo: React.FC = () => {
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
+    const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
-    const [formData, setFormData] = useState<CompanyGeneralInfo>({
-        companyName: 'MinhLoc Group',
-        shortDescription: 'Tập đoàn đa ngành hàng đầu Việt Nam',
-        fullDescription: 'MinhLoc Group là tập đoàn đa ngành với hơn 15 năm kinh nghiệm trong các lĩnh vực xây dựng, bất động sản và đầu tư tài chính.',
-        foundedYear: 2008,
-        headquarters: 'TP. Hồ Chí Minh, Việt Nam',
+    const [formData, setFormData] = useState<CompanyGeneralInfoData>({
+        companyName: '',
+        shortDescription: '',
+        fullDescription: '',
+        foundedYear: 0,
+        headquarters: '',
         contactInfo: {
-            email: 'info@minhlocgroup.com',
-            phone: '(+84) 28 1234 5678',
-            address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-            website: 'https://minhlocgroup.com',
+            email: '',
+            phone: '',
+            address: '',
+            website: '',
         },
         socialMedia: {
-            facebook: 'https://facebook.com/minhlocgroup',
-            linkedin: 'https://linkedin.com/company/minhlocgroup',
-            youtube: 'https://youtube.com/minhlocgroup',
+            facebook: '',
+            linkedin: '',
+            youtube: '',
         },
-        mission: 'Mang đến những sản phẩm và dịch vụ chất lượng cao, góp phần xây dựng cuộc sống tốt đẹp hơn cho cộng đồng.',
-        vision: 'Trở thành tập đoàn đa ngành hàng đầu Việt Nam và khu vực Đông Nam Á.',
-        values: ['Chất lượng', 'Uy tín', 'Sáng tạo', 'Phát triển bền vững'],
-        achievements: [
-            'Top 100 doanh nghiệp lớn nhất Việt Nam',
-            'Giải thưởng Doanh nghiệp Xanh 2023',
-            'Chứng nhận ISO 9001:2015',
-            'Hơn 1000 dự án đã hoàn thành',
-        ],
+        mission: '',
+        vision: '',
+        values: [],
+        achievements: [],
     });
 
-    const handleInputChange = (field: string, value: any) => {
+    // Load company info from API
+    const loadCompanyInfo = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const info = await companyService.getCompanyInfoBySection('general');
+            if (info) {
+                setCompanyInfo(info);
+                // Parse data from API
+                const apiData = info.data || {};
+                setFormData({
+                    companyName: apiData.companyName || '',
+                    shortDescription: info.title || '',
+                    fullDescription: info.content || '',
+                    foundedYear: apiData.foundedYear || 0,
+                    headquarters: apiData.headquarters || '',
+                    contactInfo: {
+                        email: apiData.contactInfo?.email || '',
+                        phone: apiData.contactInfo?.phone || '',
+                        address: apiData.contactInfo?.address || '',
+                        website: apiData.contactInfo?.website || '',
+                    },
+                    socialMedia: {
+                        facebook: apiData.socialMedia?.facebook || '',
+                        linkedin: apiData.socialMedia?.linkedin || '',
+                        youtube: apiData.socialMedia?.youtube || '',
+                    },
+                    mission: apiData.mission || '',
+                    vision: apiData.vision || '',
+                    values: apiData.values || [],
+                    achievements: apiData.achievements || [],
+                });
+            }
+        } catch (err) {
+            console.error('Error loading company info:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải thông tin công ty');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadCompanyInfo();
+    }, [loadCompanyInfo]);
+
+    const handleInputChange = (field: string, value: string | number | string[]) => {
         if (field.includes('.')) {
             const [parent, child] = field.split('.');
             setFormData(prev => ({
                 ...prev,
                 [parent]: {
-                    ...prev[parent as keyof CompanyGeneralInfo],
+                    ...(prev[parent as keyof CompanyGeneralInfoData] as Record<string, string | number | string[]>),
                     [child]: value
                 }
             }));
@@ -104,14 +147,34 @@ const CompanyGeneralInfo: React.FC = () => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            // TODO: Implement API call to save company general info
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+            const dataToSave = {
+                section: 'general',
+                title: formData.shortDescription,
+                content: formData.fullDescription,
+                data: {
+                    companyName: formData.companyName,
+                    foundedYear: formData.foundedYear,
+                    headquarters: formData.headquarters,
+                    contactInfo: formData.contactInfo,
+                    socialMedia: formData.socialMedia,
+                    mission: formData.mission,
+                    vision: formData.vision,
+                    values: formData.values,
+                    achievements: formData.achievements,
+                },
+                sortOrder: 1
+            };
 
-            setSnackbarMessage('Cập nhật thông tin công ty thành công!');
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Lưu thông tin công ty thành công!');
             setSnackbarOpen(true);
             setIsEditing(false);
+            // Reload data
+            await loadCompanyInfo();
         } catch (error) {
-            setSnackbarMessage('Có lỗi xảy ra khi cập nhật thông tin!');
+            console.error('Error saving company info:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu thông tin công ty');
             setSnackbarOpen(true);
         } finally {
             setSaving(false);
@@ -120,11 +183,51 @@ const CompanyGeneralInfo: React.FC = () => {
 
     const handleCancel = () => {
         setIsEditing(false);
-        // TODO: Reset form data to original values
+        // Reset form data to original values from API
+        if (companyInfo) {
+            const apiData = companyInfo.data || {};
+            setFormData({
+                companyName: apiData.companyName || '',
+                shortDescription: companyInfo.title || '',
+                fullDescription: companyInfo.content || '',
+                foundedYear: apiData.foundedYear || 0,
+                headquarters: apiData.headquarters || '',
+                contactInfo: {
+                    email: apiData.contactInfo?.email || '',
+                    phone: apiData.contactInfo?.phone || '',
+                    address: apiData.contactInfo?.address || '',
+                    website: apiData.contactInfo?.website || '',
+                },
+                socialMedia: {
+                    facebook: apiData.socialMedia?.facebook || '',
+                    linkedin: apiData.socialMedia?.linkedin || '',
+                    youtube: apiData.socialMedia?.youtube || '',
+                },
+                mission: apiData.mission || '',
+                vision: apiData.vision || '',
+                values: apiData.values || [],
+                achievements: apiData.achievements || [],
+            });
+        }
     };
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải thông tin công ty...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Thông tin chung về công ty
@@ -208,6 +311,7 @@ const CompanyGeneralInfo: React.FC = () => {
                                         value={formData.shortDescription}
                                         onChange={(e) => handleInputChange('shortDescription', e.target.value)}
                                         disabled={!isEditing}
+                                        placeholder="Mô tả ngắn gọn về công ty"
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
@@ -215,10 +319,11 @@ const CompanyGeneralInfo: React.FC = () => {
                                         fullWidth
                                         label="Mô tả chi tiết"
                                         multiline
-                                        rows={4}
+                                        rows={6}
                                         value={formData.fullDescription}
                                         onChange={(e) => handleInputChange('fullDescription', e.target.value)}
                                         disabled={!isEditing}
+                                        placeholder="Mô tả chi tiết về lịch sử, sứ mệnh và tầm nhìn của công ty"
                                     />
                                 </Grid>
                             </Grid>
@@ -306,10 +411,11 @@ const CompanyGeneralInfo: React.FC = () => {
                                         fullWidth
                                         label="Sứ mệnh"
                                         multiline
-                                        rows={3}
+                                        rows={4}
                                         value={formData.mission}
                                         onChange={(e) => handleInputChange('mission', e.target.value)}
                                         disabled={!isEditing}
+                                        placeholder="Sứ mệnh của công ty"
                                     />
                                 </Grid>
                                 <Grid item xs={12} md={6}>
@@ -317,28 +423,24 @@ const CompanyGeneralInfo: React.FC = () => {
                                         fullWidth
                                         label="Tầm nhìn"
                                         multiline
-                                        rows={3}
+                                        rows={4}
                                         value={formData.vision}
                                         onChange={(e) => handleInputChange('vision', e.target.value)}
                                         disabled={!isEditing}
+                                        placeholder="Tầm nhìn của công ty"
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
-                                    <Box>
-                                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                                            Giá trị cốt lõi
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                            {formData.values.map((value, index) => (
-                                                <Chip
-                                                    key={index}
-                                                    label={value}
-                                                    color="primary"
-                                                    variant="outlined"
-                                                />
-                                            ))}
-                                        </Box>
-                                    </Box>
+                                    <TextField
+                                        fullWidth
+                                        label="Giá trị cốt lõi"
+                                        multiline
+                                        rows={3}
+                                        value={formData.values.join('\n')}
+                                        onChange={(e) => handleInputChange('values', e.target.value.split('\n').filter(v => v.trim()))}
+                                        disabled={!isEditing}
+                                        placeholder="Mỗi giá trị trên một dòng"
+                                    />
                                 </Grid>
                             </Grid>
                         </CardContent>
@@ -353,17 +455,42 @@ const CompanyGeneralInfo: React.FC = () => {
                                 Thành tựu nổi bật
                             </Typography>
 
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            <Grid container spacing={2}>
                                 {formData.achievements.map((achievement, index) => (
-                                    <Chip
-                                        key={index}
-                                        label={achievement}
-                                        color="success"
-                                        variant="outlined"
-                                        icon={<BusinessIcon />}
-                                    />
+                                    <Grid item xs={12} sm={6} md={4} key={index}>
+                                        <Card
+                                            variant="outlined"
+                                            sx={{
+                                                p: 2,
+                                                textAlign: 'center',
+                                                '&:hover': {
+                                                    boxShadow: 2,
+                                                    transform: 'translateY(-2px)',
+                                                    transition: 'all 0.3s ease'
+                                                }
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="h4"
+                                                sx={{
+                                                    fontWeight: 'bold',
+                                                    color: 'primary.main',
+                                                    mb: 1
+                                                }}
+                                            >
+                                                {achievement.number}
+                                            </Typography>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ lineHeight: 1.4 }}
+                                            >
+                                                {achievement.label}
+                                            </Typography>
+                                        </Card>
+                                    </Grid>
                                 ))}
-                            </Box>
+                            </Grid>
                         </CardContent>
                     </Card>
                 </Grid>

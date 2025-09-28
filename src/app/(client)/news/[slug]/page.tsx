@@ -15,6 +15,9 @@ import {
     Chip,
     Stack,
     Avatar,
+    CircularProgress,
+    Alert,
+    Divider,
 } from '@mui/material';
 import {
     Home,
@@ -29,124 +32,90 @@ import {
     BookmarkBorder,
     Bookmark,
     ArrowBack,
+    Visibility,
+    ThumbUp,
+    Comment,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Layout from '@/components/client/shared/Layout';
+import { newsService } from '@/services/client/newsService';
+import type { NewsArticle } from '@/services/client/newsService';
 
-interface NewsDetail {
-    id: number;
-    title: string;
-    content: string;
-    image: string;
-    category: 'company' | 'market' | 'culture';
-    author: string;
-    authorAvatar: string;
-    publishDate: string;
-    readTime: string;
-    featured: boolean;
+interface NewsCategory {
+    _id: string;
+    name: string;
     slug: string;
-    tags: string[];
-    relatedNews: {
-        id: number;
-        title: string;
-        image: string;
-        publishDate: string;
-        slug: string;
-    }[];
+    color: string;
 }
 
 const NewsDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({ params }) => {
-    const [news, setNews] = useState<NewsDetail | null>(null);
+    const [news, setNews] = useState<NewsArticle | null>(null);
+    const [relatedNews, setRelatedNews] = useState<NewsArticle[]>([]);
+    const [category, setCategory] = useState<NewsCategory | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [isBookmarked, setIsBookmarked] = useState(false);
     const [showShare, setShowShare] = useState(false);
 
     const resolvedParams = use(params);
 
     useEffect(() => {
-        // Mock data - trong thực tế sẽ fetch từ API dựa trên slug
-        const mockNews: NewsDetail = {
-            id: 1,
-            title: 'LỄ KICK-OFF FRESIA RIVERSIDE: ĐẤT XANH MIỀN NAM TIẾP TỤC KHẲNG ĐỊNH VỊ THẾ DẪN ĐẦU THỊ TRƯỜNG BẤT ĐỘNG SẢN KHU ĐÔNG',
-            content: `
-                <p>Chiều ngày 03.04.2025, Đất Xanh Miền Nam tiếp tục ghi dấu ấn khi tham dự Lễ ra quân dự án Fresia Riverside - bước đi tiếp nối chuỗi thành công khi triển khai các dự án đa phân khúc.</p>
-                
-                <p>Sự kiện này đánh dấu một cột mốc quan trọng trong chiến lược phát triển của công ty tại khu vực phía Đông TP.HCM. Với vị trí đắc địa và tiềm năng phát triển mạnh mẽ, Fresia Riverside hứa hẹn sẽ trở thành điểm nhấn mới trong bức tranh bất động sản khu vực.</p>
+        const loadNewsDetail = async () => {
+            try {
+                setLoading(true);
+                setError(null);
 
-                <h3>Dự án Fresia Riverside - Tầm nhìn chiến lược</h3>
-                
-                <p>Fresia Riverside được thiết kế với tầm nhìn trở thành khu đô thị hiện đại, đáp ứng đầy đủ nhu cầu sống của cư dân. Dự án sở hữu những ưu thế vượt trội:</p>
-                
-                <ul>
-                    <li><strong>Vị trí đắc địa:</strong> Nằm tại khu vực phía Đông TP.HCM, gần các trục giao thông chính</li>
-                    <li><strong>Tiện ích đa dạng:</strong> Hệ thống tiện ích hiện đại, đầy đủ từ giáo dục đến y tế</li>
-                    <li><strong>Thiết kế thông minh:</strong> Áp dụng công nghệ xanh và tiết kiệm năng lượng</li>
-                    <li><strong>Pháp lý minh bạch:</strong> Sổ hồng lâu dài, đảm bảo quyền lợi tối đa cho khách hàng</li>
-                </ul>
+                // Load news article by slug
+                const newsData = await newsService.getNewsBySlug(resolvedParams.slug);
+                setNews(newsData);
 
-                <h3>Cam kết chất lượng từ Minh Lộc Group</h3>
-                
-                <p>Với hơn 15 năm kinh nghiệm trong lĩnh vực bất động sản, Minh Lộc Group cam kết mang đến cho khách hàng những sản phẩm chất lượng cao nhất. Dự án Fresia Riverside được đầu tư kỹ lưỡng từ khâu thiết kế đến thi công, đảm bảo từng chi tiết đều được chăm chút tỉ mỉ.</p>
-
-                <p>Ông Nguyễn Văn A, Tổng Giám đốc Minh Lộc Group chia sẻ: "Fresia Riverside không chỉ là một dự án bất động sản thông thường, mà còn là tâm huyết của chúng tôi trong việc tạo ra những không gian sống lý tưởng cho cộng đồng. Chúng tôi tin tưởng rằng dự án này sẽ góp phần nâng cao chất lượng cuộc sống của người dân khu vực."</p>
-
-                <h3>Triển vọng thị trường</h3>
-                
-                <p>Khu vực phía Đông TP.HCM đang có sự phát triển mạnh mẽ với nhiều dự án hạ tầng lớn được triển khai. Điều này tạo ra cơ hội đầu tư hấp dẫn cho các nhà đầu tư và nhu cầu ở thực cao từ người dân.</p>
-
-                <p>Dự kiến, dự án Fresia Riverside sẽ chính thức mở bán trong quý 2/2025 với nhiều chính sách ưu đãi hấp dẫn dành cho khách hàng đăng ký sớm.</p>
-            `,
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/87/phoi-canh-tu-can-ho-the-prive-quan-2-anh-theprive-net-vn.jpg',
-            category: 'company',
-            author: 'Minh Lộc Group',
-            authorAvatar: 'https://datxanhmiennam.com.vn/Data/Sites/1/media/du-an/canho.png',
-            publishDate: '2025-04-03',
-            readTime: '5 phút',
-            featured: true,
-            slug: 'le-kick-off-fresia-riverside',
-            tags: ['Fresia Riverside', 'Bất động sản', 'Khu Đông', 'Minh Lộc Group'],
-            relatedNews: [
-                {
-                    id: 2,
-                    title: 'ĐẤT XANH MIỀN NAM BÙNG CHÁY NHIỆT HUYẾT TẠI LỄ RA QUÂN "THE INFINITY DĨ AN"',
-                    image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/86/th%C3%B4ng-tin-d%E1%BB%B1-%C3%A1n-stown-gateway-h%C3%ACnh-%E1%BA%A3nh-5_6.jpg',
-                    publishDate: '2025-02-28',
-                    slug: 'the-infinity-di-an-kick-off'
-                },
-                {
-                    id: 3,
-                    title: 'ĐẤT XANH MIỀN NAM CHÀO ĐÓN CÔNG TY THÀNH VIÊN CENTRAL REAL',
-                    image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/85/phoi-canh-the-gio-riverside.jpg',
-                    publishDate: '2025-02-27',
-                    slug: 'central-real-visit'
-                },
-                {
-                    id: 4,
-                    title: 'KHOẢNH KHẮC ĐÁNG NHỚ TẠI LỄ KHAI TRƯƠNG TÒA NHÀ TRỤ SỞ MỚI',
-                    image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/83/photo-3-1728871003192740345375-1728874764904-17288747649761796268016.png',
-                    publishDate: '2025-01-10',
-                    slug: 'headquarters-grand-opening'
+                // Set category info from news data
+                if (newsData.categoryId && typeof newsData.categoryId === 'object') {
+                    setCategory(newsData.categoryId);
                 }
-            ]
+
+                // Load related news
+                const categoryId = typeof newsData.categoryId === 'object' ? newsData.categoryId._id : newsData.categoryId;
+                const relatedData = await newsService.getNews(1, 3, {
+                    category: categoryId,
+                    exclude: newsData._id
+                });
+                setRelatedNews(relatedData);
+
+            } catch (err) {
+                console.error('Error loading news detail:', err);
+                setError('Không thể tải bài viết. Vui lòng thử lại sau.');
+            } finally {
+                setLoading(false);
+            }
         };
-        setNews(mockNews);
+
+        if (resolvedParams.slug) {
+            loadNewsDetail();
+        }
     }, [resolvedParams.slug]);
 
-    const getCategoryColor = (category: string) => {
-        switch (category) {
-            case 'company': return '#E7C873';
-            case 'market': return '#1976D2';
-            case 'culture': return '#2E7D32';
-            default: return '#666';
-        }
+    const getCategoryColor = (category: NewsCategory | null) => {
+        return category?.color || '#E7C873';
     };
 
-    const getCategoryLabel = (category: string) => {
-        switch (category) {
-            case 'company': return 'Tin MinhLoc Group';
-            case 'market': return 'Tin thị trường';
-            case 'culture': return 'Văn hóa MLG';
-            default: return category;
-        }
+    const getCategoryLabel = (category: NewsCategory | null) => {
+        return category?.name || 'Tin tức';
+    };
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('vi-VN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    const calculateReadTime = (content: string) => {
+        const wordsPerMinute = 200;
+        const wordCount = content.split(/\s+/).length;
+        const minutes = Math.ceil(wordCount / wordsPerMinute);
+        return `${minutes} phút`;
     };
 
     const handleBookmark = () => {
@@ -157,11 +126,40 @@ const NewsDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({ param
         setShowShare(!showShare);
     };
 
-    if (!news) {
+    if (loading) {
         return (
             <Layout>
                 <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
-                    <Typography variant="h4">Đang tải...</Typography>
+                    <CircularProgress size={60} sx={{ color: '#E7C873', mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary">
+                        Đang tải bài viết...
+                    </Typography>
+                </Container>
+            </Layout>
+        );
+    }
+
+    if (error || !news) {
+        return (
+            <Layout>
+                <Container maxWidth="lg" sx={{ py: 8 }}>
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                        {error || 'Không tìm thấy bài viết'}
+                    </Alert>
+                    <Button
+                        component={Link}
+                        href="/news"
+                        variant="contained"
+                        startIcon={<ArrowBack />}
+                        sx={{
+                            backgroundColor: '#E7C873',
+                            '&:hover': {
+                                backgroundColor: '#d4b85a',
+                            },
+                        }}
+                    >
+                        Quay lại tin tức
+                    </Button>
                 </Container>
             </Layout>
         );
@@ -169,142 +167,187 @@ const NewsDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({ param
 
     return (
         <Layout>
-            {/* Hero Section */}
-            <Box
-                sx={{
-                    position: 'relative',
-                    height: { xs: '50vh', md: '60vh' },
-                    overflow: 'hidden',
-                }}
-            >
-                <CardMedia
-                    component="img"
-                    image={news.image}
-                    alt={news.title}
-                    sx={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                    }}
-                />
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7))',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'flex-end',
-                        p: 4,
-                    }}
-                >
-                    <Container maxWidth="lg">
-                        <Breadcrumbs aria-label="breadcrumb" sx={{ color: 'white', mb: 2 }}>
-                            <MuiLink component={Link} href="/" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Home sx={{ mr: 0.5 }} fontSize="inherit" />
-                                Trang chủ
-                            </MuiLink>
-                            <MuiLink component={Link} href="/news" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Article sx={{ mr: 0.5 }} fontSize="inherit" />
-                                Tin tức
-                            </MuiLink>
-                            <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', color: '#E7C873' }}>
-                                {news.title}
-                            </Typography>
-                        </Breadcrumbs>
+            {/* Simple Header */}
+            <Box sx={{ backgroundColor: '#f8f9fa', py: 3, borderBottom: '1px solid #e9ecef' }}>
+                <Container maxWidth="lg">
+                    <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+                        <MuiLink component={Link} href="/" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Home sx={{ mr: 0.5 }} fontSize="inherit" />
+                            Trang chủ
+                        </MuiLink>
+                        <MuiLink component={Link} href="/news" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Article sx={{ mr: 0.5 }} fontSize="inherit" />
+                            Tin tức
+                        </MuiLink>
+                        <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', color: '#E7C873' }}>
+                            {news.title}
+                        </Typography>
+                    </Breadcrumbs>
 
-                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                    {/* Category Tags */}
+                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                        <Chip
+                            label={getCategoryLabel(category)}
+                            sx={{
+                                backgroundColor: getCategoryColor(category),
+                                color: 'white',
+                                fontWeight: 600,
+                            }}
+                        />
+                        {news.isFeatured && (
                             <Chip
-                                label={getCategoryLabel(news.category)}
+                                label="Nổi bật"
                                 sx={{
-                                    backgroundColor: getCategoryColor(news.category),
+                                    backgroundColor: '#FF5722',
                                     color: 'white',
                                     fontWeight: 600,
                                 }}
                             />
-                            {news.featured && (
-                                <Chip
-                                    label="Nổi bật"
-                                    sx={{
-                                        backgroundColor: '#FF5722',
-                                        color: 'white',
-                                        fontWeight: 600,
-                                    }}
-                                />
-                            )}
-                        </Box>
+                        )}
+                        {news.isBreaking && (
+                            <Chip
+                                label="Tin nóng"
+                                sx={{
+                                    backgroundColor: '#F44336',
+                                    color: 'white',
+                                    fontWeight: 600,
+                                }}
+                            />
+                        )}
+                    </Box>
 
+                    {/* Article Title */}
+                    <Typography
+                        variant="h3"
+                        component="h1"
+                        sx={{
+                            fontWeight: 700,
+                            mb: 2,
+                            fontSize: { xs: '1.8rem', md: '2.2rem' },
+                            lineHeight: 1.3,
+                            color: '#2c3e50',
+                        }}
+                    >
+                        {news.title}
+                    </Typography>
+
+                    {/* Article Meta */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, color: '#6c757d', flexWrap: 'wrap', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <CalendarToday sx={{ fontSize: 18 }} />
+                            <Typography variant="body2">
+                                {formatDate(news.publishedAt || news.createdAt)}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <AccessTime sx={{ fontSize: 18 }} />
+                            <Typography variant="body2">
+                                {news.readingTime ? `${news.readingTime} phút` : calculateReadTime(news.content)}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Person sx={{ fontSize: 18 }} />
+                            <Typography variant="body2">
+                                {typeof news.author === 'object' ? news.author.name : (news.author || 'MinhLoc Group')}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Visibility sx={{ fontSize: 18 }} />
+                            <Typography variant="body2">
+                                {news.statistics?.views || 0} lượt xem
+                            </Typography>
+                        </Box>
+                    </Box>
+
+                    {/* Article Excerpt */}
+                    {news.excerpt && (
                         <Typography
-                            variant="h2"
-                            component="h1"
+                            variant="h6"
                             sx={{
-                                color: 'white',
-                                fontWeight: 700,
-                                mb: 2,
-                                fontSize: { xs: '1.8rem', md: '2.5rem' },
-                                lineHeight: 1.2,
+                                color: '#6c757d',
+                                fontWeight: 400,
+                                fontStyle: 'italic',
+                                borderLeft: '4px solid #E7C873',
+                                pl: 2,
+                                py: 1,
+                                backgroundColor: '#f8f9fa',
+                                borderRadius: '0 4px 4px 0',
                             }}
                         >
-                            {news.title}
+                            {news.excerpt}
                         </Typography>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, color: 'white' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <CalendarToday sx={{ fontSize: 20 }} />
-                                <Typography variant="body1">
-                                    {new Date(news.publishDate).toLocaleDateString('vi-VN')}
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <AccessTime sx={{ fontSize: 20 }} />
-                                <Typography variant="body1">{news.readTime}</Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Person sx={{ fontSize: 20 }} />
-                                <Typography variant="body1">{news.author}</Typography>
-                            </Box>
-                        </Box>
-                    </Container>
-                </Box>
+                    )}
+                </Container>
             </Box>
 
             <Container maxWidth="lg" sx={{ py: 6 }}>
                 <Grid container spacing={4}>
                     {/* Main Content */}
                     <Grid item xs={12} md={8}>
+                        {/* Featured Image */}
+                        {news.featuredImage && (
+                            <Box sx={{ mb: 4, textAlign: 'center' }}>
+                                <img
+                                    src={news.featuredImage}
+                                    alt={news.title}
+                                    style={{
+                                        maxWidth: '100%',
+                                        height: 'auto',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                    }}
+                                />
+                            </Box>
+                        )}
+
                         {/* Article Content */}
-                        <Card sx={{ mb: 4, borderRadius: 1, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+                        <Card sx={{ mb: 4, borderRadius: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                             <CardContent sx={{ p: 4 }}>
                                 <Box
                                     sx={{
-                                        '& h3': {
-                                            fontSize: '1.5rem',
+                                        '& h1, & h2, & h3, & h4, & h5, & h6': {
+                                            fontSize: '1.4rem',
                                             fontWeight: 600,
-                                            color: '#E7C873',
+                                            color: '#2c3e50',
                                             mb: 2,
                                             mt: 3,
                                         },
                                         '& p': {
-                                            fontSize: '1.1rem',
-                                            lineHeight: 1.8,
+                                            fontSize: '1rem',
+                                            lineHeight: 1.7,
                                             mb: 2,
-                                            color: '#333',
+                                            color: '#2c3e50',
                                         },
-                                        '& ul': {
+                                        '& ul, & ol': {
                                             pl: 3,
                                             mb: 2,
                                         },
                                         '& li': {
-                                            fontSize: '1.1rem',
-                                            lineHeight: 1.8,
+                                            fontSize: '1rem',
+                                            lineHeight: 1.7,
                                             mb: 1,
+                                            color: '#2c3e50',
                                         },
                                         '& strong': {
                                             fontWeight: 600,
-                                            color: '#E7C873',
+                                            color: '#2c3e50',
+                                        },
+                                        '& blockquote': {
+                                            borderLeft: '4px solid #E7C873',
+                                            pl: 2,
+                                            ml: 0,
+                                            fontStyle: 'italic',
+                                            color: '#6c757d',
+                                            backgroundColor: '#f8f9fa',
+                                            p: 2,
+                                            borderRadius: '0 4px 4px 0',
+                                            mb: 2,
+                                        },
+                                        '& img': {
+                                            maxWidth: '100%',
+                                            height: 'auto',
+                                            borderRadius: '4px',
+                                            mb: 2,
                                         },
                                     }}
                                     dangerouslySetInnerHTML={{ __html: news.content }}
@@ -312,122 +355,205 @@ const NewsDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({ param
                             </CardContent>
                         </Card>
 
-                        {/* Tags */}
-                        <Card sx={{ mb: 4, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                            <CardContent sx={{ p: 3 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#E7C873' }}>
-                                    Tags
-                                </Typography>
-                                <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-                                    {news.tags.map((tag, index) => (
-                                        <Chip
-                                            key={index}
-                                            label={tag}
-                                            variant="outlined"
-                                            sx={{
-                                                borderColor: '#E7C873',
-                                                color: '#E7C873',
-                                                '&:hover': {
-                                                    backgroundColor: '#E7C873',
-                                                    color: 'white',
-                                                },
-                                            }}
-                                        />
-                                    ))}
-                                </Stack>
-                            </CardContent>
-                        </Card>
-
-                        {/* Related News */}
-                        <Card sx={{ borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                            <CardContent sx={{ p: 3 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
-                                    Tin Liên Quan
-                                </Typography>
-                                <Grid container spacing={2}>
-                                    {news.relatedNews.map((relatedNews) => (
-                                        <Grid item xs={12} sm={6} key={relatedNews.id}>
-                                            <Card
-                                                component={Link}
-                                                href={`/news/${relatedNews.slug}`}
+                        {/* Tags and Keywords */}
+                        {(news.tags?.length > 0 || news.seo?.keywords?.length > 0) && (
+                            <Card sx={{ mb: 4, borderRadius: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                <CardContent sx={{ p: 3 }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2c3e50' }}>
+                                        Tags & Từ khóa
+                                    </Typography>
+                                    <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
+                                        {news.tags?.map((tag, index) => (
+                                            <Chip
+                                                key={index}
+                                                label={tag}
+                                                variant="outlined"
+                                                size="small"
                                                 sx={{
-                                                    textDecoration: 'none',
-                                                    color: 'inherit',
-                                                    transition: 'all 0.3s ease',
-                                                    borderRadius: 1,
-                                                    '&:hover': {
-                                                        transform: 'translateY(-2px)',
-                                                        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-                                                    },
+                                                    borderColor: '#E7C873',
+                                                    color: '#E7C873',
                                                 }}
-                                            >
-                                                <CardMedia
-                                                    component="img"
-                                                    height="150"
-                                                    image={relatedNews.image}
-                                                    alt={relatedNews.title}
-                                                    sx={{ objectFit: 'cover' }}
-                                                />
-                                                <CardContent sx={{ p: 2 }}>
-                                                    <Typography
-                                                        variant="subtitle1"
-                                                        sx={{
-                                                            fontWeight: 600,
-                                                            mb: 1,
-                                                            fontSize: '0.9rem',
-                                                            lineHeight: 1.4,
-                                                            display: '-webkit-box',
-                                                            WebkitLineClamp: 2,
-                                                            WebkitBoxOrient: 'vertical',
-                                                            overflow: 'hidden',
-                                                        }}
-                                                    >
-                                                        {relatedNews.title}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {new Date(relatedNews.publishDate).toLocaleDateString('vi-VN')}
-                                                    </Typography>
-                                                </CardContent>
-                                            </Card>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            </CardContent>
-                        </Card>
-                    </Grid>
+                                            />
+                                        ))}
+                                        {news.seo?.keywords?.map((keyword, index) => (
+                                            <Chip
+                                                key={`keyword-${index}`}
+                                                label={keyword}
+                                                variant="outlined"
+                                                size="small"
+                                                sx={{
+                                                    borderColor: '#1976D2',
+                                                    color: '#1976D2',
+                                                }}
+                                            />
+                                        ))}
+                                    </Stack>
+                                </CardContent>
+                            </Card>
+                        )}
 
-                    {/* Sidebar */}
-                    <Grid item xs={12} md={4}>
-                        {/* Author Info */}
-                        <Card sx={{ mb: 4, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                        {/* Simple Stats */}
+                        <Card sx={{ mb: 4, borderRadius: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                             <CardContent sx={{ p: 3 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
-                                    Tác giả
+                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2c3e50' }}>
+                                    Thống kê
                                 </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Avatar
-                                        src={news.authorAvatar}
-                                        sx={{ width: 60, height: 60 }}
-                                    />
-                                    <Box>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                                            {news.author}
+                                <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Visibility sx={{ color: '#1976D2', fontSize: 20 }} />
+                                        <Typography variant="body2">
+                                            <strong>{news.statistics?.views || 0}</strong> lượt xem
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Minh Lộc Group
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <ThumbUp sx={{ color: '#4CAF50', fontSize: 20 }} />
+                                        <Typography variant="body2">
+                                            <strong>{news.statistics?.likes || 0}</strong> lượt thích
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Comment sx={{ color: '#FF9800', fontSize: 20 }} />
+                                        <Typography variant="body2">
+                                            <strong>{news.statistics?.comments || 0}</strong> bình luận
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <ShareIcon sx={{ color: '#9C27B0', fontSize: 20 }} />
+                                        <Typography variant="body2">
+                                            <strong>{news.statistics?.shares || 0}</strong> chia sẻ
                                         </Typography>
                                     </Box>
                                 </Box>
                             </CardContent>
                         </Card>
 
-                        {/* Action Buttons */}
-                        <Card sx={{ mb: 4, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                        {/* Related News */}
+                        {relatedNews.length > 0 && (
+                            <Card sx={{ borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                                <CardContent sx={{ p: 3 }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
+                                        Tin Liên Quan
+                                    </Typography>
+                                    <Grid container spacing={2}>
+                                        {relatedNews.map((relatedNews) => (
+                                            <Grid item xs={12} sm={6} key={relatedNews._id}>
+                                                <Card
+                                                    component={Link}
+                                                    href={`/news/${relatedNews.slug}`}
+                                                    sx={{
+                                                        textDecoration: 'none',
+                                                        color: 'inherit',
+                                                        transition: 'all 0.3s ease',
+                                                        borderRadius: 1,
+                                                        '&:hover': {
+                                                            transform: 'translateY(-2px)',
+                                                            boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                                                        },
+                                                    }}
+                                                >
+                                                    <CardMedia
+                                                        component="img"
+                                                        height="150"
+                                                        image={relatedNews.featuredImage || relatedNews.imageUrl || '/placeholder-news.jpg'}
+                                                        alt={relatedNews.title}
+                                                        sx={{ objectFit: 'cover' }}
+                                                    />
+                                                    <CardContent sx={{ p: 2 }}>
+                                                        <Typography
+                                                            variant="subtitle1"
+                                                            sx={{
+                                                                fontWeight: 600,
+                                                                mb: 1,
+                                                                fontSize: '0.9rem',
+                                                                lineHeight: 1.4,
+                                                                display: '-webkit-box',
+                                                                WebkitLineClamp: 2,
+                                                                WebkitBoxOrient: 'vertical',
+                                                                overflow: 'hidden',
+                                                            }}
+                                                        >
+                                                            {relatedNews.title}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {formatDate(relatedNews.publishedAt || relatedNews.createdAt)}
+                                                        </Typography>
+                                                    </CardContent>
+                                                </Card>
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </Grid>
+
+                    {/* Sidebar */}
+                    <Grid item xs={12} md={4}>
+                        {/* Author Info */}
+                        <Card sx={{ mb: 3, borderRadius: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                             <CardContent sx={{ p: 3 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
+                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2c3e50' }}>
+                                    Tác giả
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Avatar
+                                        src={news.authorAvatar || '/avatar.jpg'}
+                                        sx={{ width: 50, height: 50 }}
+                                    />
+                                    <Box>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                            {typeof news.author === 'object' ? news.author.name : (news.author || 'MinhLoc Group')}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {typeof news.author === 'object' && news.author.id ? news.author.id.email : 'MinhLoc Group'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </CardContent>
+                        </Card>
+
+                        {/* Article Info */}
+                        <Card sx={{ mb: 3, borderRadius: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                            <CardContent sx={{ p: 3 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2c3e50' }}>
+                                    Thông tin bài viết
+                                </Typography>
+                                <Stack spacing={1.5}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <AccessTime sx={{ color: '#1976D2', fontSize: 18 }} />
+                                        <Typography variant="body2">
+                                            {news.readingTime ? `${news.readingTime} phút đọc` : 'Thời gian đọc không xác định'}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Article sx={{ color: '#4CAF50', fontSize: 18 }} />
+                                        <Typography variant="body2">
+                                            {news.wordCount || 0} từ
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <CalendarToday sx={{ color: '#FF9800', fontSize: 18 }} />
+                                        <Typography variant="body2">
+                                            {formatDate(news.publishedAt || news.createdAt)}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Comment sx={{ color: '#9C27B0', fontSize: 18 }} />
+                                        <Typography variant="body2">
+                                            {news.allowComments ? 'Cho phép bình luận' : 'Không cho phép bình luận'}
+                                        </Typography>
+                                    </Box>
+                                </Stack>
+                            </CardContent>
+                        </Card>
+
+                        {/* Action Buttons */}
+                        <Card sx={{ mb: 3, borderRadius: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                            <CardContent sx={{ p: 3 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2c3e50' }}>
                                     Hành động
                                 </Typography>
-                                <Stack spacing={2}>
+                                <Stack spacing={1.5}>
                                     <Button
                                         variant="outlined"
                                         startIcon={isBookmarked ? <Bookmark /> : <BookmarkBorder />}
@@ -450,10 +576,10 @@ const NewsDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({ param
                                         onClick={handleShare}
                                         fullWidth
                                         sx={{
-                                            borderColor: '#E7C873',
-                                            color: '#E7C873',
+                                            borderColor: '#1976D2',
+                                            color: '#1976D2',
                                             '&:hover': {
-                                                backgroundColor: '#E7C873',
+                                                backgroundColor: '#1976D2',
                                                 color: 'white',
                                             },
                                         }}
@@ -467,9 +593,9 @@ const NewsDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({ param
                                         startIcon={<ArrowBack />}
                                         fullWidth
                                         sx={{
-                                            backgroundColor: '#E7C873',
+                                            backgroundColor: '#6c757d',
                                             '&:hover': {
-                                                backgroundColor: '#d4b85a',
+                                                backgroundColor: '#5a6268',
                                             },
                                         }}
                                     >
@@ -481,16 +607,17 @@ const NewsDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({ param
 
                         {/* Share Options */}
                         {showShare && (
-                            <Card sx={{ mb: 4, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                            <Card sx={{ mb: 3, borderRadius: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                                 <CardContent sx={{ p: 3 }}>
-                                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2c3e50' }}>
                                         Chia sẻ
                                     </Typography>
-                                    <Stack spacing={2}>
+                                    <Stack spacing={1.5}>
                                         <Button
                                             variant="outlined"
                                             startIcon={<Facebook />}
                                             fullWidth
+                                            size="small"
                                             sx={{
                                                 borderColor: '#1877F2',
                                                 color: '#1877F2',
@@ -506,6 +633,7 @@ const NewsDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({ param
                                             variant="outlined"
                                             startIcon={<Twitter />}
                                             fullWidth
+                                            size="small"
                                             sx={{
                                                 borderColor: '#1DA1F2',
                                                 color: '#1DA1F2',
@@ -521,6 +649,7 @@ const NewsDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({ param
                                             variant="outlined"
                                             startIcon={<LinkedIn />}
                                             fullWidth
+                                            size="small"
                                             sx={{
                                                 borderColor: '#0077B5',
                                                 color: '#0077B5',

@@ -17,6 +17,7 @@ import {
     ListItemText,
     Divider,
     Stack,
+    CircularProgress,
 } from '@mui/material';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -32,6 +33,7 @@ import {
     PersonAdd,
 } from '@mui/icons-material';
 import { usePathname } from 'next/navigation';
+import { companyService, type CompanyInfo } from '@/services/client/companyService';
 
 const Header: React.FC = () => {
     const theme = useTheme();
@@ -39,7 +41,26 @@ const Header: React.FC = () => {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+    const [loading, setLoading] = useState(true);
     const pathname = usePathname();
+
+    // Fetch company info
+    useEffect(() => {
+        const fetchCompanyInfo = async () => {
+            try {
+                setLoading(true);
+                const info = await companyService.getGeneralInfo();
+                setCompanyInfo(info);
+            } catch (error) {
+                console.error('Error fetching company info:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCompanyInfo();
+    }, []);
 
     // Scroll effect
     useEffect(() => {
@@ -96,8 +117,14 @@ const Header: React.FC = () => {
     ];
 
     const topBarItems = [
-        { label: 'MinhLoc Group - Trụ Sở', path: '/about/headquarters' },
-        { label: 'Saigon Real', path: 'https://minhlocgroup.vn' },
+        {
+            label: companyInfo?.data?.companyName ? `${companyInfo.data.companyName} - Trụ Sở` : 'MinhLoc Group - Trụ Sở',
+            path: '/about/headquarters'
+        },
+        {
+            label: 'Saigon Real',
+            path: companyInfo?.data?.contactInfo?.website || 'https://minhlocgroup.vn'
+        },
     ];
 
     return (
@@ -107,9 +134,9 @@ const Header: React.FC = () => {
             <AppBar
                 position="fixed"
                 elevation={scrolled ? 4 : 0}
-                data-aos="fade-down"
-                data-aos-duration="800"
-                data-aos-delay="0"
+
+
+
                 sx={{
                     backgroundColor: 'white',
                     color: '#1a1a1a',
@@ -193,7 +220,7 @@ const Header: React.FC = () => {
                         >
                             <Image
                                 src="/Logo_MinhLocGroup.png"
-                                alt="MinhLoc Group"
+                                alt={companyInfo?.data?.companyName || "MinhLoc Group"}
                                 width={scrolled ? 120 : 120}
                                 height={scrolled ? 90 : 120}
                                 priority={true}
@@ -217,35 +244,42 @@ const Header: React.FC = () => {
                             transition: 'all 0.3s ease-in-out',
                         }}>
                             {/* Hotline */}
-                            <Box
-                                sx={{
-                                    display: { xs: 'none', md: 'flex' },
-                                    alignItems: 'center',
-                                    gap: scrolled ? 0.5 : 1,
-                                    backgroundColor: '#E7C873',
-                                    color: 'white',
-                                    px: scrolled ? 1.2 : 2,
-                                    py: scrolled ? 0.6 : 1,
-                                    borderRadius: '4px',
-                                    fontWeight: 600,
-                                    fontSize: scrolled ? '0.8rem' : '0.9rem',
-                                    transition: 'all 0.3s ease-in-out',
-                                }}
-                            >
-                                <PhoneIcon sx={{ fontSize: '1.2rem' }} />
-                                <Typography
-                                    component={Link}
-                                    href="tel:1900232427"
+                            {!loading && (
+                                <Box
                                     sx={{
+                                        display: { xs: 'none', md: 'flex' },
+                                        alignItems: 'center',
+                                        gap: scrolled ? 0.5 : 1,
+                                        backgroundColor: '#E7C873',
                                         color: 'white',
-                                        textDecoration: 'none',
+                                        px: scrolled ? 1.2 : 2,
+                                        py: scrolled ? 0.6 : 1,
+                                        borderRadius: '4px',
                                         fontWeight: 600,
-                                        fontSize: '0.9rem',
+                                        fontSize: scrolled ? '0.8rem' : '0.9rem',
+                                        transition: 'all 0.3s ease-in-out',
                                     }}
                                 >
-                                    1900232427
-                                </Typography>
-                            </Box>
+                                    <PhoneIcon sx={{ fontSize: '1.2rem' }} />
+                                    <Typography
+                                        component={Link}
+                                        href={`tel:${companyInfo?.data?.contactInfo?.phone || '1900232427'}`}
+                                        sx={{
+                                            color: 'white',
+                                            textDecoration: 'none',
+                                            fontWeight: 600,
+                                            fontSize: '0.9rem',
+                                        }}
+                                    >
+                                        {companyInfo?.data?.contactInfo?.phone || '1900232427'}
+                                    </Typography>
+                                </Box>
+                            )}
+                            {loading && (
+                                <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+                                    <CircularProgress size={20} />
+                                </Box>
+                            )}
 
                             {/* Search Toggle */}
                             <IconButton
@@ -267,44 +301,50 @@ const Header: React.FC = () => {
                             </IconButton>
 
                             {/* Social Icons */}
-                            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: scrolled ? 0.5 : 1 }}>
-                                <IconButton
-                                    component={Link}
-                                    href="https://facebook.com/minhlocgroup"
-                                    target="_blank"
-                                    sx={{
-                                        backgroundColor: '#1877F2',
-                                        color: 'white',
-                                        width: scrolled ? '32px' : '40px',
-                                        height: scrolled ? '32px' : '40px',
-                                        borderRadius: '4px',
-                                        transition: 'all 0.3s ease-in-out',
-                                        '&:hover': {
-                                            backgroundColor: '#166FE5',
-                                        },
-                                    }}
-                                >
-                                    <Facebook sx={{ fontSize: scrolled ? '1rem' : '1.2rem' }} />
-                                </IconButton>
-                                <IconButton
-                                    component={Link}
-                                    href="https://youtube.com/minhlocgroup"
-                                    target="_blank"
-                                    sx={{
-                                        backgroundColor: '#FF0000',
-                                        color: 'white',
-                                        width: scrolled ? '32px' : '40px',
-                                        height: scrolled ? '32px' : '40px',
-                                        borderRadius: '4px',
-                                        transition: 'all 0.3s ease-in-out',
-                                        '&:hover': {
-                                            backgroundColor: '#E60000',
-                                        },
-                                    }}
-                                >
-                                    <YouTube sx={{ fontSize: scrolled ? '1rem' : '1.2rem' }} />
-                                </IconButton>
-                            </Box>
+                            {!loading && (
+                                <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: scrolled ? 0.5 : 1 }}>
+                                    {companyInfo?.data?.socialMedia?.facebook && (
+                                        <IconButton
+                                            component={Link}
+                                            href={companyInfo.data.socialMedia.facebook}
+                                            target="_blank"
+                                            sx={{
+                                                backgroundColor: '#1877F2',
+                                                color: 'white',
+                                                width: scrolled ? '32px' : '40px',
+                                                height: scrolled ? '32px' : '40px',
+                                                borderRadius: '4px',
+                                                transition: 'all 0.3s ease-in-out',
+                                                '&:hover': {
+                                                    backgroundColor: '#166FE5',
+                                                },
+                                            }}
+                                        >
+                                            <Facebook sx={{ fontSize: scrolled ? '1rem' : '1.2rem' }} />
+                                        </IconButton>
+                                    )}
+                                    {companyInfo?.data?.socialMedia?.youtube && (
+                                        <IconButton
+                                            component={Link}
+                                            href={companyInfo.data.socialMedia.youtube}
+                                            target="_blank"
+                                            sx={{
+                                                backgroundColor: '#FF0000',
+                                                color: 'white',
+                                                width: scrolled ? '32px' : '40px',
+                                                height: scrolled ? '32px' : '40px',
+                                                borderRadius: '4px',
+                                                transition: 'all 0.3s ease-in-out',
+                                                '&:hover': {
+                                                    backgroundColor: '#E60000',
+                                                },
+                                            }}
+                                        >
+                                            <YouTube sx={{ fontSize: scrolled ? '1rem' : '1.2rem' }} />
+                                        </IconButton>
+                                    )}
+                                </Box>
+                            )}
 
                             {/* Mobile Menu Button */}
                             {isMobile && (
@@ -377,7 +417,7 @@ const Header: React.FC = () => {
                         </Box>
 
                         {/* Mobile Hotline */}
-                        {isMobile && (
+                        {isMobile && !loading && (
                             <Box
                                 sx={{
                                     backgroundColor: '#E7C873',
@@ -388,7 +428,7 @@ const Header: React.FC = () => {
                             >
                                 <Typography
                                     component={Link}
-                                    href="tel:1900232427"
+                                    href={`tel:${companyInfo?.data?.contactInfo?.phone || '1900232427'}`}
                                     sx={{
                                         color: 'white',
                                         textDecoration: 'none',
@@ -396,8 +436,20 @@ const Header: React.FC = () => {
                                         fontSize: '0.9rem',
                                     }}
                                 >
-                                    📞 1900232427
+                                    📞 {companyInfo?.data?.contactInfo?.phone || '1900232427'}
                                 </Typography>
+                            </Box>
+                        )}
+                        {isMobile && loading && (
+                            <Box
+                                sx={{
+                                    backgroundColor: '#E7C873',
+                                    color: 'white',
+                                    py: 1,
+                                    textAlign: 'center',
+                                }}
+                            >
+                                <CircularProgress size={20} sx={{ color: 'white' }} />
                             </Box>
                         )}
                     </Box>
@@ -506,34 +558,40 @@ const Header: React.FC = () => {
                     <Divider sx={{ my: 2 }} />
 
                     {/* Mobile Social Icons */}
-                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                        <IconButton
-                            component={Link}
-                            href="https://facebook.com/minhlocgroup"
-                            target="_blank"
-                            sx={{
-                                color: '#1877F2',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(24, 119, 242, 0.1)',
-                                },
-                            }}
-                        >
-                            <Facebook />
-                        </IconButton>
-                        <IconButton
-                            component={Link}
-                            href="https://youtube.com/minhlocgroup"
-                            target="_blank"
-                            sx={{
-                                color: '#FF0000',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 0, 0, 0.1)',
-                                },
-                            }}
-                        >
-                            <YouTube />
-                        </IconButton>
-                    </Box>
+                    {!loading && (
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                            {companyInfo?.data?.socialMedia?.facebook && (
+                                <IconButton
+                                    component={Link}
+                                    href={companyInfo.data.socialMedia.facebook}
+                                    target="_blank"
+                                    sx={{
+                                        color: '#1877F2',
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(24, 119, 242, 0.1)',
+                                        },
+                                    }}
+                                >
+                                    <Facebook />
+                                </IconButton>
+                            )}
+                            {companyInfo?.data?.socialMedia?.youtube && (
+                                <IconButton
+                                    component={Link}
+                                    href={companyInfo.data.socialMedia.youtube}
+                                    target="_blank"
+                                    sx={{
+                                        color: '#FF0000',
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                                        },
+                                    }}
+                                >
+                                    <YouTube />
+                                </IconButton>
+                            )}
+                        </Box>
+                    )}
                 </Box>
             </Drawer>
         </>

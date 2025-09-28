@@ -8,8 +8,8 @@ import {
     CardContent,
     Grid,
     Avatar,
-    LinearProgress,
 } from '@mui/material';
+import CustomProgressBar from './CustomProgressBar';
 import {
     TrendingUp as TrendingUpIcon,
     Assessment as AssessmentIcon,
@@ -139,44 +139,44 @@ const FieldAnalytics: React.FC = () => {
                             </Typography>
 
                             <Box sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2">Xây dựng</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        {analyticsData.constructionProjects} dự án
-                                    </Typography>
-                                </Box>
-                                <LinearProgress
-                                    variant="determinate"
+                                <CustomProgressBar
                                     value={(analyticsData.constructionProjects / analyticsData.totalProjects) * 100}
-                                    sx={{ height: 8, borderRadius: 1 }}
+                                    height={8}
+                                    color="#1976d2"
+                                    backgroundColor="rgba(0,0,0,0.1)"
+                                    borderRadius={1}
+                                    label="Xây dựng"
+                                    valueLabel={`${analyticsData.constructionProjects} dự án`}
+                                    percentagePosition="right"
+                                    animated={true}
                                 />
                             </Box>
 
                             <Box sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2">Đầu tư Tài chính</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        {analyticsData.financeProjects} dự án
-                                    </Typography>
-                                </Box>
-                                <LinearProgress
-                                    variant="determinate"
+                                <CustomProgressBar
                                     value={(analyticsData.financeProjects / analyticsData.totalProjects) * 100}
-                                    sx={{ height: 8, borderRadius: 1 }}
+                                    height={8}
+                                    color="#388e3c"
+                                    backgroundColor="rgba(0,0,0,0.1)"
+                                    borderRadius={1}
+                                    label="Đầu tư Tài chính"
+                                    valueLabel={`${analyticsData.financeProjects} dự án`}
+                                    percentagePosition="right"
+                                    animated={true}
                                 />
                             </Box>
 
                             <Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2">Bất động sản</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        {analyticsData.realEstateProjects} dự án
-                                    </Typography>
-                                </Box>
-                                <LinearProgress
-                                    variant="determinate"
+                                <CustomProgressBar
                                     value={(analyticsData.realEstateProjects / analyticsData.totalProjects) * 100}
-                                    sx={{ height: 8, borderRadius: 1 }}
+                                    height={8}
+                                    color="#f57c00"
+                                    backgroundColor="rgba(0,0,0,0.1)"
+                                    borderRadius={1}
+                                    label="Bất động sản"
+                                    valueLabel={`${analyticsData.realEstateProjects} dự án`}
+                                    percentagePosition="right"
+                                    animated={true}
                                 />
                             </Box>
                         </CardContent>
@@ -191,47 +191,44 @@ const FieldAnalytics: React.FC = () => {
                             </Typography>
 
                             <Box sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2">Tăng trưởng tháng</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                                        +{analyticsData.monthlyGrowth}%
-                                    </Typography>
-                                </Box>
-                                <LinearProgress
-                                    variant="determinate"
+                                <CustomProgressBar
                                     value={analyticsData.monthlyGrowth}
-                                    color="success"
-                                    sx={{ height: 8, borderRadius: 1 }}
+                                    height={8}
+                                    color="#4caf50"
+                                    backgroundColor="rgba(0,0,0,0.1)"
+                                    borderRadius={1}
+                                    label="Tăng trưởng tháng"
+                                    valueLabel={`+${analyticsData.monthlyGrowth}%`}
+                                    percentagePosition="right"
+                                    animated={true}
                                 />
                             </Box>
 
                             <Box sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2">Tăng trưởng quý</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'info.main' }}>
-                                        +{analyticsData.quarterlyGrowth}%
-                                    </Typography>
-                                </Box>
-                                <LinearProgress
-                                    variant="determinate"
+                                <CustomProgressBar
                                     value={analyticsData.quarterlyGrowth}
-                                    color="info"
-                                    sx={{ height: 8, borderRadius: 1 }}
+                                    height={8}
+                                    color="#2196f3"
+                                    backgroundColor="rgba(0,0,0,0.1)"
+                                    borderRadius={1}
+                                    label="Tăng trưởng quý"
+                                    valueLabel={`+${analyticsData.quarterlyGrowth}%`}
+                                    percentagePosition="right"
+                                    animated={true}
                                 />
                             </Box>
 
                             <Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2">Tăng trưởng năm</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                                        +{analyticsData.yearlyGrowth}%
-                                    </Typography>
-                                </Box>
-                                <LinearProgress
-                                    variant="determinate"
+                                <CustomProgressBar
                                     value={analyticsData.yearlyGrowth}
-                                    color="primary"
-                                    sx={{ height: 8, borderRadius: 1 }}
+                                    height={8}
+                                    color="#1976d2"
+                                    backgroundColor="rgba(0,0,0,0.1)"
+                                    borderRadius={1}
+                                    label="Tăng trưởng năm"
+                                    valueLabel={`+${analyticsData.yearlyGrowth}%`}
+                                    percentagePosition="right"
+                                    animated={true}
                                 />
                             </Box>
                         </CardContent>

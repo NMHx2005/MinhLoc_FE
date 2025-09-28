@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Typography,
@@ -32,6 +32,9 @@ import {
     Group as GroupIcon,
     CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
+import { companyService } from '../../services/admin/companyService';
+import type { CompanyInfo } from '../../services/admin/companyService';
+import { Alert, Snackbar, CircularProgress } from '@mui/material';
 
 interface CompetitiveAdvantage {
     id: string;
@@ -51,71 +54,14 @@ interface Achievement {
 }
 
 const CompanyCompetitive: React.FC = () => {
-    const [advantages, setAdvantages] = useState<CompetitiveAdvantage[]>([
-        {
-            id: '1',
-            title: 'Kinh nghiệm 15+ năm',
-            description: 'Hơn 15 năm kinh nghiệm trong lĩnh vực xây dựng và bất động sản',
-            icon: 'experience',
-            category: 'experience',
-            isActive: true,
-        },
-        {
-            id: '2',
-            title: 'Công nghệ tiên tiến',
-            description: 'Ứng dụng công nghệ BIM, AI trong thiết kế và quản lý dự án',
-            icon: 'technology',
-            category: 'technology',
-            isActive: true,
-        },
-        {
-            id: '3',
-            title: 'Đội ngũ chuyên nghiệp',
-            description: 'Hơn 500 nhân viên có trình độ cao, được đào tạo bài bản',
-            icon: 'team',
-            category: 'team',
-            isActive: true,
-        },
-        {
-            id: '4',
-            title: 'Quy trình chuẩn hóa',
-            description: 'Quy trình quản lý dự án theo tiêu chuẩn quốc tế ISO 9001:2015',
-            icon: 'process',
-            category: 'process',
-            isActive: true,
-        },
-    ]);
-
-    const [achievements, setAchievements] = useState<Achievement[]>([
-        {
-            id: '1',
-            title: 'Dự án đã hoàn thành',
-            value: '1000+',
-            unit: 'dự án',
-            description: 'Từ nhà ở đến các dự án thương mại quy mô lớn',
-        },
-        {
-            id: '2',
-            title: 'Khách hàng hài lòng',
-            value: '98%',
-            unit: 'tỷ lệ',
-            description: 'Tỷ lệ khách hàng hài lòng với chất lượng dịch vụ',
-        },
-        {
-            id: '3',
-            title: 'Thị phần',
-            value: '15%',
-            unit: 'TP.HCM',
-            description: 'Thị phần bất động sản cao cấp tại TP.HCM',
-        },
-        {
-            id: '4',
-            title: 'Tăng trưởng',
-            value: '25%',
-            unit: 'năm',
-            description: 'Tăng trưởng doanh thu trung bình hàng năm',
-        },
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+    const [advantages, setAdvantages] = useState<CompetitiveAdvantage[]>([]);
+    const [achievements, setAchievements] = useState<Achievement[]>([]);
 
     const [advantageDialogOpen, setAdvantageDialogOpen] = useState(false);
     const [editingAdvantage, setEditingAdvantage] = useState<CompetitiveAdvantage | null>(null);
@@ -135,6 +81,38 @@ const CompanyCompetitive: React.FC = () => {
         unit: '',
         description: '',
     });
+
+    // Load company competitive data from API
+    const loadCompanyCompetitive = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const info = await companyService.getCompanyInfoBySection('competitiveness');
+            if (info) {
+                setCompanyInfo(info);
+                // Convert strengths to advantages
+                const strengths = info.data?.strengths || [];
+                const competitiveAdvantages: CompetitiveAdvantage[] = strengths.map((strength: any, index: number) => ({
+                    id: strength._id || `strength-${index}`,
+                    title: strength.title || '',
+                    description: strength.description || '',
+                    icon: strength.icon || 'experience',
+                    category: 'experience' as const,
+                    isActive: true,
+                }));
+                setAdvantages(competitiveAdvantages);
+            }
+        } catch (err) {
+            console.error('Error loading company competitive data:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu năng lực cạnh tranh');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadCompanyCompetitive();
+    }, [loadCompanyCompetitive]);
 
     const getIconComponent = (icon: string) => {
         switch (icon) {
@@ -194,25 +172,93 @@ const CompanyCompetitive: React.FC = () => {
         setAdvantageDialogOpen(true);
     };
 
-    const handleSaveAdvantage = () => {
-        if (editingAdvantage) {
-            setAdvantages(prev => prev.map(adv =>
-                adv.id === editingAdvantage.id
-                    ? { ...advantageFormData, id: editingAdvantage.id }
-                    : adv
-            ));
-        } else {
-            const newAdvantage: CompetitiveAdvantage = {
-                ...advantageFormData,
-                id: Date.now().toString(),
+    const handleSaveAdvantage = async () => {
+        setSaving(true);
+        try {
+            let updatedAdvantages: CompetitiveAdvantage[];
+
+            if (editingAdvantage) {
+                updatedAdvantages = advantages.map(adv =>
+                    adv.id === editingAdvantage.id
+                        ? { ...advantageFormData, id: editingAdvantage.id }
+                        : adv
+                );
+            } else {
+                const newAdvantage: CompetitiveAdvantage = {
+                    ...advantageFormData,
+                    id: Date.now().toString(),
+                };
+                updatedAdvantages = [...advantages, newAdvantage];
+            }
+
+            setAdvantages(updatedAdvantages);
+
+            // Convert advantages back to strengths format and save to API
+            const strengths = updatedAdvantages.map(adv => ({
+                title: adv.title,
+                description: adv.description,
+                icon: adv.icon,
+                color: '#2196f3', // Default color
+            }));
+
+            const dataToSave = {
+                section: 'competitiveness',
+                title: companyInfo?.title || 'Năng lực cạnh tranh và thế mạnh',
+                content: companyInfo?.content || '',
+                data: {
+                    strengths: strengths,
+                },
+                sortOrder: 3
             };
-            setAdvantages(prev => [...prev, newAdvantage]);
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Lưu thông tin năng lực cạnh tranh thành công!');
+            setSnackbarOpen(true);
+            setAdvantageDialogOpen(false);
+            await loadCompanyCompetitive();
+        } catch (error) {
+            console.error('Error saving competitive advantage:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu thông tin năng lực cạnh tranh');
+            setSnackbarOpen(true);
+        } finally {
+            setSaving(false);
         }
-        setAdvantageDialogOpen(false);
     };
 
-    const handleDeleteAdvantage = (advantageId: string) => {
-        setAdvantages(prev => prev.filter(adv => adv.id !== advantageId));
+    const handleDeleteAdvantage = async (advantageId: string) => {
+        try {
+            const updatedAdvantages = advantages.filter(adv => adv.id !== advantageId);
+            setAdvantages(updatedAdvantages);
+
+            // Convert advantages back to strengths format and save to API
+            const strengths = updatedAdvantages.map(adv => ({
+                title: adv.title,
+                description: adv.description,
+                icon: adv.icon,
+                color: '#2196f3', // Default color
+            }));
+
+            const dataToSave = {
+                section: 'competitiveness',
+                title: companyInfo?.title || 'Năng lực cạnh tranh và thế mạnh',
+                content: companyInfo?.content || '',
+                data: {
+                    strengths: strengths,
+                },
+                sortOrder: 3
+            };
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Xóa thế mạnh thành công!');
+            setSnackbarOpen(true);
+        } catch (error) {
+            console.error('Error deleting advantage:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa thế mạnh');
+            setSnackbarOpen(true);
+            await loadCompanyCompetitive();
+        }
     };
 
     const handleAddAchievement = () => {
@@ -237,29 +283,120 @@ const CompanyCompetitive: React.FC = () => {
         setAchievementDialogOpen(true);
     };
 
-    const handleSaveAchievement = () => {
-        if (editingAchievement) {
-            setAchievements(prev => prev.map(ach =>
-                ach.id === editingAchievement.id
-                    ? { ...achievementFormData, id: editingAchievement.id }
-                    : ach
-            ));
-        } else {
-            const newAchievement: Achievement = {
-                ...achievementFormData,
-                id: Date.now().toString(),
+    const handleSaveAchievement = async () => {
+        setSaving(true);
+        try {
+            let updatedAchievements: Achievement[];
+
+            if (editingAchievement) {
+                updatedAchievements = achievements.map(ach =>
+                    ach.id === editingAchievement.id
+                        ? { ...achievementFormData, id: editingAchievement.id }
+                        : ach
+                );
+            } else {
+                const newAchievement: Achievement = {
+                    ...achievementFormData,
+                    id: Date.now().toString(),
+                };
+                updatedAchievements = [...achievements, newAchievement];
+            }
+
+            setAchievements(updatedAchievements);
+
+            // Convert achievements to API format and save
+            const achievementsData = updatedAchievements.map(ach => ({
+                number: ach.value,
+                label: ach.title,
+            }));
+
+            const dataToSave = {
+                section: 'competitiveness',
+                title: companyInfo?.title || 'Năng lực cạnh tranh và thế mạnh',
+                content: companyInfo?.content || '',
+                data: {
+                    strengths: advantages.map(adv => ({
+                        title: adv.title,
+                        description: adv.description,
+                        icon: adv.icon,
+                        color: '#2196f3',
+                    })),
+                    achievements: achievementsData,
+                },
+                sortOrder: 3
             };
-            setAchievements(prev => [...prev, newAchievement]);
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Lưu thành tựu thành công!');
+            setSnackbarOpen(true);
+            setAchievementDialogOpen(false);
+            await loadCompanyCompetitive();
+        } catch (error) {
+            console.error('Error saving achievement:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu thành tựu');
+            setSnackbarOpen(true);
+        } finally {
+            setSaving(false);
         }
-        setAchievementDialogOpen(false);
     };
 
-    const handleDeleteAchievement = (achievementId: string) => {
-        setAchievements(prev => prev.filter(ach => ach.id !== achievementId));
+    const handleDeleteAchievement = async (achievementId: string) => {
+        try {
+            const updatedAchievements = achievements.filter(ach => ach.id !== achievementId);
+            setAchievements(updatedAchievements);
+
+            // Convert achievements to API format and save
+            const achievementsData = updatedAchievements.map(ach => ({
+                number: ach.value,
+                label: ach.title,
+            }));
+
+            const dataToSave = {
+                section: 'competitiveness',
+                title: companyInfo?.title || 'Năng lực cạnh tranh và thế mạnh',
+                content: companyInfo?.content || '',
+                data: {
+                    strengths: advantages.map(adv => ({
+                        title: adv.title,
+                        description: adv.description,
+                        icon: adv.icon,
+                        color: '#2196f3',
+                    })),
+                    achievements: achievementsData,
+                },
+                sortOrder: 3
+            };
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Xóa thành tựu thành công!');
+            setSnackbarOpen(true);
+        } catch (error) {
+            console.error('Error deleting achievement:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa thành tựu');
+            setSnackbarOpen(true);
+            await loadCompanyCompetitive();
+        }
     };
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải thông tin năng lực cạnh tranh...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Năng lực cạnh tranh
@@ -301,10 +438,8 @@ const CompanyCompetitive: React.FC = () => {
                                             </ListItemIcon>
                                             <ListItemText
                                                 primary={
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Typography variant="h6">
-                                                            {advantage.title}
-                                                        </Typography>
+                                                    <Typography variant="h6" component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <span>{advantage.title}</span>
                                                         <Chip
                                                             label={advantage.category}
                                                             size="small"
@@ -317,7 +452,7 @@ const CompanyCompetitive: React.FC = () => {
                                                                 color="success"
                                                             />
                                                         )}
-                                                    </Box>
+                                                    </Typography>
                                                 }
                                                 secondary={advantage.description}
                                             />
@@ -514,14 +649,30 @@ const CompanyCompetitive: React.FC = () => {
                     </Grid>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setAchievementDialogOpen(false)}>
+                    <Button onClick={() => setAchievementDialogOpen(false)} disabled={saving}>
                         Hủy
                     </Button>
-                    <Button onClick={handleSaveAchievement} variant="contained">
-                        {editingAchievement ? 'Cập nhật' : 'Thêm'}
+                    <Button
+                        onClick={handleSaveAchievement}
+                        variant="contained"
+                        disabled={saving}
+                        startIcon={saving ? <CircularProgress size={20} /> : undefined}
+                    >
+                        {saving ? 'Đang lưu...' : (editingAchievement ? 'Cập nhật' : 'Thêm')}
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={() => setSnackbarOpen(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarMessage.includes('✅') ? 'success' : 'error'} sx={{ width: '100%' }}>
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

@@ -20,9 +20,11 @@ import {
     Web as StaticPageIcon,
     ViewCarousel as BannerIcon,
     Search as SEOIcon,
+    Category as CategoryIcon,
 } from '@mui/icons-material';
 import AdminLayout from '../../../../components/admin/AdminLayout';
 import NewsManagement from '../../../../components/admin/NewsManagement';
+import NewsCategoriesManagement from '../../../../components/admin/NewsCategoriesManagement';
 import StaticPages from '../../../../components/admin/StaticPages';
 import BannerSlider from '../../../../components/admin/BannerSlider';
 import SEOSettings from '@/components/admin/SEOSettings';
@@ -118,21 +120,27 @@ const ContentManagementPage: React.FC = () => {
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
+                                    icon={<CategoryIcon />}
+                                    label="Danh mục"
+                                    {...a11yProps(1)}
+                                    sx={{ minHeight: 72 }}
+                                />
+                                <Tab
                                     icon={<StaticPageIcon />}
                                     label="Trang tĩnh"
-                                    {...a11yProps(1)}
+                                    {...a11yProps(2)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
                                     icon={<BannerIcon />}
                                     label="Banner/Slider"
-                                    {...a11yProps(2)}
+                                    {...a11yProps(3)}
                                     sx={{ minHeight: 72 }}
                                 />
                                 <Tab
                                     icon={<SEOIcon />}
                                     label="SEO Settings"
-                                    {...a11yProps(3)}
+                                    {...a11yProps(4)}
                                     sx={{ minHeight: 72 }}
                                 />
                             </Tabs>
@@ -145,12 +153,15 @@ const ContentManagementPage: React.FC = () => {
                     <NewsManagement />
                 </TabPanel>
                 <TabPanel value={value} index={1}>
-                    <StaticPages />
+                    <NewsCategoriesManagement />
                 </TabPanel>
                 <TabPanel value={value} index={2}>
-                    <BannerSlider />
+                    <StaticPages />
                 </TabPanel>
                 <TabPanel value={value} index={3}>
+                    <BannerSlider />
+                </TabPanel>
+                <TabPanel value={value} index={4}>
                     <SEOSettings />
                 </TabPanel>
             </Container>

@@ -1,35 +1,41 @@
 'use client'
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Box,
     Typography,
     Container,
     Card,
     CardContent,
+    CircularProgress,
 } from '@mui/material';
+import { getBusinessFields } from '@/services/client/businessFieldService';
 
 const BusinessAreas: React.FC = () => {
-    const businessAreas = [
-        {
-            id: 1,
-            title: 'Xây dựng',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/News/23/xd.jpg',
-            description: 'Đất Xanh đã không ngừng phát triển mạnh mẽ các hoạt động đầu tư xây dựng để nhanh chóng trở thành một trong những tập đoàn phát triển bất động sản hàng đầu Việt Nam'
-        },
-        {
-            id: 2,
-            title: 'Đầu tư tài chính',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/News/22/tc.jpg',
-            description: 'Trải qua chặng đường 14 năm phát triển, Tập đoàn Đất Xanh đã trở thành một trong những chủ đầu tư mang lại đầu ấn với sản phẩm đa dạng đáp ứng nhu cầu của thị trường.'
-        },
-        {
-            id: 3,
-            title: 'Bất động sản',
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/News/21/bds.jpg',
-            description: 'Tất cả các giải pháp mà Đất Xanh cung cấp đều được phân tích một cách chuyên sâu, hướng đến phục vụ và giải quyết những vướng mắc một cách nhanh chóng và thỏa mãn tối đa nhu cầu của khách hàng.'
-        }
-    ];
+    const [businessAreas, setBusinessAreas] = useState<any>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchBusinessFields = async () => {
+            try {
+                setLoading(true);
+                const response = await getBusinessFields(1, 3); // Lấy 3 lĩnh vực
+                if (response) {
+                    setBusinessAreas(response);
+                } else {
+                    setError('Không thể tải dữ liệu lĩnh vực hoạt động');
+                }
+            } catch (err) {
+                console.error('Error fetching business fields:', err);
+                setError('Có lỗi xảy ra khi tải dữ liệu');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchBusinessFields();
+    }, []);
 
     return (
         <Box
@@ -59,8 +65,8 @@ const BusinessAreas: React.FC = () => {
                 <Typography
                     variant="h2"
                     component="h2"
-                    data-aos="fade-up"
-                    data-aos-duration="1000"
+
+
                     sx={{
                         textAlign: 'center',
                         color: '#E7C873',
@@ -74,93 +80,119 @@ const BusinessAreas: React.FC = () => {
                     Lĩnh vực hoạt động
                 </Typography>
 
-                {/* Business Areas Grid */}
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                            xs: '1fr',
-                            md: 'repeat(3, 1fr)',
-                        },
-                        gap: 4,
-                        mt: 4,
-                    }}
-                >
-                    {businessAreas.map((area, index) => (
-                        <Card
-                            key={area.id}
-                            data-aos="zoom-in"
-                            data-aos-duration="1000"
-                            data-aos-delay={index * 200}
-                            sx={{
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                backgroundColor: 'white',
-                                overflow: 'hidden',
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                                transition: 'all 0.3s ease-in-out',
-                                '&:hover': {
-                                    transform: 'translateY(-8px)',
-                                    boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
-                                },
-                            }}
-                        >
-                            {/* Image */}
-                            <Box
-                                component="img"
-                                src={area.image}
-                                alt={area.title}
-                                sx={{
-                                    width: '100%',
-                                    height: 250,
-                                    objectFit: 'cover',
-                                    transition: 'transform 0.3s ease-in-out',
-                                    '&:hover': {
-                                        transform: 'scale(1.05)',
-                                    },
-                                }}
-                            />
+                {/* Loading State */}
+                {loading && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+                        <CircularProgress />
+                    </Box>
+                )}
 
-                            {/* Content */}
-                            <CardContent
+                {/* Error State */}
+                {error && (
+                    <Box sx={{ textAlign: 'center', py: 8 }}>
+                        <Typography variant="h6" color="error">
+                            {error}
+                        </Typography>
+                    </Box>
+                )}
+
+                {/* Business Areas Grid */}
+                {!loading && !error && (
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: {
+                                xs: '1fr',
+                                md: 'repeat(3, 1fr)',
+                            },
+                            gap: 4,
+                            mt: 4,
+                        }}
+                    >
+                        {businessAreas.map((area: any) => (
+                            <Card
+                                key={area._id}
+
+
                                 sx={{
-                                    p: 3,
-                                    flexGrow: 1,
+                                    height: '100%',
                                     display: 'flex',
                                     flexDirection: 'column',
+                                    backgroundColor: 'white',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                                    transition: 'all 0.3s ease-in-out',
+                                    '&:hover': {
+                                        transform: 'translateY(-8px)',
+                                        boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+                                    },
                                 }}
                             >
-                                <Typography
-                                    variant="h4"
-                                    component="h3"
+                                {/* Image */}
+                                <Box
+                                    component="img"
+                                    src={area.image || '/modern-house.png'}
+                                    alt={area.name}
                                     sx={{
-                                        fontSize: '1.5rem',
-                                        fontWeight: 700,
-                                        color: '#E7C873',
-                                        mb: 2,
-                                        textAlign: 'center',
+                                        width: '100%',
+                                        height: 200,
+                                        objectFit: 'cover',
+                                        overflow: 'hidden!important',
+                                        objectPosition: 'center',
+                                        transition: 'transform 0.3s ease-in-out',
+                                        '&:hover': {
+                                            transform: 'scale(1.05)',
+                                        },
                                     }}
-                                >
-                                    {area.title}
-                                </Typography>
+                                />
 
-                                <Typography
-                                    variant="body1"
+                                {/* Content */}
+                                <CardContent
                                     sx={{
-                                        fontSize: '0.95rem',
-                                        lineHeight: 1.7,
-                                        color: '#555',
-                                        textAlign: 'justify',
+                                        p: 3,
                                         flexGrow: 1,
+                                        display: 'flex',
+                                        flexDirection: 'column',
                                     }}
                                 >
-                                    {area.description}
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </Box>
+                                    <Typography
+                                        variant="h4"
+                                        component="h3"
+                                        sx={{
+                                            fontSize: '1.5rem',
+                                            fontWeight: 700,
+                                            color: '#E7C873',
+                                            mb: 2,
+                                            textAlign: 'center',
+                                        }}
+                                    >
+                                        {area.name}
+                                    </Typography>
+
+                                    <Typography
+                                        variant="body1"
+                                        sx={{
+                                            fontSize: '0.95rem',
+                                            lineHeight: 1.5,
+                                            color: '#555',
+                                            textAlign: 'justify',
+                                            flexGrow: 1,
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 3,
+                                            WebkitBoxOrient: 'vertical',
+                                            overflow: 'hidden!important',
+                                            textOverflow: 'ellipsis',
+                                            height: '4.5em', // 3 lines * 1.5 line-height
+                                        }}
+                                        title={area.description} // Tooltip for full text
+                                    >
+                                        {area.description}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </Box>
+                )}
             </Container>
         </Box>
     );

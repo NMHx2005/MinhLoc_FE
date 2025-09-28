@@ -14,7 +14,6 @@ import {
     TablePagination,
     IconButton,
     Chip,
-    Avatar,
     Menu,
     MenuItem,
     ListItemIcon,
@@ -34,120 +33,79 @@ import {
     Image as ImageIcon,
     LocationOn as LocationIcon,
     AttachMoney as MoneyIcon,
+    Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
-interface Project {
-    id: number;
-    name: string;
-    type: 'apartment' | 'villa' | 'commercial' | 'land';
-    status: 'available' | 'sold' | 'coming-soon';
-    city: string;
-    district: string;
-    price: string;
-    area: string;
-    image: string;
-    createdAt: string;
-}
+import type { Project } from '../../services/admin/projectService';
+import { getOptimizedImageUrl, getPlaceholderImage, imageStyles, handleImageError } from '../../utils/imageUtils';
 
 interface ProjectListProps {
+    projects: Project[];
+    loading: boolean;
     onEditProject?: (project: Project) => void;
+    onDeleteProject?: (projectId: string) => void;
     onAddProject?: () => void;
+    total: number;
+    page: number;
+    limit: number;
+    onPageChange: (page: number) => void;
+    onLimitChange: (limit: number) => void;
 }
 
-const ProjectList: React.FC<ProjectListProps> = ({ onEditProject, onAddProject }) => {
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+const ProjectList: React.FC<ProjectListProps> = ({
+    projects,
+    loading: _loading,
+    onEditProject,
+    onDeleteProject,
+    onAddProject,
+    total,
+    page,
+    limit,
+    onPageChange,
+    onLimitChange
+}) => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-    // Mock data
-    const projects: Project[] = [
-        {
-            id: 1,
-            name: 'Chung cư Green Valley',
-            type: 'apartment',
-            status: 'available',
-            city: 'TP.HCM',
-            district: 'Quận 2',
-            price: '3.5 tỷ',
-            area: '85m²',
-            image: '/article-1.png',
-            createdAt: '2024-01-15',
-        },
-        {
-            id: 2,
-            name: 'Biệt thự Royal Garden',
-            type: 'villa',
-            status: 'sold',
-            city: 'TP.HCM',
-            district: 'Quận 7',
-            price: '15 tỷ',
-            area: '250m²',
-            image: '/article-2.png',
-            createdAt: '2024-01-10',
-        },
-        {
-            id: 3,
-            name: 'Tòa nhà Sky Tower',
-            type: 'commercial',
-            status: 'coming-soon',
-            city: 'TP.HCM',
-            district: 'Quận 1',
-            price: '25 tỷ',
-            area: '500m²',
-            image: '/article-3.png',
-            createdAt: '2024-01-05',
-        },
-        {
-            id: 4,
-            name: 'Đất nền Golden Land',
-            type: 'land',
-            status: 'available',
-            city: 'TP.HCM',
-            district: 'Quận 9',
-            price: '8 tỷ',
-            area: '100m²',
-            image: '/article-4.png',
-            createdAt: '2024-01-18',
-        },
-    ];
 
     const getTypeLabel = (type: string) => {
         const types = {
             apartment: 'Chung cư',
             villa: 'Biệt thự',
             commercial: 'Thương mại',
-            land: 'Đất nền',
+            office: 'Văn phòng',
         };
         return types[type as keyof typeof types] || type;
     };
 
     const getStatusColor = (status: string) => {
         const colors = {
-            available: '#4caf50',
-            sold: '#f44336',
-            'coming-soon': '#ff9800',
+            planning: '#ff9800',
+            construction: '#2196f3',
+            completed: '#4caf50',
+            sold_out: '#f44336',
         };
         return colors[status as keyof typeof colors] || '#666';
     };
 
     const getStatusLabel = (status: string) => {
         const labels = {
-            available: 'Đang bán',
-            sold: 'Đã bán',
-            'coming-soon': 'Sắp mở bán',
+            planning: 'Đang lên kế hoạch',
+            construction: 'Đang xây dựng',
+            completed: 'Hoàn thành',
+            sold_out: 'Đã bán hết',
         };
         return labels[status as keyof typeof labels] || status;
     };
 
     const handleChangePage = (_event: unknown, newPage: number) => {
-        setPage(newPage);
+        onPageChange(newPage + 1); // Convert to 1-based page
     };
 
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
+        const newLimit = parseInt(event.target.value, 10);
+        onLimitChange(newLimit);
+        onPageChange(1); // Reset to first page
     };
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, project: Project) => {
@@ -167,10 +125,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onEditProject, onAddProject }
         handleMenuClose();
     };
 
-    const handleView = () => {
-        // TODO: Implement view project functionality
-        handleMenuClose();
-    };
 
     const handleDelete = () => {
         setDeleteDialogOpen(true);
@@ -178,7 +132,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onEditProject, onAddProject }
     };
 
     const handleDeleteConfirm = () => {
-        // TODO: Implement delete project functionality
+        if (selectedProject && onDeleteProject) {
+            onDeleteProject(selectedProject._id);
+        }
         setDeleteDialogOpen(false);
         setSelectedProject(null);
     };
@@ -194,27 +150,31 @@ const ProjectList: React.FC<ProjectListProps> = ({ onEditProject, onAddProject }
         }
     };
 
+
+
     return (
         <Box>
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Danh sách Dự án ({projects.length})
+                    Danh sách Dự án ({total} dự án)
                 </Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={handleAddProject}
-                    sx={{
-                        backgroundColor: '#E7C873',
-                        color: 'white',
-                        '&:hover': {
-                            backgroundColor: '#d4b85a',
-                        },
-                    }}
-                >
-                    Thêm dự án
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                        variant="outlined"
+                        startIcon={<RefreshIcon />}
+                        onClick={() => window.location.reload()}
+                    >
+                        Làm mới
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleAddProject}
+                    >
+                        Thêm dự án
+                    </Button>
+                </Box>
             </Box>
 
             {/* Table */}
@@ -234,94 +194,126 @@ const ProjectList: React.FC<ProjectListProps> = ({ onEditProject, onAddProject }
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {projects
-                                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                .map((project) => (
-                                    <TableRow key={project.id} hover>
-                                        <TableCell>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                <Avatar
-                                                    variant="rounded"
-                                                    sx={{ width: 60, height: 60 }}
-                                                    src={project.image}
-                                                >
-                                                    <ImageIcon />
-                                                </Avatar>
-                                                <Box>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                        {project.name}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        ID: #{project.id}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={getTypeLabel(project.type)}
-                                                size="small"
+                            {projects.map((project) => (
+                                <TableRow key={project._id} hover>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Box
                                                 sx={{
-                                                    backgroundColor: '#e3f2fd',
-                                                    color: '#1976d2',
-                                                    fontWeight: 500,
+                                                    position: 'relative',
+                                                    width: 80,
+                                                    height: 45, // 16:9 aspect ratio
+                                                    borderRadius: 1,
+                                                    overflow: 'hidden',
+                                                    border: '1px solid #e0e0e0',
+                                                    flexShrink: 0,
                                                 }}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={getStatusLabel(project.status)}
-                                                size="small"
-                                                sx={{
-                                                    backgroundColor: getStatusColor(project.status),
-                                                    color: 'white',
-                                                    fontWeight: 500,
-                                                }}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <LocationIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                                <Typography variant="body2">
-                                                    {project.district}, {project.city}
-                                                </Typography>
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <MoneyIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                    {project.price}
-                                                </Typography>
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2">{project.area}</Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {new Date(project.createdAt).toLocaleDateString('vi-VN')}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <IconButton
-                                                onClick={(e) => handleMenuOpen(e, project)}
-                                                size="small"
                                             >
-                                                <MoreVertIcon />
-                                            </IconButton>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                                <Box
+                                                    component="img"
+                                                    src={project.images?.[0] ? getOptimizedImageUrl.thumbnail(project.images[0]) : '/article-1.png'}
+                                                    alt={project.name}
+                                                    sx={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'cover',
+                                                        filter: 'brightness(1.05) contrast(1.02)',
+                                                    }}
+                                                    onError={(e) => handleImageError(e, getPlaceholderImage.thumbnail())}
+                                                />
+                                                {/* Watermark overlay */}
+                                                <Box sx={imageStyles.watermarkOverlay} />
+                                                {!project.images?.[0] && (
+                                                    <Box
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: '50%',
+                                                            left: '50%',
+                                                            transform: 'translate(-50%, -50%)',
+                                                            color: 'text.secondary',
+                                                        }}
+                                                    >
+                                                        <ImageIcon sx={{ fontSize: 20 }} />
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                    {project.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {project.location}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            label={getTypeLabel(project.type)}
+                                            size="small"
+                                            sx={{
+                                                backgroundColor: '#e3f2fd',
+                                                color: '#1976d2',
+                                                fontWeight: 500,
+                                            }}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            label={getStatusLabel(project.status)}
+                                            size="small"
+                                            sx={{
+                                                backgroundColor: getStatusColor(project.status),
+                                                color: 'white',
+                                                fontWeight: 500,
+                                            }}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <LocationIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                            <Typography variant="body2">
+                                                {project.location}
+                                            </Typography>
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <MoneyIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                {project.price.min.toLocaleString()} - {project.price.max.toLocaleString()} {project.price.currency}
+                                            </Typography>
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2">
+                                            {project.area.min} - {project.area.max} {project.area.unit}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {new Date(project.createdAt).toLocaleDateString('vi-VN')}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        <IconButton
+                                            onClick={(e) => handleMenuOpen(e, project)}
+                                            size="small"
+                                        >
+                                            <MoreVertIcon />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
                 <TablePagination
                     rowsPerPageOptions={[5, 10, 25]}
                     component="div"
-                    count={projects.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
+                    count={total}
+                    rowsPerPage={limit}
+                    page={page - 1} // Convert to 0-based page
                     onPageChange={handleChangePage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
@@ -336,7 +328,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onEditProject, onAddProject }
                     sx: { width: 200 },
                 }}
             >
-                <MenuItem onClick={handleView}>
+                <MenuItem
+                    onClick={() => window.open(`/admin/projects/${selectedProject!._id}`)}
+                >
                     <ListItemIcon>
                         <ViewIcon fontSize="small" />
                     </ListItemIcon>
@@ -352,7 +346,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onEditProject, onAddProject }
                     <ListItemIcon>
                         <DeleteIcon fontSize="small" color="error" />
                     </ListItemIcon>
-                    <ListItemText>Xóa</ListItemText>
+                    <ListItemText>Xóa dự án</ListItemText>
                 </MenuItem>
             </Menu>
 
@@ -364,20 +358,24 @@ const ProjectList: React.FC<ProjectListProps> = ({ onEditProject, onAddProject }
                     sx: { overflow: 'visible' }
                 }}
             >
-                <DialogTitle>Xác nhận xóa</DialogTitle>
+                <DialogTitle>Xác nhận xóa dự án</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        Bạn có chắc chắn muốn xóa dự án "{selectedProject?.name}" không?
-                        Hành động này không thể hoàn tác.
+                        Bạn có chắc chắn muốn xóa dự án <strong>"{selectedProject?.name}"</strong> không?
+                        <br />
+                        <br />
+                        Hành động này sẽ xóa vĩnh viễn tất cả dữ liệu liên quan đến dự án và không thể hoàn tác.
                     </Typography>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDeleteCancel}>Hủy</Button>
                     <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-                        Xóa
+                        Xóa dự án
                     </Button>
                 </DialogActions>
             </Dialog>
+
+
         </Box>
     );
 };

@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Typography,
     Card,
     CardContent,
-    TextField,
     Button,
     Grid,
     Chip,
@@ -15,199 +14,193 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Avatar,
-    Switch,
-    FormControlLabel,
+    TextField,
     Snackbar,
+    Alert,
+    CircularProgress,
+    Avatar,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
     Stepper,
     Step,
     StepLabel,
     StepContent,
-    Paper,
 } from '@mui/material';
 import {
     Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
-    Timeline as ProcessIcon,
-    Person as PersonIcon,
+    Assignment as AssignmentIcon,
+    PersonSearch as PersonSearchIcon,
+    Quiz as QuizIcon,
     Group as GroupIcon,
-    CheckCircle as CheckIcon,
-    Schedule as ScheduleIcon,
+    CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 
 interface ProcessStep {
-    id: string;
+    _id: string;
     name: string;
     description: string;
     order: number;
-    duration: number; // in days
-    responsible: string;
-    requirements: string[];
     isActive: boolean;
+    estimatedDays: number;
 }
 
 interface RecruitmentProcess {
-    id: string;
+    _id: string;
     name: string;
     description: string;
     steps: ProcessStep[];
-    totalDuration: number;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
 }
 
 const RecruitmentProcess: React.FC = () => {
-    const [processes, setProcesses] = useState<RecruitmentProcess[]>([
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [processes, setProcesses] = useState<RecruitmentProcess[]>([]);
+
+    // Mock data for recruitment processes
+    const mockProcesses: RecruitmentProcess[] = [
         {
-            id: '1',
+            _id: '1',
             name: 'Quy trình tuyển dụng cơ bản',
-            description: 'Quy trình tuyển dụng cho các vị trí cơ bản',
+            description: 'Quy trình tuyển dụng chuẩn cho các vị trí thông thường.',
             steps: [
                 {
-                    id: '1-1',
-                    name: 'Nhận hồ sơ ứng tuyển',
-                    description: 'Nhận và kiểm tra hồ sơ ứng tuyển từ các kênh tuyển dụng',
-                    order: 1,
-                    duration: 1,
-                    responsible: 'Phòng Nhân sự',
-                    requirements: ['CV', 'Thư xin việc', 'Bằng cấp'],
-                    isActive: true,
-                },
-                {
-                    id: '1-2',
+                    _id: '1-1',
                     name: 'Sàng lọc hồ sơ',
-                    description: 'Sàng lọc và đánh giá hồ sơ ứng viên phù hợp',
-                    order: 2,
-                    duration: 2,
-                    responsible: 'Phòng Nhân sự',
-                    requirements: ['Đáp ứng yêu cầu cơ bản', 'Kinh nghiệm phù hợp'],
+                    description: 'Xem xét và sàng lọc hồ sơ ứng viên.',
+                    order: 1,
                     isActive: true,
+                    estimatedDays: 2
                 },
                 {
-                    id: '1-3',
+                    _id: '1-2',
                     name: 'Phỏng vấn vòng 1',
-                    description: 'Phỏng vấn với HR về thông tin cá nhân và động cơ',
-                    order: 3,
-                    duration: 1,
-                    responsible: 'Phòng Nhân sự',
-                    requirements: ['Thái độ tích cực', 'Giao tiếp tốt'],
+                    description: 'Phỏng vấn trực tiếp với HR.',
+                    order: 2,
                     isActive: true,
+                    estimatedDays: 3
                 },
                 {
-                    id: '1-4',
+                    _id: '1-3',
                     name: 'Phỏng vấn vòng 2',
-                    description: 'Phỏng vấn kỹ thuật với trưởng phòng',
-                    order: 4,
-                    duration: 1,
-                    responsible: 'Trưởng phòng',
-                    requirements: ['Kiến thức chuyên môn', 'Kinh nghiệm thực tế'],
+                    description: 'Phỏng vấn với trưởng phòng.',
+                    order: 3,
                     isActive: true,
+                    estimatedDays: 5
                 },
                 {
-                    id: '1-5',
+                    _id: '1-4',
                     name: 'Quyết định tuyển dụng',
-                    description: 'Hội đồng quyết định và thông báo kết quả',
-                    order: 5,
-                    duration: 1,
-                    responsible: 'Ban Giám đốc',
-                    requirements: ['Đạt yêu cầu tất cả vòng'],
+                    description: 'Đánh giá cuối cùng và quyết định.',
+                    order: 4,
                     isActive: true,
-                },
+                    estimatedDays: 2
+                }
             ],
-            totalDuration: 6,
             isActive: true,
             createdAt: '2024-01-01',
-            updatedAt: '2024-01-15',
+            updatedAt: '2024-01-01'
         },
         {
-            id: '2',
+            _id: '2',
             name: 'Quy trình tuyển dụng cấp cao',
-            description: 'Quy trình tuyển dụng cho các vị trí quản lý cấp cao',
+            description: 'Quy trình tuyển dụng cho các vị trí quản lý và cấp cao.',
             steps: [
                 {
-                    id: '2-1',
-                    name: 'Nhận hồ sơ ứng tuyển',
-                    description: 'Nhận và kiểm tra hồ sơ ứng tuyển từ các kênh tuyển dụng',
-                    order: 1,
-                    duration: 1,
-                    responsible: 'Phòng Nhân sự',
-                    requirements: ['CV', 'Thư xin việc', 'Bằng cấp', 'Chứng chỉ'],
-                    isActive: true,
-                },
-                {
-                    id: '2-2',
+                    _id: '2-1',
                     name: 'Sàng lọc hồ sơ',
-                    description: 'Sàng lọc và đánh giá hồ sơ ứng viên phù hợp',
-                    order: 2,
-                    duration: 3,
-                    responsible: 'Phòng Nhân sự',
-                    requirements: ['Đáp ứng yêu cầu cao', 'Kinh nghiệm quản lý'],
+                    description: 'Xem xét và sàng lọc hồ sơ ứng viên.',
+                    order: 1,
                     isActive: true,
+                    estimatedDays: 3
                 },
                 {
-                    id: '2-3',
+                    _id: '2-2',
                     name: 'Phỏng vấn HR',
-                    description: 'Phỏng vấn với HR về thông tin cá nhân và động cơ',
-                    order: 3,
-                    duration: 1,
-                    responsible: 'Phòng Nhân sự',
-                    requirements: ['Thái độ tích cực', 'Giao tiếp tốt'],
+                    description: 'Phỏng vấn với bộ phận nhân sự.',
+                    order: 2,
                     isActive: true,
+                    estimatedDays: 2
                 },
                 {
-                    id: '2-4',
+                    _id: '2-3',
                     name: 'Phỏng vấn kỹ thuật',
-                    description: 'Phỏng vấn kỹ thuật với trưởng phòng',
+                    description: 'Phỏng vấn kỹ thuật với chuyên gia.',
+                    order: 3,
+                    isActive: true,
+                    estimatedDays: 3
+                },
+                {
+                    _id: '2-4',
+                    name: 'Phỏng vấn ban giám đốc',
+                    description: 'Phỏng vấn với ban giám đốc.',
                     order: 4,
-                    duration: 1,
-                    responsible: 'Trưởng phòng',
-                    requirements: ['Kiến thức chuyên môn', 'Kinh nghiệm thực tế'],
                     isActive: true,
+                    estimatedDays: 5
                 },
                 {
-                    id: '2-5',
-                    name: 'Phỏng vấn Ban Giám đốc',
-                    description: 'Phỏng vấn với Ban Giám đốc về tầm nhìn và chiến lược',
-                    order: 5,
-                    duration: 1,
-                    responsible: 'Ban Giám đốc',
-                    requirements: ['Tầm nhìn chiến lược', 'Kinh nghiệm quản lý'],
-                    isActive: true,
-                },
-                {
-                    id: '2-6',
+                    _id: '2-5',
                     name: 'Quyết định tuyển dụng',
-                    description: 'Hội đồng quyết định và thông báo kết quả',
-                    order: 6,
-                    duration: 2,
-                    responsible: 'Ban Giám đốc',
-                    requirements: ['Đạt yêu cầu tất cả vòng'],
+                    description: 'Đánh giá cuối cùng và quyết định.',
+                    order: 5,
                     isActive: true,
-                },
+                    estimatedDays: 3
+                }
             ],
-            totalDuration: 9,
             isActive: true,
             createdAt: '2024-01-01',
-            updatedAt: '2024-01-15',
-        },
-    ]);
+            updatedAt: '2024-01-01'
+        }
+    ];
+
+    const loadProcesses = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            // Simulate API call
+            setTimeout(() => {
+                setProcesses(mockProcesses);
+                setLoading(false);
+            }, 1000);
+        } catch (err) {
+            console.error('Error loading processes:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải danh sách quy trình tuyển dụng');
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadProcesses();
+    }, [loadProcesses]);
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingProcess, setEditingProcess] = useState<RecruitmentProcess | null>(null);
-    const [formData, setFormData] = useState<Omit<RecruitmentProcess, 'id' | 'totalDuration' | 'createdAt' | 'updatedAt'>>({
+    const [formData, setFormData] = useState({
         name: '',
         description: '',
-        steps: [],
-        isActive: true,
+        isActive: true
     });
 
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
-
-    const calculateTotalDuration = (steps: ProcessStep[]) => {
-        return steps.reduce((total, step) => total + step.duration, 0);
+    const getStepIcon = (order: number) => {
+        switch (order) {
+            case 1:
+                return <PersonSearchIcon />;
+            case 2:
+                return <QuizIcon />;
+            case 3:
+                return <GroupIcon />;
+            default:
+                return <CheckCircleIcon />;
+        }
     };
 
     const handleAddProcess = () => {
@@ -215,8 +208,7 @@ const RecruitmentProcess: React.FC = () => {
         setFormData({
             name: '',
             description: '',
-            steps: [],
-            isActive: true,
+            isActive: true
         });
         setDialogOpen(true);
     };
@@ -226,99 +218,65 @@ const RecruitmentProcess: React.FC = () => {
         setFormData({
             name: process.name,
             description: process.description,
-            steps: process.steps,
-            isActive: process.isActive,
+            isActive: process.isActive
         });
         setDialogOpen(true);
     };
 
-    const handleSaveProcess = () => {
-        const totalDuration = calculateTotalDuration(formData.steps);
-
-        if (editingProcess) {
-            setProcesses(prev => prev.map(process =>
-                process.id === editingProcess.id
-                    ? {
-                        ...formData,
-                        id: editingProcess.id,
-                        totalDuration,
-                        createdAt: process.createdAt,
-                        updatedAt: new Date().toISOString().split('T')[0]
-                    }
-                    : process
-            ));
-            setSnackbarMessage('Cập nhật quy trình tuyển dụng thành công!');
-        } else {
-            const newProcess: RecruitmentProcess = {
-                ...formData,
-                id: Date.now().toString(),
-                totalDuration,
-                createdAt: new Date().toISOString().split('T')[0],
-                updatedAt: new Date().toISOString().split('T')[0],
-            };
-            setProcesses(prev => [...prev, newProcess]);
-            setSnackbarMessage('Thêm quy trình tuyển dụng thành công!');
+    const handleSaveProcess = async () => {
+        setSaving(true);
+        try {
+            // Simulate API call
+            setTimeout(() => {
+                setSnackbarMessage('✅ Lưu quy trình tuyển dụng thành công!');
+                setSnackbarOpen(true);
+                setDialogOpen(false);
+                loadProcesses();
+                setSaving(false);
+            }, 1000);
+        } catch (error) {
+            console.error('Error saving process:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu quy trình tuyển dụng');
+            setSnackbarOpen(true);
+            setSaving(false);
         }
-        setSnackbarOpen(true);
-        setDialogOpen(false);
     };
 
-    const handleDeleteProcess = (processId: string) => {
-        setProcesses(prev => prev.filter(process => process.id !== processId));
-        setSnackbarMessage('Xóa quy trình tuyển dụng thành công!');
-        setSnackbarOpen(true);
+    const handleDeleteProcess = async (processId: string) => {
+        try {
+            // Simulate API call
+            setTimeout(() => {
+                setSnackbarMessage('✅ Xóa quy trình tuyển dụng thành công!');
+                setSnackbarOpen(true);
+                loadProcesses();
+            }, 1000);
+        } catch (error) {
+            console.error('Error deleting process:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa quy trình tuyển dụng');
+            setSnackbarOpen(true);
+        }
     };
 
-    const handleToggleStatus = (processId: string) => {
-        setProcesses(prev => prev.map(process =>
-            process.id === processId
-                ? {
-                    ...process,
-                    isActive: !process.isActive,
-                    updatedAt: new Date().toISOString().split('T')[0]
-                }
-                : process
-        ));
-        setSnackbarMessage('Cập nhật trạng thái quy trình thành công!');
-        setSnackbarOpen(true);
-    };
-
-    const handleAddStep = () => {
-        const newStep: ProcessStep = {
-            id: Date.now().toString(),
-            name: '',
-            description: '',
-            order: formData.steps.length + 1,
-            duration: 1,
-            responsible: '',
-            requirements: [],
-            isActive: true,
-        };
-        setFormData(prev => ({
-            ...prev,
-            steps: [...prev.steps, newStep]
-        }));
-    };
-
-    const handleUpdateStep = (stepId: string, updatedStep: ProcessStep) => {
-        setFormData(prev => ({
-            ...prev,
-            steps: prev.steps.map(step => step.id === stepId ? updatedStep : step)
-        }));
-    };
-
-    const handleDeleteStep = (stepId: string) => {
-        setFormData(prev => ({
-            ...prev,
-            steps: prev.steps.filter(step => step.id !== stepId)
-        }));
-    };
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải danh sách quy trình tuyển dụng...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Quy trình tuyển dụng
+                    Quản lý quy trình tuyển dụng
                 </Typography>
                 <Button
                     variant="contained"
@@ -329,115 +287,30 @@ const RecruitmentProcess: React.FC = () => {
                 </Button>
             </Box>
 
-            {/* Summary Cards */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                                    <ProcessIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {processes.length}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Tổng quy trình
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'success.main' }}>
-                                    <CheckIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {processes.filter(p => p.isActive).length}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Đang hoạt động
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'info.main' }}>
-                                    <ScheduleIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {Math.round(processes.reduce((sum, p) => sum + p.totalDuration, 0) / processes.length)} ngày
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Thời gian TB
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'warning.main' }}>
-                                    <GroupIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {processes.reduce((sum, p) => sum + p.steps.length, 0)}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Tổng bước
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
-
-            {/* Processes List */}
             <Grid container spacing={3}>
                 {processes.map((process) => (
-                    <Grid item xs={12} md={6} key={process.id}>
-                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <CardContent sx={{ flex: 1 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                    <Box>
-                                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                                            {process.name}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                            {process.description}
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <Grid item xs={12} key={process._id}>
+                        <Card>
+                            <CardContent>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <Avatar
+                                            sx={{
+                                                bgcolor: 'primary.main',
+                                                width: 50,
+                                                height: 50
+                                            }}
+                                        >
+                                            <AssignmentIcon />
+                                        </Avatar>
+                                        <Box>
+                                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                                {process.name}
+                                            </Typography>
                                             <Chip
-                                                label={process.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                                                label={process.isActive ? 'Đang sử dụng' : 'Tạm dừng'}
+                                                size="small"
                                                 color={process.isActive ? 'success' : 'default'}
-                                                size="small"
-                                            />
-                                            <Chip
-                                                label={`${process.totalDuration} ngày`}
-                                                color="info"
-                                                size="small"
-                                            />
-                                            <Chip
-                                                label={`${process.steps.length} bước`}
-                                                color="primary"
-                                                size="small"
                                             />
                                         </Box>
                                     </Box>
@@ -450,14 +323,7 @@ const RecruitmentProcess: React.FC = () => {
                                         </IconButton>
                                         <IconButton
                                             size="small"
-                                            onClick={() => handleToggleStatus(process.id)}
-                                            color={process.isActive ? 'warning' : 'success'}
-                                        >
-                                            {process.isActive ? 'Tạm dừng' : 'Kích hoạt'}
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleDeleteProcess(process.id)}
+                                            onClick={() => handleDeleteProcess(process._id)}
                                             color="error"
                                         >
                                             <DeleteIcon />
@@ -465,35 +331,55 @@ const RecruitmentProcess: React.FC = () => {
                                     </Box>
                                 </Box>
 
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{
+                                        mb: 3,
+                                        height: '3.2em',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        display: 'block',
+                                        lineHeight: 1.6
+                                    }}
+                                >
+                                    {process.description.length > 120
+                                        ? `${process.description.substring(0, 120)}...`
+                                        : process.description
+                                    }
+                                </Typography>
+
                                 <Stepper orientation="vertical">
-                                    {process.steps.map((step) => (
-                                        <Step key={step.id} active={step.isActive}>
-                                            <StepLabel>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                    {step.name}
-                                                </Typography>
+                                    {process.steps.map((step, index) => (
+                                        <Step key={step._id} active={step.isActive}>
+                                            <StepLabel
+                                                icon={
+                                                    <Avatar
+                                                        sx={{
+                                                            bgcolor: step.isActive ? 'primary.main' : 'grey.300',
+                                                            width: 32,
+                                                            height: 32
+                                                        }}
+                                                    >
+                                                        {getStepIcon(step.order)}
+                                                    </Avatar>
+                                                }
+                                            >
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                                        {step.name}
+                                                    </Typography>
+                                                    <Chip
+                                                        label={`${step.estimatedDays} ngày`}
+                                                        size="small"
+                                                        color="info"
+                                                    />
+                                                </Box>
                                             </StepLabel>
                                             <StepContent>
-                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                                                     {step.description}
                                                 </Typography>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                                    <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {step.responsible}
-                                                    </Typography>
-                                                    <ScheduleIcon sx={{ fontSize: 16, color: 'text.secondary', ml: 1 }} />
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {step.duration} ngày
-                                                    </Typography>
-                                                </Box>
-                                                {step.requirements.length > 0 && (
-                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                        {step.requirements.map((req, reqIndex) => (
-                                                            <Chip key={reqIndex} label={req} size="small" variant="outlined" />
-                                                        ))}
-                                                    </Box>
-                                                )}
                                             </StepContent>
                                         </Step>
                                     ))}
@@ -505,7 +391,7 @@ const RecruitmentProcess: React.FC = () => {
             </Grid>
 
             {/* Add/Edit Process Dialog */}
-            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="lg" fullWidth>
+            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
                 <DialogTitle>
                     {editingProcess ? 'Chỉnh sửa quy trình tuyển dụng' : 'Thêm quy trình tuyển dụng mới'}
                 </DialogTitle>
@@ -524,99 +410,19 @@ const RecruitmentProcess: React.FC = () => {
                                 fullWidth
                                 label="Mô tả"
                                 multiline
-                                rows={2}
+                                rows={3}
                                 value={formData.description}
                                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                             />
                         </Grid>
-                        <Grid item xs={12}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Typography variant="h6">
-                                    Các bước trong quy trình
-                                </Typography>
-                                <Button
-                                    variant="outlined"
-                                    startIcon={<AddIcon />}
-                                    onClick={handleAddStep}
-                                >
-                                    Thêm bước
-                                </Button>
-                            </Box>
-                        </Grid>
-                        {formData.steps.map((step) => (
-                            <Grid item xs={12} key={step.id}>
-                                <Paper sx={{ p: 2, mb: 2 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                            Bước {step.order}: {step.name || 'Bước mới'}
-                                        </Typography>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleDeleteStep(step.id)}
-                                            color="error"
-                                        >
-                                            <DeleteIcon />
-                                        </IconButton>
-                                    </Box>
-                                    <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Tên bước"
-                                                value={step.name}
-                                                onChange={(e) => handleUpdateStep(step.id, { ...step, name: e.target.value })}
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Thời gian (ngày)"
-                                                type="number"
-                                                value={step.duration}
-                                                onChange={(e) => handleUpdateStep(step.id, { ...step, duration: parseInt(e.target.value) })}
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Mô tả"
-                                                multiline
-                                                rows={2}
-                                                value={step.description}
-                                                onChange={(e) => handleUpdateStep(step.id, { ...step, description: e.target.value })}
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Người phụ trách"
-                                                value={step.responsible}
-                                                onChange={(e) => handleUpdateStep(step.id, { ...step, responsible: e.target.value })}
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <FormControlLabel
-                                                control={
-                                                    <Switch
-                                                        checked={step.isActive}
-                                                        onChange={(e) => handleUpdateStep(step.id, { ...step, isActive: e.target.checked })}
-                                                    />
-                                                }
-                                                label="Hoạt động"
-                                            />
-                                        </Grid>
-                                    </Grid>
-                                </Paper>
-                            </Grid>
-                        ))}
                     </Grid>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setDialogOpen(false)}>
                         Hủy
                     </Button>
-                    <Button onClick={handleSaveProcess} variant="contained">
-                        {editingProcess ? 'Cập nhật' : 'Thêm'}
+                    <Button onClick={handleSaveProcess} variant="contained" disabled={saving}>
+                        {saving ? 'Đang lưu...' : (editingProcess ? 'Cập nhật' : 'Thêm')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -625,8 +431,15 @@ const RecruitmentProcess: React.FC = () => {
                 open={snackbarOpen}
                 autoHideDuration={6000}
                 onClose={() => setSnackbarOpen(false)}
-                message={snackbarMessage}
-            />
+            >
+                <Alert
+                    onClose={() => setSnackbarOpen(false)}
+                    severity={snackbarMessage.includes('❌') ? 'error' : 'success'}
+                    sx={{ width: '100%' }}
+                >
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

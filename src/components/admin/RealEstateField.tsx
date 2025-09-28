@@ -406,7 +406,7 @@ const RealEstateField: React.FC = () => {
                                         <Typography variant="body2">
                                             {project.soldUnits}/{project.totalUnits}
                                         </Typography>
-                                        <Box sx={{ width: 60, height: 8, bgcolor: 'grey.200', borderRadius: 1 }}>
+                                        <Box sx={{ position: 'relative', width: 60, height: 8, bgcolor: 'grey.200', borderRadius: 1 }}>
                                             <Box
                                                 sx={{
                                                     width: `${getSalesProgress(project.soldUnits, project.totalUnits)}%`,

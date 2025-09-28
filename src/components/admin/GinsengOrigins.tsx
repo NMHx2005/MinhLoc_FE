@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Card,
@@ -26,6 +26,9 @@ import {
     Grid,
     Chip,
     Avatar,
+    Alert,
+    CircularProgress,
+    Snackbar,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -34,85 +37,49 @@ import {
     Delete as DeleteIcon,
     LocationOn as LocationIcon,
 } from '@mui/icons-material';
-
-interface GinsengOrigin {
-    id: number;
-    name: string;
-    country: string;
-    description: string;
-    productCount: number;
-    status: 'active' | 'inactive';
-    createdAt: string;
-    flag?: string;
-}
+import { ginsengService } from '../../services/admin/ginsengService';
+import type { GinsengOrigin } from '../../services/admin/ginsengService';
 
 const GinsengOrigins: React.FC = () => {
-    const [origins, setOrigins] = useState<GinsengOrigin[]>([
-        {
-            id: 1,
-            name: 'Kontum',
-            country: 'Việt Nam',
-            description: 'Vùng núi Ngọc Linh, Kontum - nơi có khí hậu và đất đai lý tưởng cho sâm Ngọc Linh',
-            productCount: 18,
-            status: 'active',
-            createdAt: '2024-01-15',
-            flag: '🇻🇳'
-        },
-        {
-            id: 2,
-            name: 'Korea',
-            country: 'Hàn Quốc',
-            description: 'Các tỉnh Gangwon, Chungbuk của Hàn Quốc - nơi sản xuất sâm chất lượng cao',
-            productCount: 12,
-            status: 'active',
-            createdAt: '2024-01-10',
-            flag: '🇰🇷'
-        },
-        {
-            id: 3,
-            name: 'Canada',
-            country: 'Canada',
-            description: 'Tỉnh Ontario và British Columbia - sâm Canada có chất lượng xuất khẩu',
-            productCount: 5,
-            status: 'active',
-            createdAt: '2024-01-08',
-            flag: '🇨🇦'
-        },
-        {
-            id: 4,
-            name: 'China',
-            country: 'Trung Quốc',
-            description: 'Các tỉnh Jilin, Liaoning - vùng truyền thống trồng sâm của Trung Quốc',
-            productCount: 8,
-            status: 'inactive',
-            createdAt: '2024-01-05',
-            flag: '🇨🇳'
-        },
-        {
-            id: 5,
-            name: 'USA',
-            country: 'Mỹ',
-            description: 'Wisconsin và các bang phía bắc - sâm Mỹ có hương vị đặc trưng',
-            productCount: 3,
-            status: 'active',
-            createdAt: '2024-01-03',
-            flag: '🇺🇸'
-        },
-    ]);
+    const [origins, setOrigins] = useState<GinsengOrigin[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [selectedOrigin, setSelectedOrigin] = useState<GinsengOrigin | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [formDialogOpen, setFormDialogOpen] = useState(false);
     const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         country: '',
         description: '',
-        status: 'active' as const,
+        status: 'active' as 'active' | 'inactive',
         flag: ''
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Load origins on component mount
+    useEffect(() => {
+        loadOrigins();
+    }, []);
+
+    const loadOrigins = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const originsData = await ginsengService.getOrigins();
+            setOrigins(originsData);
+        } catch (err) {
+            console.error('Error loading origins:', err);
+            setError('Không thể tải danh sách xuất xứ');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, origin: GinsengOrigin) => {
         setAnchorEl(event.currentTarget);
@@ -121,7 +88,7 @@ const GinsengOrigins: React.FC = () => {
 
     const handleMenuClose = () => {
         setAnchorEl(null);
-        setSelectedOrigin(null);
+        // Don't reset selectedOrigin here to preserve data for form operations
     };
 
     const handleEdit = () => {
@@ -144,16 +111,64 @@ const GinsengOrigins: React.FC = () => {
         handleMenuClose();
     };
 
-    const handleDeleteConfirm = () => {
+    const handleToggleStatus = () => {
+        setStatusDialogOpen(true);
+        handleMenuClose();
+    };
+
+    const handleDeleteConfirm = async () => {
         if (selectedOrigin) {
-            setOrigins(origins.filter(origin => origin.id !== selectedOrigin.id));
-            setDeleteDialogOpen(false);
-            setSelectedOrigin(null);
+            try {
+                setLoading(true);
+                await ginsengService.deleteOrigin(selectedOrigin._id);
+                setSnackbarMessage('Xóa xuất xứ thành công');
+                setSnackbarOpen(true);
+                loadOrigins(); // Reload origins
+                setDeleteDialogOpen(false);
+                setSelectedOrigin(null);
+            } catch (err) {
+                console.error('Error deleting origin:', err);
+                setError('Không thể xóa xuất xứ');
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
     const handleDeleteCancel = () => {
         setDeleteDialogOpen(false);
+        setSelectedOrigin(null);
+    };
+
+    const handleStatusConfirm = async () => {
+        if (selectedOrigin) {
+            try {
+                setLoading(true);
+                const newStatus = selectedOrigin.status === 'active' ? 'inactive' : 'active';
+                await ginsengService.updateOrigin({
+                    _id: selectedOrigin._id,
+                    name: selectedOrigin.name,
+                    country: selectedOrigin.country,
+                    description: selectedOrigin.description,
+                    status: newStatus,
+                    flag: selectedOrigin.flag
+                });
+                setSnackbarMessage(`Đã ${newStatus === 'active' ? 'kích hoạt' : 'vô hiệu hóa'} xuất xứ thành công`);
+                setSnackbarOpen(true);
+                loadOrigins(); // Reload origins
+                setStatusDialogOpen(false);
+                setSelectedOrigin(null);
+            } catch (err) {
+                console.error('Error updating origin status:', err);
+                setError('Không thể cập nhật trạng thái xuất xứ');
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const handleStatusCancel = () => {
+        setStatusDialogOpen(false);
         setSelectedOrigin(null);
     };
 
@@ -209,7 +224,7 @@ const GinsengOrigins: React.FC = () => {
         // Check for duplicate name (exclude current origin when editing)
         const duplicateName = origins.find(origin =>
             origin.name.toLowerCase() === formData.name.toLowerCase() &&
-            (formMode === 'add' || origin.id !== selectedOrigin?.id)
+            (formMode === 'add' || origin._id !== selectedOrigin?._id)
         );
 
         if (duplicateName) {
@@ -220,35 +235,31 @@ const GinsengOrigins: React.FC = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleFormSubmit = () => {
+    const handleFormSubmit = async () => {
         if (validateForm()) {
-            if (formMode === 'add') {
-                const newOrigin: GinsengOrigin = {
-                    id: Math.max(...origins.map(o => o.id)) + 1,
-                    name: formData.name,
-                    country: formData.country,
-                    description: formData.description,
-                    status: formData.status,
-                    flag: formData.flag,
-                    productCount: 0,
-                    createdAt: new Date().toISOString().split('T')[0],
-                };
-                setOrigins([...origins, newOrigin]);
-            } else if (formMode === 'edit' && selectedOrigin) {
-                setOrigins(origins.map(origin =>
-                    origin.id === selectedOrigin.id
-                        ? {
-                            ...origin,
-                            name: formData.name,
-                            country: formData.country,
-                            description: formData.description,
-                            status: formData.status,
-                            flag: formData.flag
-                        }
-                        : origin
-                ));
+            try {
+                setLoading(true);
+                if (formMode === 'add') {
+                    await ginsengService.createOrigin(formData);
+                    setSnackbarMessage('Thêm xuất xứ thành công');
+                } else if (selectedOrigin) {
+                    await ginsengService.updateOrigin({
+                        _id: selectedOrigin._id,
+                        ...formData
+                    });
+                    setSnackbarMessage('Cập nhật xuất xứ thành công');
+                }
+                setSnackbarOpen(true);
+                loadOrigins(); // Reload origins
+                setFormDialogOpen(false);
+                setSelectedOrigin(null);
+                setErrors({});
+            } catch (err) {
+                console.error('Error submitting origin:', err);
+                setError(formMode === 'add' ? 'Không thể thêm xuất xứ' : 'Không thể cập nhật xuất xứ');
+            } finally {
+                setLoading(false);
             }
-            handleFormClose();
         }
     };
 
@@ -260,8 +271,19 @@ const GinsengOrigins: React.FC = () => {
         return status === 'active' ? 'Đang sử dụng' : 'Ngừng sử dụng';
     };
 
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false);
+    };
+
     return (
         <Box>
+            {/* Error Alert */}
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
+
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -285,66 +307,81 @@ const GinsengOrigins: React.FC = () => {
 
             {/* Origins Grid */}
             <Grid container spacing={3} sx={{ mb: 3 }}>
-                {origins.map((origin) => (
-                    <Grid item xs={12} md={6} lg={4} key={origin.id}>
-                        <Card
-                            sx={{
-                                height: '100%',
-                                position: 'relative',
-                                '&:hover': {
-                                    boxShadow: 6,
-                                    transform: 'translateY(-2px)',
-                                    transition: 'all 0.3s ease'
-                                }
-                            }}
-                        >
-                            <CardContent>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        {origin.flag ? (
-                                            <Typography variant="h6">{origin.flag}</Typography>
-                                        ) : (
-                                            <LocationIcon sx={{ color: '#E7C873' }} />
-                                        )}
-                                        <Box>
-                                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                                {origin.name}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {origin.country}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                    <IconButton
-                                        size="small"
-                                        onClick={(e) => handleMenuOpen(e, origin)}
-                                    >
-                                        <MoreVertIcon />
-                                    </IconButton>
-                                </Box>
-
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 60 }}>
-                                    {origin.description}
-                                </Typography>
-
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        Số sản phẩm: {origin.productCount}
-                                    </Typography>
-                                    <Chip
-                                        label={getStatusLabel(origin.status)}
-                                        color={getStatusColor(origin.status) as any}
-                                        size="small"
-                                    />
-                                </Box>
-
-                                <Typography variant="caption" color="text.secondary">
-                                    Tạo: {new Date(origin.createdAt).toLocaleDateString('vi-VN')}
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                {loading ? (
+                    <Grid item xs={12} sx={{ textAlign: 'center', py: 4 }}>
+                        <CircularProgress />
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                            Đang tải dữ liệu...
+                        </Typography>
                     </Grid>
-                ))}
+                ) : origins.length === 0 ? (
+                    <Grid item xs={12} sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Không có xuất xứ nào
+                        </Typography>
+                    </Grid>
+                ) : (
+                    origins.map((origin) => (
+                        <Grid item xs={12} md={6} lg={4} key={origin._id}>
+                            <Card
+                                sx={{
+                                    height: '100%',
+                                    position: 'relative',
+                                    '&:hover': {
+                                        boxShadow: 6,
+                                        transform: 'translateY(-2px)',
+                                        transition: 'all 0.3s ease'
+                                    }
+                                }}
+                            >
+                                <CardContent>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {origin.flag ? (
+                                                <Typography variant="h6">{origin.flag}</Typography>
+                                            ) : (
+                                                <LocationIcon sx={{ color: '#E7C873' }} />
+                                            )}
+                                            <Box>
+                                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                                    {origin.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {origin.country}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => handleMenuOpen(e, origin)}
+                                        >
+                                            <MoreVertIcon />
+                                        </IconButton>
+                                    </Box>
+
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 60 }}>
+                                        {origin.description}
+                                    </Typography>
+
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            Số sản phẩm: {origin.productCount}
+                                        </Typography>
+                                        <Chip
+                                            label={getStatusLabel(origin.status)}
+                                            color={getStatusColor(origin.status) as any}
+                                            size="small"
+                                        />
+                                    </Box>
+
+                                    <Typography variant="caption" color="text.secondary">
+                                        Tạo: {new Date(origin.createdAt).toLocaleDateString('vi-VN')}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    ))
+                )}
             </Grid>
 
             {/* Detailed Table */}
@@ -367,61 +404,80 @@ const GinsengOrigins: React.FC = () => {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {origins.map((origin) => (
-                                    <TableRow key={origin.id} hover>
-                                        <TableCell>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                {origin.flag ? (
-                                                    <Avatar sx={{ width: 32, height: 32, fontSize: '1.2rem' }}>
-                                                        {origin.flag}
-                                                    </Avatar>
-                                                ) : (
-                                                    <Avatar sx={{ width: 32, height: 32, bgcolor: '#E7C873' }}>
-                                                        <LocationIcon />
-                                                    </Avatar>
-                                                )}
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                    {origin.name}
-                                                </Typography>
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2">
-                                                {origin.country}
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                                            <CircularProgress />
+                                            <Typography variant="body2" sx={{ mt: 1 }}>
+                                                Đang tải dữ liệu...
                                             </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2" sx={{ maxWidth: 300 }}>
-                                                {origin.description}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                {origin.productCount}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <Chip
-                                                label={getStatusLabel(origin.status)}
-                                                color={getStatusColor(origin.status) as any}
-                                                size="small"
-                                            />
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <Typography variant="body2">
-                                                {new Date(origin.createdAt).toLocaleDateString('vi-VN')}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <IconButton
-                                                onClick={(e) => handleMenuOpen(e, origin)}
-                                                size="small"
-                                            >
-                                                <MoreVertIcon />
-                                            </IconButton>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                ) : origins.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Không có xuất xứ nào
+                                            </Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    origins.map((origin) => (
+                                        <TableRow key={origin._id} hover>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    {origin.flag ? (
+                                                        <Avatar sx={{ width: 32, height: 32, fontSize: '1.2rem' }}>
+                                                            {origin.flag}
+                                                        </Avatar>
+                                                    ) : (
+                                                        <Avatar sx={{ width: 32, height: 32, bgcolor: '#E7C873' }}>
+                                                            <LocationIcon />
+                                                        </Avatar>
+                                                    )}
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                        {origin.name}
+                                                    </Typography>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2">
+                                                    {origin.country}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ maxWidth: 300 }}>
+                                                    {origin.description}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                    {origin.productCount}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Chip
+                                                    label={getStatusLabel(origin.status)}
+                                                    color={getStatusColor(origin.status) as any}
+                                                    size="small"
+                                                />
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Typography variant="body2">
+                                                    {new Date(origin.createdAt).toLocaleDateString('vi-VN')}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <IconButton
+                                                    onClick={(e) => handleMenuOpen(e, origin)}
+                                                    size="small"
+                                                >
+                                                    <MoreVertIcon />
+                                                </IconButton>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
                             </TableBody>
                         </Table>
                     </TableContainer>
@@ -440,6 +496,10 @@ const GinsengOrigins: React.FC = () => {
                 <MenuItem onClick={handleEdit}>
                     <EditIcon sx={{ mr: 1 }} />
                     Chỉnh sửa
+                </MenuItem>
+                <MenuItem onClick={handleToggleStatus}>
+                    <LocationIcon sx={{ mr: 1 }} />
+                    {selectedOrigin?.status === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt'}
                 </MenuItem>
                 <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
                     <DeleteIcon sx={{ mr: 1 }} />
@@ -466,6 +526,33 @@ const GinsengOrigins: React.FC = () => {
                     <Button onClick={handleDeleteCancel}>Hủy</Button>
                     <Button onClick={handleDeleteConfirm} color="error" variant="contained">
                         Xóa
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Status Toggle Confirmation Dialog */}
+            <Dialog
+                open={statusDialogOpen}
+                onClose={handleStatusCancel}
+                PaperProps={{
+                    sx: { overflow: 'visible' }
+                }}
+            >
+                <DialogTitle>Xác nhận thay đổi trạng thái</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Bạn có chắc chắn muốn {selectedOrigin?.status === 'active' ? 'vô hiệu hóa' : 'kích hoạt'} xuất xứ "{selectedOrigin?.name}"?
+                        {selectedOrigin?.status === 'active' && ' Xuất xứ này sẽ không hiển thị trong danh sách sản phẩm.'}
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleStatusCancel}>Hủy</Button>
+                    <Button
+                        onClick={handleStatusConfirm}
+                        color={selectedOrigin?.status === 'active' ? 'warning' : 'success'}
+                        variant="contained"
+                    >
+                        {selectedOrigin?.status === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt'}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -556,6 +643,14 @@ const GinsengOrigins: React.FC = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Snackbar for notifications */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={handleSnackbarClose}
+                message={snackbarMessage}
+            />
         </Box>
     );
 };

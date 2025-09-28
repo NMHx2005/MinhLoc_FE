@@ -1,177 +1,100 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect, use } from 'react';
 import {
+    Box,
     Container,
     Typography,
-    Box,
     Card,
     CardContent,
     CardMedia,
     Grid,
+    Chip,
+    Button,
     Breadcrumbs,
     Link as MuiLink,
-    Button,
-    Chip,
-    Stack,
-    Rating,
     Tabs,
     Tab,
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    IconButton,
+    Stack,
+    CircularProgress,
+    Alert,
+    TextField,
+    Divider,
     List,
     ListItem,
-    ListItemIcon,
     ListItemText,
-    IconButton,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
 } from '@mui/material';
 import {
     Home,
-    LocalFlorist,
-    ShoppingCart,
+    Phone,
+    Favorite,
     FavoriteBorder,
-    Share,
-    CheckCircle,
-    HealthAndSafety,
-    Spa,
-    Inventory,
-    AccessTime,
-    LocationOn,
     Close,
     Add,
     Remove,
+    ArrowBack,
+    LocalShipping,
+    Security,
+    Support,
+    CheckCircle,
+    Spa,
+    Inventory,
+    LocationOn,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import Layout from '@/components/client/shared/Layout';
-
-interface SamProduct {
-    id: number;
-    name: string;
-    category: 'hong-sam' | 'nhat-sam' | 'han-quoc-sam' | 'my-sam' | 'canada-sam';
-    origin: string;
-    age: string;
-    price: number;
-    originalPrice?: number;
-    image: string;
-    images: string[];
-    rating: number;
-    reviewCount: number;
-    description: string;
-    detailedDescription: string;
-    benefits: string[];
-    ingredients: string[];
-    usage: string;
-    storage: string;
-    weight: string;
-    isNew: boolean;
-    isBestSeller: boolean;
-    isLimited: boolean;
-    stock: number;
-    slug: string;
-    relatedProducts: {
-        id: number;
-        name: string;
-        image: string;
-        price: number;
-        slug: string;
-    }[];
-}
+import { getProductBySlug, getProducts, type Product } from '@/services/client/productService';
 
 const SamProductDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({ params }) => {
-    const [product, setProduct] = useState<SamProduct | null>(null);
+    const resolvedParams = use(params);
+    const [product, setProduct] = useState<Product | null>(null);
+    const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
     const [isFavorite, setIsFavorite] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [selectedImage, setSelectedImage] = useState(0);
     const [showImageModal, setShowImageModal] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
-
-    const resolvedParams = use(params);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Mock data - trong thực tế sẽ fetch từ API dựa trên slug
-        const mockProduct: SamProduct = {
-            id: 1,
-            name: 'Hồng Sâm Hàn Quốc 6 năm tuổi',
-            category: 'hong-sam',
-            origin: 'Hàn Quốc',
-            age: '6 năm',
-            price: 2500000,
-            originalPrice: 3000000,
-            image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/87/phoi-canh-tu-can-ho-the-prive-quan-2-anh-theprive-net-vn.jpg',
-            images: [
-                'https://datxanhmiennam.com.vn/Data/Sites/1/Product/87/phoi-canh-tu-can-ho-the-prive-quan-2-anh-theprive-net-vn.jpg',
-                'https://datxanhmiennam.com.vn/Data/Sites/1/Product/86/th%C3%B4ng-tin-d%E1%BB%B1-%C3%A1n-stown-gateway-h%C3%ACnh-%E1%BA%A3nh-5_6.jpg',
-                'https://datxanhmiennam.com.vn/Data/Sites/1/Product/85/phoi-canh-the-gio-riverside.jpg',
-                'https://datxanhmiennam.com.vn/Data/Sites/1/Product/84/b%E1%BA%A3n-sao-c%E1%BB%A7a-db06e9991a33a36dfa22.jpg',
-            ],
-            rating: 4.8,
-            reviewCount: 156,
-            description: 'Hồng sâm Hàn Quốc 6 năm tuổi được chế biến từ nhân sâm tươi 6 năm tuổi, có tác dụng bồi bổ sức khỏe, tăng cường miễn dịch và chống lão hóa.',
-            detailedDescription: `
-                <p>Hồng sâm Hàn Quốc 6 năm tuổi là sản phẩm cao cấp được chế biến từ nhân sâm tươi 6 năm tuổi theo phương pháp truyền thống của Hàn Quốc. Quá trình chế biến kỹ lưỡng giúp tăng cường hàm lượng saponin - hoạt chất quý giá nhất trong sâm.</p>
-                
-                <h3>Đặc điểm nổi bật</h3>
-                <p>Sản phẩm được chọn lọc từ những củ sâm chất lượng cao nhất, đảm bảo độ tinh khiết và hiệu quả tối ưu. Mỗi viên sâm đều được kiểm tra chất lượng nghiêm ngặt trước khi đóng gói.</p>
-                
-                <h3>Quy trình sản xuất</h3>
-                <p>Nhân sâm tươi được thu hoạch sau 6 năm trồng trọt, sau đó trải qua quá trình hấp và sấy khô theo phương pháp truyền thống. Quá trình này giúp tăng cường hoạt tính sinh học và bảo quản được lâu dài.</p>
-                
-                <h3>Chứng nhận chất lượng</h3>
-                <p>Sản phẩm đã được chứng nhận bởi các tổ chức quốc tế về chất lượng và an toàn thực phẩm, đảm bảo không chứa chất bảo quản độc hại.</p>
-            `,
-            benefits: [
-                'Tăng cường sức đề kháng và hệ miễn dịch',
-                'Bồi bổ khí huyết, cải thiện tuần hoàn máu',
-                'Chống lão hóa, làm đẹp da từ bên trong',
-                'Cải thiện trí nhớ và khả năng tập trung',
-                'Tăng cường sinh lực và sức bền',
-                'Hỗ trợ chức năng gan và thận',
-                'Giảm căng thẳng, mệt mỏi',
-                'Tăng cường chức năng tim mạch'
-            ],
-            ingredients: [
-                'Nhân sâm 6 năm tuổi (Panax ginseng)',
-                'Mật ong tự nhiên',
-                'Đường phèn tinh khiết',
-                'Tinh chất sâm cô đặc',
-                'Vitamin E tự nhiên',
-                'Chất chống oxy hóa'
-            ],
-            usage: 'Ngày 1-2 lần, mỗi lần 1-2 viên, uống với nước ấm trước bữa ăn 30 phút. Không nên sử dụng quá liều khuyến nghị.',
-            storage: 'Bảo quản nơi khô ráo, thoáng mát, tránh ánh nắng trực tiếp. Nhiệt độ bảo quản dưới 25°C. Đậy kín nắp sau khi sử dụng.',
-            weight: '100g (60 viên)',
-            isNew: true,
-            isBestSeller: true,
-            isLimited: false,
-            stock: 50,
-            slug: 'hong-sam-han-quoc-6-nam-tuoi',
-            relatedProducts: [
-                {
-                    id: 2,
-                    name: 'Nhật Sâm Tươi Cao Cấp',
-                    image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/86/th%C3%B4ng-tin-d%E1%BB%B1-%C3%A1n-stown-gateway-h%C3%ACnh-%E1%BA%A3nh-5_6.jpg',
-                    price: 1800000,
-                    slug: 'nhat-sam-tuoi-cao-cap'
-                },
-                {
-                    id: 3,
-                    name: 'Hàn Quốc Sâm Đỏ Premium',
-                    image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/85/phoi-canh-the-gio-riverside.jpg',
-                    price: 3500000,
-                    slug: 'han-quoc-sam-do-premium'
-                },
-                {
-                    id: 4,
-                    name: 'Mỹ Sâm Tây Bắc',
-                    image: 'https://datxanhmiennam.com.vn/Data/Sites/1/Product/84/b%E1%BA%A3n-sao-c%E1%BB%A7a-db06e9991a33a36dfa22.jpg',
-                    price: 1200000,
-                    slug: 'my-sam-tay-bac'
+        const loadProduct = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                // Fetch product by slug
+                const productResponse = await getProductBySlug(resolvedParams.slug);
+                if (productResponse) {
+                    setProduct(productResponse);
+
+                    // Fetch related products (same category)
+                    const relatedResponse = await getProducts({
+                        category: productResponse.categoryId._id,
+                        limit: 4
+                    });
+                    if (relatedResponse.success && relatedResponse.data) {
+                        // Filter out current product
+                        const products = relatedResponse.data.products || relatedResponse.data;
+                        const filtered = products.filter((p: Product) => p._id !== productResponse._id);
+                        setRelatedProducts(filtered.slice(0, 3));
+                    }
+                } else {
+                    setError('Không tìm thấy sản phẩm');
                 }
-            ]
+            } catch (err) {
+                console.error('Error loading product:', err);
+                setError('Có lỗi xảy ra khi tải sản phẩm');
+            } finally {
+                setLoading(false);
+            }
         };
-        setProduct(mockProduct);
+
+        loadProduct();
     }, [resolvedParams.slug]);
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -182,43 +105,61 @@ const SamProductDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({
         setQuantity(prev => Math.max(1, Math.min(prev + delta, product?.stock || 1)));
     };
 
-    const handleAddToCart = () => {
-        // Logic thêm vào giỏ hàng
-        // TODO: Implement add to cart functionality
-    };
 
-    const handleBuyNow = () => {
-        // Logic mua ngay
-        // TODO: Implement buy now functionality
-    };
-
-    const getCategoryColor = (category: string) => {
-        switch (category) {
-            case 'hong-sam': return '#E7C873';
-            case 'nhat-sam': return '#4CAF50';
-            case 'han-quoc-sam': return '#F44336';
-            case 'my-sam': return '#2196F3';
-            case 'canada-sam': return '#9C27B0';
-            default: return '#666';
+    const handleContact = () => {
+        if (product?.phone) {
+            window.open(`tel:${product.phone}`, '_self');
         }
     };
 
-    const getCategoryLabel = (category: string) => {
-        switch (category) {
-            case 'hong-sam': return 'Hồng Sâm';
-            case 'nhat-sam': return 'Nhật Sâm';
-            case 'han-quoc-sam': return 'Hàn Quốc Sâm';
-            case 'my-sam': return 'Mỹ Sâm';
-            case 'canada-sam': return 'Canada Sâm';
-            default: return category;
-        }
+    const getCategoryColor = (_categoryId: string) => {
+        if (!product?.categoryId) return '#666';
+
+        const name = product.categoryId.name.toLowerCase();
+        if (name.includes('hồng') || name.includes('hong')) return '#E7C873';
+        if (name.includes('nhật') || name.includes('nhat')) return '#4CAF50';
+        if (name.includes('hàn') || name.includes('han')) return '#F44336';
+        if (name.includes('mỹ') || name.includes('my')) return '#2196F3';
+        if (name.includes('canada')) return '#9C27B0';
+        return '#666';
     };
 
-    if (!product) {
+    const formatPrice = (price: number | undefined) => {
+        if (!price || typeof price !== 'number') {
+            return 'Liên hệ';
+        }
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(price);
+    };
+
+    if (loading) {
         return (
             <Layout>
-                <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
-                    <Typography variant="h4">Đang tải...</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+                    <CircularProgress size={60} sx={{ color: '#E7C873' }} />
+                </Box>
+            </Layout>
+        );
+    }
+
+    if (error || !product) {
+        return (
+            <Layout>
+                <Container maxWidth="lg" sx={{ py: 6, textAlign: 'center' }}>
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                        {error || 'Không tìm thấy sản phẩm'}
+                    </Alert>
+                    <Button
+                        component={Link}
+                        href="/SamType"
+                        variant="contained"
+                        startIcon={<ArrowBack />}
+                        sx={{ backgroundColor: '#E7C873', '&:hover': { backgroundColor: '#d4b05a' } }}
+                    >
+                        Quay lại danh sách sản phẩm
+                    </Button>
                 </Container>
             </Layout>
         );
@@ -226,573 +167,540 @@ const SamProductDetailPage: React.FC<{ params: Promise<{ slug: string }> }> = ({
 
     return (
         <Layout>
-            {/* Hero Section */}
-            <Box
-                sx={{
-                    position: 'relative',
-                    height: { xs: '40vh', md: '50vh' },
-                    overflow: 'hidden',
-                    pt: { xs: 12, md: 16 },
-                }}
-            >
-                <CardMedia
-                    component="img"
-                    image={product.image}
-                    alt={product.name}
-                    sx={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                    }}
-                />
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7))',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'flex-end',
-                        p: 4,
-                    }}
-                >
-                    <Container maxWidth="lg">
-                        <Breadcrumbs aria-label="breadcrumb" sx={{ color: 'white', mb: 2 }}>
-                            <MuiLink component={Link} href="/" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Home sx={{ mr: 0.5 }} fontSize="inherit" />
-                                Trang chủ
-                            </MuiLink>
-                            <MuiLink component={Link} href="/SamType" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
-                                <LocalFlorist sx={{ mr: 0.5 }} fontSize="inherit" />
-                                Các Loại Sâm
-                            </MuiLink>
-                            <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', color: '#E7C873' }}>
-                                {product.name}
-                            </Typography>
-                        </Breadcrumbs>
-
-                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                            <Chip
-                                label={getCategoryLabel(product.category)}
-                                sx={{
-                                    backgroundColor: getCategoryColor(product.category),
-                                    color: 'white',
-                                    fontWeight: 600,
-                                }}
-                            />
-                            {product.isNew && (
-                                <Chip
-                                    label="MỚI"
-                                    sx={{
-                                        backgroundColor: '#4CAF50',
-                                        color: 'white',
-                                        fontWeight: 600,
-                                    }}
-                                />
-                            )}
-                            {product.isBestSeller && (
-                                <Chip
-                                    label="BÁN CHẠY"
-                                    sx={{
-                                        backgroundColor: '#FF5722',
-                                        color: 'white',
-                                        fontWeight: 600,
-                                    }}
-                                />
-                            )}
-                            {product.isLimited && (
-                                <Chip
-                                    label="CÓ HẠN"
-                                    sx={{
-                                        backgroundColor: '#9C27B0',
-                                        color: 'white',
-                                        fontWeight: 600,
-                                    }}
-                                />
-                            )}
-                        </Box>
-
-                        <Typography
-                            variant="h2"
-                            component="h1"
-                            sx={{
-                                color: 'white',
-                                fontWeight: 700,
-                                mb: 2,
-                                fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2.5rem' },
-                                lineHeight: 1.2,
-                            }}
-                        >
+            <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+                {/* Breadcrumbs */}
+                <Container maxWidth="lg" sx={{ pt: 3, pb: 2 }}>
+                    <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+                        <MuiLink component={Link} href="/" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Home sx={{ mr: 0.5 }} fontSize="inherit" />
+                            Trang chủ
+                        </MuiLink>
+                        <MuiLink component={Link} href="/SamType" color="inherit" sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Spa sx={{ mr: 0.5 }} fontSize="inherit" />
+                            Sâm
+                        </MuiLink>
+                        <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', color: '#E7C873', fontWeight: 600 }}>
                             {product.name}
                         </Typography>
+                    </Breadcrumbs>
+                </Container>
 
-                        <Box sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: { xs: 2, sm: 3 },
-                            color: 'white',
-                            flexWrap: 'wrap'
-                        }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Rating value={product.rating} precision={0.1} size="small" readOnly />
-                                <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' } }}>
-                                    ({product.reviewCount} đánh giá)
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <LocationOn sx={{ fontSize: 16 }} />
-                                <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' } }}>
-                                    {product.origin}
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Spa sx={{ fontSize: 16 }} />
-                                <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' } }}>
-                                    {product.age}
-                                </Typography>
-                            </Box>
-                        </Box>
-                    </Container>
-                </Box>
-            </Box>
-
-            <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
-                <Grid container spacing={{ xs: 3, md: 4 }}>
-                    {/* Product Images */}
-                    <Grid item xs={12} lg={6}>
-                        <Card sx={{ mb: 3, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                            <CardMedia
-                                component="img"
-                                height="400"
-                                image={product.images[selectedImage]}
-                                alt={product.name}
-                                sx={{
-                                    objectFit: 'cover',
-                                    cursor: 'pointer',
-                                    '&:hover': {
-                                        opacity: 0.9,
-                                    }
-                                }}
-                                onClick={() => setShowImageModal(true)}
-                            />
-                        </Card>
-
-                        {/* Thumbnail Images */}
-                        <Grid container spacing={1}>
-                            {product.images.map((image, index) => (
-                                <Grid item xs={3} key={index}>
-                                    <Card
+                <Container maxWidth="lg" sx={{ pb: 6 }}>
+                    <Grid container spacing={4}>
+                        {/* Main Content */}
+                        <Grid item xs={12} lg={8}>
+                            {/* Product Header */}
+                            <Card sx={{ mb: 4, borderRadius: 2, overflow: 'hidden' }}>
+                                <Box sx={{ position: 'relative' }}>
+                                    <CardMedia
+                                        component="img"
+                                        height="400"
+                                        image={product.images?.[0] || '/placeholder-product.jpg'}
+                                        alt={product.name}
+                                        sx={{ objectFit: 'cover' }}
+                                    />
+                                    <Box
                                         sx={{
-                                            cursor: 'pointer',
-                                            border: selectedImage === index ? '2px solid #E7C873' : '1px solid #e0e0e0',
-                                            borderRadius: 1,
-                                            overflow: 'hidden',
+                                            position: 'absolute',
+                                            top: 16,
+                                            right: 16,
+                                            display: 'flex',
+                                            gap: 1,
                                         }}
-                                        onClick={() => setSelectedImage(index)}
                                     >
-                                        <CardMedia
-                                            component="img"
-                                            height="80"
-                                            image={image}
-                                            alt={`${product.name} ${index + 1}`}
-                                            sx={{ objectFit: 'cover' }}
-                                        />
-                                    </Card>
-                                </Grid>
-                            ))}
-                        </Grid>
-                    </Grid>
-
-                    {/* Product Info */}
-                    <Grid item xs={12} lg={6}>
-                        <Card sx={{ mb: 3, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                            <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                                {/* Price */}
-                                <Box sx={{ mb: 3 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                                        <Typography
-                                            variant="h3"
+                                        <Chip
+                                            label={product.categoryId.name}
                                             sx={{
-                                                fontWeight: 700,
-                                                color: '#E7C873',
+                                                backgroundColor: getCategoryColor(product.categoryId._id),
+                                                color: 'white',
+                                                fontWeight: 600
                                             }}
-                                        >
-                                            {product.price.toLocaleString('vi-VN')} VNĐ
-                                        </Typography>
-                                        {product.originalPrice && (
-                                            <Typography
-                                                variant="h6"
-                                                sx={{
-                                                    textDecoration: 'line-through',
-                                                    color: 'text.secondary',
-                                                }}
-                                            >
-                                                {product.originalPrice.toLocaleString('vi-VN')} VNĐ
-                                            </Typography>
+                                        />
+                                        {product.isFeatured && (
+                                            <Chip
+                                                label="Nổi bật"
+                                                sx={{ color: 'white', backgroundColor: '#E7C873', fontWeight: 600 }}
+                                            />
+                                        )}
+                                        {product.stock < 10 && (
+                                            <Chip
+                                                label="Sắp hết hàng"
+                                                sx={{ color: 'white', backgroundColor: '#f44336', fontWeight: 600 }}
+                                            />
                                         )}
                                     </Box>
-                                    {product.originalPrice && (
-                                        <Typography variant="body2" color="success.main" sx={{ fontWeight: 600 }}>
-                                            Tiết kiệm: {((product.originalPrice - product.price) / product.originalPrice * 100).toFixed(0)}%
-                                        </Typography>
-                                    )}
                                 </Box>
-
-                                {/* Description */}
-                                <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.6 }}>
-                                    {product.description}
-                                </Typography>
-
-                                {/* Product Details */}
-                                <Stack spacing={2} sx={{ mb: 3 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <HealthAndSafety sx={{ fontSize: 20, color: '#666' }} />
-                                        <Typography variant="body2" color="text.secondary">
-                                            Xuất xứ: {product.origin}
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Spa sx={{ fontSize: 20, color: '#666' }} />
-                                        <Typography variant="body2" color="text.secondary">
-                                            Tuổi: {product.age}
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Inventory sx={{ fontSize: 20, color: '#666' }} />
-                                        <Typography variant="body2" color="text.secondary">
-                                            Trọng lượng: {product.weight}
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <AccessTime sx={{ fontSize: 20, color: '#666' }} />
-                                        <Typography variant="body2" color="text.secondary">
-                                            Bảo quản: {product.storage}
-                                        </Typography>
-                                    </Box>
-                                </Stack>
-
-                                {/* Stock Status */}
-                                <Typography
-                                    variant="body2"
-                                    color={product.stock > 10 ? 'success.main' : 'error.main'}
-                                    sx={{ mb: 3, fontWeight: 600 }}
-                                >
-                                    {product.stock > 10 ? 'Còn hàng' : `Chỉ còn ${product.stock} sản phẩm`}
-                                </Typography>
-
-                                {/* Quantity Selector */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                        Số lượng:
+                                <CardContent sx={{ p: 4 }}>
+                                    <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, color: '#2c3e50' }}>
+                                        {product.name}
                                     </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                                        <IconButton
-                                            onClick={() => handleQuantityChange(-1)}
-                                            disabled={quantity <= 1}
-                                            size="small"
-                                        >
-                                            <Remove />
-                                        </IconButton>
-                                        <Typography sx={{ px: 2, minWidth: 40, textAlign: 'center' }}>
-                                            {quantity}
-                                        </Typography>
-                                        <IconButton
-                                            onClick={() => handleQuantityChange(1)}
-                                            disabled={quantity >= product.stock}
-                                            size="small"
-                                        >
-                                            <Add />
-                                        </IconButton>
-                                    </Box>
-                                </Box>
 
-                                {/* Action Buttons */}
-                                <Stack
-                                    direction={{ xs: 'column', sm: 'row' }}
-                                    spacing={{ xs: 1, sm: 2 }}
-                                    sx={{ mb: 3 }}
-                                >
-                                    <Button
-                                        variant="contained"
-                                        startIcon={<ShoppingCart />}
-                                        onClick={handleAddToCart}
-                                        disabled={product.stock === 0}
-                                        sx={{
-                                            backgroundColor: '#E7C873',
-                                            flex: 1,
-                                            py: 1.5,
-                                            '&:hover': {
-                                                backgroundColor: '#d4b85a',
-                                            },
-                                        }}
-                                    >
-                                        Thêm vào giỏ
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        startIcon={<FavoriteBorder />}
-                                        onClick={() => setIsFavorite(!isFavorite)}
-                                        sx={{
-                                            borderColor: '#E7C873',
-                                            color: '#E7C873',
-                                            minWidth: { xs: 'auto', sm: '120px' },
-                                            '&:hover': {
-                                                backgroundColor: '#E7C873',
-                                                color: 'white',
-                                            },
-                                        }}
-                                    >
-                                        <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                                            {isFavorite ? 'Đã yêu thích' : 'Yêu thích'}
-                                        </Box>
-                                        <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                                            {isFavorite ? '♥' : '♡'}
-                                        </Box>
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        startIcon={<Share />}
-                                        sx={{
-                                            borderColor: '#E7C873',
-                                            color: '#E7C873',
-                                            minWidth: { xs: 'auto', sm: '120px' },
-                                            '&:hover': {
-                                                backgroundColor: '#E7C873',
-                                                color: 'white',
-                                            },
-                                        }}
-                                    >
-                                        <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                                            Chia sẻ
-                                        </Box>
-                                    </Button>
-                                </Stack>
+                                    <Typography variant="h6" sx={{ color: '#E7C873', mb: 2, fontWeight: 600 }}>
+                                        {product.categoryId.name} • {product.originId.name}
+                                    </Typography>
 
-                                <Button
-                                    variant="contained"
-                                    fullWidth
-                                    onClick={handleBuyNow}
-                                    disabled={product.stock === 0}
-                                    sx={{
-                                        backgroundColor: '#1976D2',
-                                        py: 1.5,
-                                        '&:hover': {
-                                            backgroundColor: '#1565C0',
-                                        },
-                                    }}
-                                >
-                                    Mua ngay
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                </Grid>
+                                    <Typography variant="h5" sx={{ color: '#2c3e50', fontWeight: 700, mb: 3 }}>
+                                        {formatPrice(product.price)}
+                                    </Typography>
 
-                {/* Product Details Tabs */}
-                <Card sx={{ mb: 4, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                    <Tabs
-                        value={activeTab}
-                        onChange={handleTabChange}
-                        variant="fullWidth"
-                        sx={{
-                            '& .MuiTab-root': {
-                                fontWeight: 600,
-                                fontSize: '1rem',
-                                textTransform: 'none',
-                            },
-                            '& .Mui-selected': {
-                                color: '#E7C873 !important',
-                            },
-                            '& .MuiTabs-indicator': {
-                                backgroundColor: '#E7C873',
-                            },
-                        }}
-                    >
-                        <Tab label="Mô tả chi tiết" />
-                        <Tab label="Thành phần" />
-                        <Tab label="Cách sử dụng" />
-                        <Tab label="Lợi ích" />
-                    </Tabs>
+                                    <Typography variant="body1" sx={{ fontSize: '1.1rem', lineHeight: 1.7, color: '#555' }}>
+                                        {product.description}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
 
-                    <CardContent sx={{ p: 4 }}>
-                        {activeTab === 0 && (
-                            <Box
-                                sx={{
-                                    '& h3': {
-                                        fontSize: '1.5rem',
-                                        fontWeight: 600,
-                                        color: '#E7C873',
-                                        mb: 2,
-                                        mt: 3,
-                                    },
-                                    '& p': {
-                                        fontSize: '1.1rem',
-                                        lineHeight: 1.8,
-                                        mb: 2,
-                                        color: '#333',
-                                    },
-                                }}
-                                dangerouslySetInnerHTML={{ __html: product.detailedDescription }}
-                            />
-                        )}
+                            {/* Product Stats */}
+                            <Card sx={{ mb: 4, borderRadius: 2 }}>
+                                <CardContent sx={{ p: 4 }}>
+                                    <Typography variant="h5" gutterBottom sx={{ fontWeight: 700, color: '#2c3e50', mb: 3 }}>
+                                        Thông số sản phẩm
+                                    </Typography>
 
-                        {activeTab === 1 && (
-                            <Box>
-                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
-                                    Thành phần chính
-                                </Typography>
-                                <List>
-                                    {product.ingredients.map((ingredient, index) => (
-                                        <ListItem key={index}>
-                                            <ListItemIcon>
-                                                <CheckCircle sx={{ color: '#4CAF50' }} />
-                                            </ListItemIcon>
-                                            <ListItemText
-                                                primary={ingredient}
-                                                primaryTypographyProps={{ fontSize: '1rem' }}
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            </Box>
-                        )}
-
-                        {activeTab === 2 && (
-                            <Box>
-                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
-                                    Hướng dẫn sử dụng
-                                </Typography>
-                                <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.8 }}>
-                                    {product.usage}
-                                </Typography>
-
-                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#E7C873' }}>
-                                    Cách bảo quản
-                                </Typography>
-                                <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
-                                    {product.storage}
-                                </Typography>
-                            </Box>
-                        )}
-
-                        {activeTab === 3 && (
-                            <Box>
-                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
-                                    Lợi ích sức khỏe
-                                </Typography>
-                                <Grid container spacing={{ xs: 1, sm: 2 }}>
-                                    {product.benefits.map((benefit, index) => (
-                                        <Grid item xs={12} sm={6} key={index}>
-                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2 }}>
-                                                <CheckCircle sx={{ color: '#4CAF50', mt: 0.5, flexShrink: 0 }} />
-                                                <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
-                                                    {benefit}
+                                    <Grid container spacing={3}>
+                                        <Grid item xs={12} sm={6} md={3}>
+                                            <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                                                <LocationOn sx={{ fontSize: 40, color: '#E7C873', mb: 1 }} />
+                                                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+                                                    Xuất xứ
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {product.originId.name}
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                    ))}
-                                </Grid>
-                            </Box>
-                        )}
-                    </CardContent>
-                </Card>
+                                        <Grid item xs={12} sm={6} md={3}>
+                                            <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                                                <Spa sx={{ fontSize: 40, color: '#E7C873', mb: 1 }} />
+                                                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+                                                    Tuổi
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {product.specifications.age ? `${product.specifications.age} năm` : 'N/A'}
+                                                </Typography>
+                                            </Box>
+                                        </Grid>
+                                        <Grid item xs={12} sm={6} md={3}>
+                                            <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                                                <Inventory sx={{ fontSize: 40, color: '#E7C873', mb: 1 }} />
+                                                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+                                                    Trọng lượng
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {product.weight} {product.weightUnit}
+                                                </Typography>
+                                            </Box>
+                                        </Grid>
+                                        <Grid item xs={12} sm={6} md={3}>
+                                            <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                                                <CheckCircle sx={{ fontSize: 40, color: '#E7C873', mb: 1 }} />
+                                                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+                                                    Cấp độ
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {product.grade}
+                                                </Typography>
+                                            </Box>
+                                        </Grid>
+                                    </Grid>
+                                </CardContent>
+                            </Card>
 
-                {/* Related Products */}
-                <Card sx={{ borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                    <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                        <Typography variant="h5" sx={{ fontWeight: 600, mb: 3, color: '#E7C873' }}>
-                            Sản phẩm liên quan
-                        </Typography>
-                        <Grid container spacing={{ xs: 2, md: 3 }}>
-                            {product.relatedProducts.map((relatedProduct) => (
-                                <Grid item xs={12} sm={6} lg={4} key={relatedProduct.id}>
-                                    <Card
-                                        component={Link}
-                                        href={`/SamType/${relatedProduct.slug}`}
-                                        sx={{
-                                            textDecoration: 'none',
-                                            color: 'inherit',
-                                            transition: 'all 0.3s ease',
-                                            borderRadius: 1,
-                                            '&:hover': {
-                                                transform: 'translateY(-2px)',
-                                                boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-                                            },
-                                        }}
-                                    >
-                                        <CardMedia
-                                            component="img"
-                                            height="200"
-                                            image={relatedProduct.image}
-                                            alt={relatedProduct.name}
-                                            sx={{ objectFit: 'cover' }}
-                                        />
-                                        <CardContent sx={{ p: 2 }}>
-                                            <Typography
-                                                variant="subtitle1"
-                                                sx={{
-                                                    fontWeight: 600,
-                                                    mb: 1,
-                                                    fontSize: '0.9rem',
-                                                    lineHeight: 1.4,
-                                                    display: '-webkit-box',
-                                                    WebkitLineClamp: 2,
-                                                    WebkitBoxOrient: 'vertical',
-                                                    overflow: 'hidden',
-                                                }}
-                                            >
-                                                {relatedProduct.name}
+                            {/* Product Images */}
+                            {product.images && product.images.length > 1 && (
+                                <Card sx={{ mb: 4, borderRadius: 2 }}>
+                                    <CardContent sx={{ p: 4 }}>
+                                        <Typography variant="h5" gutterBottom sx={{ fontWeight: 700, color: '#2c3e50', mb: 3 }}>
+                                            Hình ảnh sản phẩm
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                            {product.images.map((image, index) => (
+                                                <Grid item xs={6} sm={4} md={3} key={index}>
+                                                    <Card
+                                                        sx={{
+                                                            cursor: 'pointer',
+                                                            border: selectedImage === index ? '2px solid #E7C873' : '1px solid #e0e0e0',
+                                                            borderRadius: 2,
+                                                            overflow: 'hidden',
+                                                            transition: 'all 0.3s ease',
+                                                            '&:hover': {
+                                                                transform: 'translateY(-2px)',
+                                                                boxShadow: 4
+                                                            }
+                                                        }}
+                                                        onClick={() => {
+                                                            setSelectedImage(index);
+                                                            setShowImageModal(true);
+                                                        }}
+                                                    >
+                                                        <CardMedia
+                                                            component="img"
+                                                            height="120"
+                                                            image={image}
+                                                            alt={`${product.name} ${index + 1}`}
+                                                            sx={{ objectFit: 'cover' }}
+                                                        />
+                                                    </Card>
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Product Details Tabs */}
+                            <Card sx={{ borderRadius: 2 }}>
+                                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                                    <Tabs value={activeTab} onChange={handleTabChange} aria-label="product details tabs">
+                                        <Tab label="Mô tả chi tiết" />
+                                        <Tab label="Thông số kỹ thuật" />
+                                        <Tab label="Lợi ích sức khỏe" />
+                                        <Tab label="Hướng dẫn sử dụng" />
+                                    </Tabs>
+                                </Box>
+                                <CardContent sx={{ p: 4 }}>
+                                    {activeTab === 0 && (
+                                        <Box>
+                                            <Typography variant="body1" sx={{ fontSize: '1.1rem', lineHeight: 1.7, color: '#555', mb: 3 }}>
+                                                {product.description}
                                             </Typography>
-                                            <Typography
-                                                variant="h6"
-                                                sx={{
-                                                    fontWeight: 700,
-                                                    color: '#E7C873',
-                                                }}
-                                            >
-                                                {relatedProduct.price.toLocaleString('vi-VN')} VNĐ
+                                            {product.content && (
+                                                <Box
+                                                    sx={{
+                                                        '& img': {
+                                                            maxWidth: '100%',
+                                                            height: 'auto',
+                                                            borderRadius: 2,
+                                                            mb: 2
+                                                        }
+                                                    }}
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: product.content.replace(
+                                                            /!\[([^\]]*)\]\(([^)]+)\)/g,
+                                                            '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 16px;" />'
+                                                        )
+                                                    }}
+                                                />
+                                            )}
+                                        </Box>
+                                    )}
+                                    {activeTab === 1 && (
+                                        <Grid container spacing={3}>
+                                            <Grid item xs={12} sm={6}>
+                                                <List>
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Danh mục"
+                                                            secondary={product.categoryId.name}
+                                                        />
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Xuất xứ"
+                                                            secondary={product.originId.name}
+                                                        />
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Cấp độ"
+                                                            secondary={product.grade}
+                                                        />
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Trọng lượng"
+                                                            secondary={`${product.weight} ${product.weightUnit}`}
+                                                        />
+                                                    </ListItem>
+                                                </List>
+                                            </Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                <List>
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Tuổi"
+                                                            secondary={product.specifications.age ? `${product.specifications.age} năm` : 'N/A'}
+                                                        />
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Mã SKU"
+                                                            secondary={product.sku}
+                                                        />
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Tình trạng"
+                                                            secondary={product.stock > 0 ? 'Còn hàng' : 'Hết hàng'}
+                                                        />
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        <ListItemText
+                                                            primary="Số lượng còn lại"
+                                                            secondary={product.stock}
+                                                        />
+                                                    </ListItem>
+                                                </List>
+                                            </Grid>
+                                        </Grid>
+                                    )}
+                                    {activeTab === 2 && (
+                                        <Box>
+                                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#2c3e50', mb: 2 }}>
+                                                Lợi ích sức khỏe
                                             </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            ))}
+                                            {product.features && product.features.length > 0 ? (
+                                                <List>
+                                                    {product.features.map((feature, index) => (
+                                                        <ListItem key={index}>
+                                                            <CheckCircle sx={{ color: '#4CAF50', mr: 2 }} />
+                                                            <ListItemText primary={feature} />
+                                                        </ListItem>
+                                                    ))}
+                                                </List>
+                                            ) : (
+                                                <Typography color="text.secondary">
+                                                    Thông tin lợi ích sức khỏe đang được cập nhật...
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    )}
+                                    {activeTab === 3 && (
+                                        <Box>
+                                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#2c3e50', mb: 2 }}>
+                                                Hướng dẫn sử dụng
+                                            </Typography>
+                                            <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.7 }}>
+                                                <strong>Cách sử dụng:</strong><br />
+                                                • Ngâm với nước ấm 60-70°C trong 10-15 phút<br />
+                                                • Có thể nhai trực tiếp hoặc pha trà<br />
+                                                • Sử dụng 1-2 lần/ngày, mỗi lần 3-5g<br />
+                                                • Nên sử dụng vào buổi sáng hoặc trước bữa ăn
+                                            </Typography>
+                                            <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.7 }}>
+                                                <strong>Bảo quản:</strong><br />
+                                                • Bảo quản nơi khô ráo, thoáng mát<br />
+                                                • Tránh ánh nắng trực tiếp<br />
+                                                • Đóng kín sau khi sử dụng<br />
+                                                • Hạn sử dụng: 24 tháng kể từ ngày sản xuất
+                                            </Typography>
+                                            <Alert severity="warning" sx={{ mt: 2 }}>
+                                                <strong>Lưu ý:</strong> Sản phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.
+                                                Nên tham khảo ý kiến bác sĩ trước khi sử dụng.
+                                            </Alert>
+                                        </Box>
+                                    )}
+                                </CardContent>
+                            </Card>
                         </Grid>
-                    </CardContent>
-                </Card>
-            </Container>
 
-            {/* Image Modal */}
-            <Dialog
-                open={showImageModal}
-                onClose={() => setShowImageModal(false)}
-                maxWidth="md"
-                fullWidth
-            >
-                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box component="span" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>
-                        {product.name} - Hình {selectedImage + 1}
-                    </Box>
-                    <IconButton onClick={() => setShowImageModal(false)} sx={{ color: 'white' }}>
-                        <Close />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent>
-                    <CardMedia
-                        component="img"
-                        image={product.images[selectedImage]}
-                        alt={product.name}
-                        sx={{ width: '100%', maxHeight: '70vh', objectFit: 'contain' }}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setShowImageModal(false)}>
-                        Đóng
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                        {/* Sidebar */}
+                        <Grid item xs={12} lg={4}>
+                            {/* Product Actions */}
+                            <Card sx={{ mb: 4, borderRadius: 2, position: 'sticky', top: 20 }}>
+                                <CardContent sx={{ p: 4 }}>
+                                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#2c3e50', mb: 3 }}>
+                                        {formatPrice(product.price)}
+                                    </Typography>
+
+                                    <Box sx={{ mb: 3 }}>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                            Số lượng
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <IconButton
+                                                onClick={() => handleQuantityChange(-1)}
+                                                disabled={quantity <= 1}
+                                                sx={{ border: '1px solid #e0e0e0' }}
+                                            >
+                                                <Remove />
+                                            </IconButton>
+                                            <TextField
+                                                value={quantity}
+                                                onChange={(e) => {
+                                                    const value = parseInt(e.target.value) || 1;
+                                                    setQuantity(Math.max(1, Math.min(value, product.stock)));
+                                                }}
+                                                inputProps={{ min: 1, max: product.stock, style: { textAlign: 'center' } }}
+                                                sx={{ width: 80 }}
+                                                size="small"
+                                            />
+                                            <IconButton
+                                                onClick={() => handleQuantityChange(1)}
+                                                disabled={quantity >= product.stock}
+                                                sx={{ border: '1px solid #e0e0e0' }}
+                                            >
+                                                <Add />
+                                            </IconButton>
+                                        </Box>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Còn lại: {product.stock} sản phẩm
+                                        </Typography>
+                                    </Box>
+
+                                    <Stack spacing={2}>
+                                        {product.phone ? (
+                                            <Button
+                                                variant="contained"
+                                                fullWidth
+                                                size="large"
+                                                startIcon={<Phone />}
+                                                onClick={handleContact}
+                                                sx={{
+                                                    backgroundColor: '#E7C873',
+                                                    '&:hover': { backgroundColor: '#d4b05a' },
+                                                    py: 1.5,
+                                                    fontSize: '1.1rem',
+                                                    fontWeight: 600
+                                                }}
+                                            >
+                                                Liên hệ: {product.phone}
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                variant="contained"
+                                                fullWidth
+                                                size="large"
+                                                startIcon={<Phone />}
+                                                disabled
+                                                sx={{
+                                                    backgroundColor: '#ccc',
+                                                    '&:hover': { backgroundColor: '#ccc' },
+                                                    py: 1.5,
+                                                    fontSize: '1.1rem',
+                                                    fontWeight: 600
+                                                }}
+                                            >
+                                                Chưa cập nhật số điện thoại
+                                            </Button>
+                                        )}
+
+                                        <Button
+                                            variant="outlined"
+                                            fullWidth
+                                            startIcon={isFavorite ? <Favorite /> : <FavoriteBorder />}
+                                            onClick={() => setIsFavorite(!isFavorite)}
+                                            sx={{
+                                                borderColor: isFavorite ? '#f44336' : '#e0e0e0',
+                                                color: isFavorite ? '#f44336' : '#666',
+                                                '&:hover': {
+                                                    borderColor: isFavorite ? '#d32f2f' : '#E7C873',
+                                                    backgroundColor: isFavorite ? 'rgba(244, 67, 54, 0.1)' : 'rgba(231, 200, 115, 0.1)'
+                                                }
+                                            }}
+                                        >
+                                            {isFavorite ? 'Đã yêu thích' : 'Yêu thích'}
+                                        </Button>
+                                    </Stack>
+
+                                    <Divider sx={{ my: 3 }} />
+
+                                    <Box sx={{ textAlign: 'center' }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', mb: 2 }}>
+                                            Cam kết chất lượng
+                                        </Typography>
+                                        <Stack spacing={1}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                                <LocalShipping sx={{ color: '#4CAF50', fontSize: 20 }} />
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Giao hàng toàn quốc
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                                <Security sx={{ color: '#4CAF50', fontSize: 20 }} />
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Đảm bảo chính hãng
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                                <Support sx={{ color: '#4CAF50', fontSize: 20 }} />
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Hỗ trợ 24/7
+                                                </Typography>
+                                            </Box>
+                                        </Stack>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    </Grid>
+
+                    {/* Related Products */}
+                    {relatedProducts.length > 0 && (
+                        <Box sx={{ mt: 6 }}>
+                            <Typography variant="h4" sx={{ fontWeight: 700, color: '#2c3e50', mb: 4, textAlign: 'center' }}>
+                                Sản phẩm liên quan
+                            </Typography>
+                            <Grid container spacing={3}>
+                                {relatedProducts.map((relatedProduct) => (
+                                    <Grid item xs={12} sm={6} md={4} key={relatedProduct._id}>
+                                        <Card
+                                            component={Link}
+                                            href={`/SamType/${relatedProduct.slug}`}
+                                            sx={{
+                                                textDecoration: 'none',
+                                                borderRadius: 2,
+                                                overflow: 'hidden',
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    transform: 'translateY(-4px)',
+                                                    boxShadow: 6
+                                                }
+                                            }}
+                                        >
+                                            <CardMedia
+                                                component="img"
+                                                height="200"
+                                                image={relatedProduct.images?.[0] || '/placeholder-product.jpg'}
+                                                alt={relatedProduct.name}
+                                                sx={{ objectFit: 'cover' }}
+                                            />
+                                            <CardContent>
+                                                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', mb: 1 }}>
+                                                    {relatedProduct.name}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                                    {relatedProduct.categoryId.name} • {relatedProduct.originId.name}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                                    {relatedProduct.weight} {relatedProduct.weightUnit}
+                                                </Typography>
+                                                <Typography variant="h6" sx={{ color: '#E7C873', fontWeight: 700 }}>
+                                                    {formatPrice(relatedProduct.price)}
+                                                </Typography>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        </Box>
+                    )}
+                </Container>
+
+                {/* Image Modal */}
+                <Dialog
+                    open={showImageModal}
+                    onClose={() => setShowImageModal(false)}
+                    maxWidth="md"
+                    fullWidth
+                >
+                    <DialogTitle>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="h6">{product.name}</Typography>
+                            <IconButton onClick={() => setShowImageModal(false)}>
+                                <Close />
+                            </IconButton>
+                        </Box>
+                    </DialogTitle>
+                    <DialogContent>
+                        <CardMedia
+                            component="img"
+                            image={product.images?.[selectedImage] || '/placeholder-product.jpg'}
+                            alt={product.name}
+                            sx={{ width: '100%', height: 'auto', borderRadius: 2 }}
+                        />
+                    </DialogContent>
+                </Dialog>
+            </Box>
         </Layout>
     );
 };

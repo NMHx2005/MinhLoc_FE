@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Card,
@@ -31,8 +31,9 @@ import {
     InputLabel,
     Select,
     Grid,
-    Tabs,
-    Tab,
+    Snackbar,
+    Alert,
+    CircularProgress,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -42,29 +43,20 @@ import {
     Search as SearchIcon,
     Visibility as ViewIcon,
     Newspaper as NewsIcon,
-    Category as CategoryIcon,
-    LocalOffer as TagIcon,
+    FilterList as FilterIcon,
+    Clear as ClearIcon,
+    Download as DownloadIcon,
+    CheckBox as CheckBoxIcon,
+    CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+    Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import NewsForm from './NewsForm';
+import { useRouter } from 'next/navigation';
+import { newsService } from '../../services/admin/newsService';
+import type { NewsArticle } from '../../services/admin/newsService';
 import NewsCategoriesManagement from './NewsCategoriesManagement';
 import NewsTagsManagement from './NewsTagsManagement';
 
-interface NewsArticle {
-    id: number;
-    title: string;
-    slug: string;
-    excerpt: string;
-    content: string;
-    category: string;
-    tags: string[];
-    author: string;
-    status: 'draft' | 'published' | 'archived';
-    featured: boolean;
-    featuredImage: string;
-    publishedAt: string;
-    createdAt: string;
-    views: number;
-}
+// Remove duplicate interface - using the one from newsService
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -88,122 +80,113 @@ function TabPanel(props: TabPanelProps) {
     );
 }
 
-function a11yProps(index: number) {
-    return {
-        id: `news-tab-${index}`,
-        'aria-controls': `news-tabpanel-${index}`,
-    };
-}
 
 const NewsManagement: React.FC = () => {
-    const [tabValue, setTabValue] = useState(0);
-    const [articles, setArticles] = useState<NewsArticle[]>([
-        {
-            id: 1,
-            title: 'Xu hướng bất động sản 2024: Những cơ hội đầu tư mới',
-            slug: 'xu-huong-bat-dong-san-2024',
-            excerpt: 'Phân tích thị trường bất động sản 2024 với những cơ hội đầu tư tiềm năng...',
-            content: 'Nội dung chi tiết về xu hướng bất động sản...',
-            category: 'Thị trường BDS',
-            tags: ['BDS', 'Đầu tư', '2024'],
-            author: 'Admin',
-            status: 'published',
-            featured: true,
-            featuredImage: '/placeholder-news.jpg',
-            publishedAt: '2024-01-20',
-            createdAt: '2024-01-18',
-            views: 1250
-        },
-        {
-            id: 2,
-            title: 'Sâm Ngọc Linh Kontum: Đặc sản quý hiếm của núi rừng Tây Nguyên',
-            slug: 'sam-ngoc-linh-kontum',
-            excerpt: 'Tìm hiểu về sâm Ngọc Linh - loại sâm quý hiếm chỉ có ở vùng núi Ngọc Linh...',
-            content: 'Nội dung chi tiết về sâm Ngọc Linh...',
-            category: 'Sản phẩm Sâm',
-            tags: ['Sâm Ngọc Linh', 'Kontum', 'Y học'],
-            author: 'Editor',
-            status: 'published',
-            featured: false,
-            featuredImage: '/placeholder-ginseng.jpg',
-            publishedAt: '2024-01-18',
-            createdAt: '2024-01-15',
-            views: 890
-        },
-        {
-            id: 3,
-            title: 'Chính sách mới về thuế bất động sản năm 2024',
-            slug: 'chinh-sach-thue-bat-dong-san-2024',
-            excerpt: 'Tổng hợp các chính sách mới về thuế bất động sản có hiệu lực từ năm 2024...',
-            content: 'Nội dung chi tiết về chính sách thuế...',
-            category: 'Chính sách',
-            tags: ['Thuế', 'Chính sách', 'BDS'],
-            author: 'Admin',
-            status: 'draft',
-            featured: false,
-            featuredImage: '/placeholder-policy.jpg',
-            publishedAt: '',
-            createdAt: '2024-01-22',
-            views: 0
-        },
-        {
-            id: 4,
-            title: 'Lợi ích của sâm Hàn Quốc đối với sức khỏe',
-            slug: 'loi-ich-sam-han-quoc',
-            excerpt: 'Khám phá những lợi ích tuyệt vời của sâm Hàn Quốc cho sức khỏe...',
-            content: 'Nội dung chi tiết về lợi ích sâm Hàn Quốc...',
-            category: 'Sản phẩm Sâm',
-            tags: ['Sâm Hàn Quốc', 'Sức khỏe'],
-            author: 'Health Expert',
-            status: 'published',
-            featured: true,
-            featuredImage: '/placeholder-korean-ginseng.jpg',
-            publishedAt: '2024-01-16',
-            createdAt: '2024-01-14',
-            views: 1580
-        },
-        {
-            id: 5,
-            title: 'Dự án căn hộ cao cấp tại quận 7 sắp ra mắt',
-            slug: 'du-an-can-ho-cao-cap-quan-7',
-            excerpt: 'Giới thiệu dự án căn hộ cao cấp mới tại quận 7 với nhiều tiện ích hiện đại...',
-            content: 'Nội dung chi tiết về dự án...',
-            category: 'Dự án mới',
-            tags: ['Căn hộ', 'Quận 7', 'Cao cấp'],
-            author: 'Property Expert',
-            status: 'archived',
-            featured: false,
-            featuredImage: '/placeholder-apartment.jpg',
-            publishedAt: '2024-01-10',
-            createdAt: '2024-01-08',
-            views: 750
-        }
-    ]);
+    const router = useRouter();
+    const [tabValue] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [articles, setArticles] = useState<NewsArticle[]>([]);
+    const [categories, setCategories] = useState<Array<{ _id: string, name: string }>>([]);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 10,
+        total: 0,
+        pages: 0
+    });
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [formOpen, setFormOpen] = useState(false);
-    const [formMode, setFormMode] = useState<'add' | 'edit' | 'view'>('add');
 
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [dateFilter, setDateFilter] = useState('all');
+    const [sortBy, setSortBy] = useState('createdAt');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [showFilters, setShowFilters] = useState(false);
 
-    const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-        setTabValue(newValue);
-    };
+    // Bulk actions
+    const [selectedArticles, setSelectedArticles] = useState<string[]>([]);
+    const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+
+    // Load categories from API
+    const loadCategories = useCallback(async () => {
+        try {
+            const response = await newsService.getNewsCategories();
+            if (response.success && response.data) {
+                setCategories(response.data);
+            } else if (Array.isArray(response)) {
+                setCategories(response);
+            } else if (response.data) {
+                setCategories(response.data);
+            }
+        } catch (err) {
+            console.error('Error loading categories:', err);
+        }
+    }, []);
+
+    // Debounce search term
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 500); // 500ms delay
+
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    // Load news articles from API
+    const loadNews = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await newsService.getNews({
+                page: pagination.page,
+                limit: pagination.limit,
+                search: debouncedSearchTerm || undefined,
+                category: categoryFilter !== 'all' ? categoryFilter : undefined,
+                status: statusFilter !== 'all' ? statusFilter : undefined,
+                sortBy: sortBy,
+                sortOrder: sortOrder
+            });
+
+            setArticles(response.data);
+            setPagination(response.pagination);
+        } catch (err) {
+            console.error('Error loading news:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải danh sách tin tức');
+        } finally {
+            setLoading(false);
+        }
+    }, [pagination.page, pagination.limit, debouncedSearchTerm, categoryFilter, statusFilter, sortBy, sortOrder]);
+
+    useEffect(() => {
+        loadNews();
+    }, [loadNews]);
+
+    useEffect(() => {
+        loadCategories();
+    }, [loadCategories]);
+
 
     const handleChangePage = (_event: unknown, newPage: number) => {
         setPage(newPage);
+        setPagination(prev => ({ ...prev, page: newPage + 1 }));
     };
 
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
+        const newRowsPerPage = parseInt(event.target.value, 10);
+        setRowsPerPage(newRowsPerPage);
         setPage(0);
+        setPagination(prev => ({ ...prev, page: 1, limit: newRowsPerPage }));
     };
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, article: NewsArticle) => {
@@ -217,14 +200,16 @@ const NewsManagement: React.FC = () => {
     };
 
     const handleView = () => {
-        setFormMode('view');
-        setFormOpen(true);
+        if (selectedArticle) {
+            router.push(`/admin/content/news/${selectedArticle._id}`);
+        }
         handleMenuClose();
     };
 
     const handleEdit = () => {
-        setFormMode('edit');
-        setFormOpen(true);
+        if (selectedArticle) {
+            router.push(`/admin/content/news/${selectedArticle._id}/edit`);
+        }
         handleMenuClose();
     };
 
@@ -233,11 +218,23 @@ const NewsManagement: React.FC = () => {
         handleMenuClose();
     };
 
-    const handleDeleteConfirm = () => {
+    const handleDeleteConfirm = async () => {
         if (selectedArticle) {
-            setArticles(articles.filter(article => article.id !== selectedArticle.id));
-            setDeleteDialogOpen(false);
-            setSelectedArticle(null);
+            setSaving(true);
+            try {
+                await newsService.deleteNews(selectedArticle._id);
+                setSnackbarMessage('✅ Xóa bài viết thành công!');
+                setSnackbarOpen(true);
+                setDeleteDialogOpen(false);
+                setSelectedArticle(null);
+                await loadNews();
+            } catch (error) {
+                console.error('Error deleting article:', error);
+                setSnackbarMessage('❌ Lỗi khi xóa bài viết');
+                setSnackbarOpen(true);
+            } finally {
+                setSaving(false);
+            }
         }
     };
 
@@ -247,34 +244,93 @@ const NewsManagement: React.FC = () => {
     };
 
     const handleAddArticle = () => {
-        setFormMode('add');
-        setSelectedArticle(null);
-        setFormOpen(true);
+        router.push('/admin/content/news/add');
     };
 
-    const handleFormClose = () => {
-        setFormOpen(false);
-        setSelectedArticle(null);
-    };
-
-    const handleFormSubmit = (articleData: Partial<NewsArticle>) => {
-        if (formMode === 'add') {
-            const newArticle: NewsArticle = {
-                id: Math.max(...articles.map(a => a.id)) + 1,
-                ...articleData as NewsArticle,
-                createdAt: new Date().toISOString().split('T')[0],
-                views: 0,
-            };
-            setArticles([...articles, newArticle]);
-        } else if (formMode === 'edit' && selectedArticle) {
-            setArticles(articles.map(article =>
-                article.id === selectedArticle.id
-                    ? { ...article, ...articleData }
-                    : article
-            ));
+    // Bulk actions
+    const handleSelectAll = () => {
+        if (selectedArticles.length === articles.length) {
+            setSelectedArticles([]);
+        } else {
+            setSelectedArticles(articles.map(article => article._id));
         }
-        handleFormClose();
     };
+
+    const handleSelectArticle = (articleId: string) => {
+        setSelectedArticles(prev =>
+            prev.includes(articleId)
+                ? prev.filter(id => id !== articleId)
+                : [...prev, articleId]
+        );
+    };
+
+    const handleBulkDelete = () => {
+        setBulkDeleteDialogOpen(true);
+    };
+
+    const handleBulkDeleteConfirm = async () => {
+        if (selectedArticles.length > 0) {
+            setSaving(true);
+            try {
+                // Delete articles one by one
+                for (const articleId of selectedArticles) {
+                    await newsService.deleteNews(articleId);
+                }
+                setSnackbarMessage(`✅ Đã xóa ${selectedArticles.length} bài viết thành công!`);
+                setSnackbarOpen(true);
+                setBulkDeleteDialogOpen(false);
+                setSelectedArticles([]);
+                await loadNews();
+            } catch (error) {
+                console.error('Error bulk deleting articles:', error);
+                setSnackbarMessage('❌ Lỗi khi xóa bài viết');
+                setSnackbarOpen(true);
+            } finally {
+                setSaving(false);
+            }
+        }
+    };
+
+    const handleBulkDeleteCancel = () => {
+        setBulkDeleteDialogOpen(false);
+    };
+
+    // Clear all filters
+    const handleClearFilters = () => {
+        setSearchTerm('');
+        setCategoryFilter('all');
+        setStatusFilter('all');
+        setDateFilter('all');
+        setSortBy('createdAt');
+        setSortOrder('desc');
+        setSelectedArticles([]);
+    };
+
+    // Export function
+    const handleExport = () => {
+        const csvContent = [
+            ['Tiêu đề', 'Danh mục', 'Trạng thái', 'Tác giả', 'Lượt xem', 'Ngày tạo'],
+            ...articles.map(article => [
+                article.title,
+                article.categoryId?.name || 'N/A',
+                getStatusLabel(article.status),
+                article.author?.name || 'N/A',
+                article.statistics?.views || 0,
+                new Date(article.createdAt).toLocaleDateString('vi-VN')
+            ])
+        ].map(row => row.join(',')).join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `tin-tuc-${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -294,24 +350,25 @@ const NewsManagement: React.FC = () => {
         }
     };
 
-    // Filter articles
-    const filteredArticles = articles.filter(article => {
-        const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            article.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            article.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesCategory = categoryFilter === 'all' || article.category === categoryFilter;
-        const matchesStatus = statusFilter === 'all' || article.status === statusFilter;
 
-        return matchesSearch && matchesCategory && matchesStatus;
-    });
-
-    const paginatedArticles = filteredArticles.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-
-    const uniqueCategories = [...new Set(articles.map(a => a.category))];
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải danh sách tin tức...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box>
-            {/* Sub Tabs */}
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
+            {/* Sub Tabs
             <Card sx={{ mb: 3 }}>
                 <CardContent sx={{ pb: 0 }}>
                     <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -337,7 +394,7 @@ const NewsManagement: React.FC = () => {
                         </Tabs>
                     </Box>
                 </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Tab Panels */}
             <TabPanel value={tabValue} index={0}>
@@ -346,32 +403,96 @@ const NewsManagement: React.FC = () => {
                     {/* Header */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            Quản lý Bài viết ({filteredArticles.length})
+                            Quản lý Bài viết ({pagination.total})
+                            {selectedArticles.length > 0 && (
+                                <Chip
+                                    label={`${selectedArticles.length} đã chọn`}
+                                    color="primary"
+                                    size="small"
+                                    sx={{ ml: 2 }}
+                                />
+                            )}
                         </Typography>
-                        <Button
-                            variant="contained"
-                            startIcon={<AddIcon />}
-                            onClick={handleAddArticle}
-                            sx={{
-                                backgroundColor: '#E7C873',
-                                color: '#000',
-                                '&:hover': {
-                                    backgroundColor: '#d4b86a',
-                                },
-                            }}
-                        >
-                            Thêm Bài viết
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            {selectedArticles.length > 0 && (
+                                <>
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        startIcon={<DeleteIcon />}
+                                        onClick={handleBulkDelete}
+                                        size="small"
+                                    >
+                                        Xóa ({selectedArticles.length})
+                                    </Button>
+                                </>
+                            )}
+                            <Button
+                                variant="outlined"
+                                startIcon={<DownloadIcon />}
+                                onClick={handleExport}
+                                size="small"
+                            >
+                                Xuất CSV
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                startIcon={<RefreshIcon />}
+                                onClick={loadNews}
+                                size="small"
+                            >
+                                Làm mới
+                            </Button>
+                            <Button
+                                variant="contained"
+                                startIcon={<AddIcon />}
+                                onClick={handleAddArticle}
+                                sx={{
+                                    backgroundColor: '#E7C873',
+                                    color: '#000',
+                                    '&:hover': {
+                                        backgroundColor: '#d4b86a',
+                                    },
+                                }}
+                            >
+                                Thêm Bài viết
+                            </Button>
+                        </Box>
                     </Box>
 
                     {/* Filters */}
                     <Card sx={{ mb: 3 }}>
                         <CardContent>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                    Bộ lọc & Tìm kiếm
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<FilterIcon />}
+                                        onClick={() => setShowFilters(!showFilters)}
+                                        size="small"
+                                    >
+                                        {showFilters ? 'Ẩn bộ lọc' : 'Hiện bộ lọc'}
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<ClearIcon />}
+                                        onClick={handleClearFilters}
+                                        size="small"
+                                        color="secondary"
+                                    >
+                                        Xóa bộ lọc
+                                    </Button>
+                                </Box>
+                            </Box>
+
                             <Grid container spacing={3} alignItems="center">
                                 <Grid item xs={12} md={4}>
                                     <TextField
                                         fullWidth
-                                        placeholder="Tìm kiếm bài viết..."
+                                        placeholder="Tìm kiếm theo tiêu đề, nội dung..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         InputProps={{
@@ -393,8 +514,8 @@ const NewsManagement: React.FC = () => {
                                             onChange={(e) => setCategoryFilter(e.target.value)}
                                         >
                                             <MenuItem value="all">Tất cả</MenuItem>
-                                            {uniqueCategories.map(category => (
-                                                <MenuItem key={category} value={category}>{category}</MenuItem>
+                                            {categories.map(category => (
+                                                <MenuItem key={category._id} value={category._id}>{category.name}</MenuItem>
                                             ))}
                                         </Select>
                                     </FormControl>
@@ -414,7 +535,81 @@ const NewsManagement: React.FC = () => {
                                         </Select>
                                     </FormControl>
                                 </Grid>
+                                <Grid item xs={12} md={2}>
+                                    <Button
+                                        variant="contained"
+                                        onClick={loadNews}
+                                        fullWidth
+                                        size="small"
+                                        sx={{
+                                            height: '40px',
+                                            backgroundColor: '#E7C873',
+                                            color: '#000',
+                                            '&:hover': {
+                                                backgroundColor: '#d4b86a',
+                                            },
+                                        }}
+                                    >
+                                        Tìm kiếm
+                                    </Button>
+                                </Grid>
                             </Grid>
+
+                            {/* Advanced Filters */}
+                            {showFilters && (
+                                <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                                        Bộ lọc nâng cao
+                                    </Typography>
+                                    <Grid container spacing={3} alignItems="center">
+                                        <Grid item xs={12} md={3}>
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel>Sắp xếp theo</InputLabel>
+                                                <Select
+                                                    value={sortBy}
+                                                    label="Sắp xếp theo"
+                                                    onChange={(e) => setSortBy(e.target.value)}
+                                                >
+                                                    <MenuItem value="createdAt">Ngày tạo</MenuItem>
+                                                    <MenuItem value="updatedAt">Ngày cập nhật</MenuItem>
+                                                    <MenuItem value="publishedAt">Ngày xuất bản</MenuItem>
+                                                    <MenuItem value="title">Tiêu đề</MenuItem>
+                                                    <MenuItem value="views">Lượt xem</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                        <Grid item xs={12} md={3}>
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel>Thứ tự</InputLabel>
+                                                <Select
+                                                    value={sortOrder}
+                                                    label="Thứ tự"
+                                                    onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                                                >
+                                                    <MenuItem value="desc">Mới nhất</MenuItem>
+                                                    <MenuItem value="asc">Cũ nhất</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                        <Grid item xs={12} md={3}>
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel>Khoảng thời gian</InputLabel>
+                                                <Select
+                                                    value={dateFilter}
+                                                    label="Khoảng thời gian"
+                                                    onChange={(e) => setDateFilter(e.target.value)}
+                                                >
+                                                    <MenuItem value="all">Tất cả</MenuItem>
+                                                    <MenuItem value="today">Hôm nay</MenuItem>
+                                                    <MenuItem value="week">Tuần này</MenuItem>
+                                                    <MenuItem value="month">Tháng này</MenuItem>
+                                                    <MenuItem value="year">Năm nay</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                    </Grid>
+                                </Box>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -424,19 +619,44 @@ const NewsManagement: React.FC = () => {
                             <Table>
                                 <TableHead>
                                     <TableRow>
+                                        <TableCell padding="checkbox">
+                                            <IconButton
+                                                onClick={handleSelectAll}
+                                                size="small"
+                                            >
+                                                {selectedArticles.length === articles.length && articles.length > 0 ? (
+                                                    <CheckBoxIcon />
+                                                ) : (
+                                                    <CheckBoxOutlineBlankIcon />
+                                                )}
+                                            </IconButton>
+                                        </TableCell>
                                         <TableCell>Bài viết</TableCell>
                                         <TableCell>Danh mục</TableCell>
                                         <TableCell>Tags</TableCell>
                                         <TableCell>Tác giả</TableCell>
                                         <TableCell align="center">Lượt xem</TableCell>
+                                        <TableCell align="center">Thời gian đọc</TableCell>
                                         <TableCell align="center">Trạng thái</TableCell>
                                         <TableCell align="center">Ngày xuất bản</TableCell>
                                         <TableCell align="center">Hành động</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {paginatedArticles.map((article) => (
-                                        <TableRow key={article.id} hover>
+                                    {articles.map((article) => (
+                                        <TableRow key={article._id} hover>
+                                            <TableCell padding="checkbox">
+                                                <IconButton
+                                                    onClick={() => handleSelectArticle(article._id)}
+                                                    size="small"
+                                                >
+                                                    {selectedArticles.includes(article._id) ? (
+                                                        <CheckBoxIcon />
+                                                    ) : (
+                                                        <CheckBoxOutlineBlankIcon />
+                                                    )}
+                                                </IconButton>
+                                            </TableCell>
                                             <TableCell>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                                     <Avatar
@@ -450,7 +670,7 @@ const NewsManagement: React.FC = () => {
                                                     <Box>
                                                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                                                             {article.title}
-                                                            {article.featured && (
+                                                            {article.isFeatured && (
                                                                 <Chip
                                                                     label="Nổi bật"
                                                                     size="small"
@@ -458,17 +678,35 @@ const NewsManagement: React.FC = () => {
                                                                     sx={{ ml: 1, fontSize: '0.6rem' }}
                                                                 />
                                                             )}
+                                                            {article.isBreaking && (
+                                                                <Chip
+                                                                    label="Tin nóng"
+                                                                    size="small"
+                                                                    color="error"
+                                                                    sx={{ ml: 1, fontSize: '0.6rem' }}
+                                                                />
+                                                            )}
                                                         </Typography>
                                                         <Typography variant="caption" color="text.secondary">
-                                                            {article.excerpt.substring(0, 60)}...
+                                                            {(article.excerpt || '').substring(0, 60)}...
                                                         </Typography>
                                                     </Box>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell>{article.category}</TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={article.categoryId?.name || 'N/A'}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: article.categoryId?.color || '#1976d2',
+                                                        color: 'white',
+                                                        fontSize: '0.7rem'
+                                                    }}
+                                                />
+                                            </TableCell>
                                             <TableCell>
                                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                    {article.tags.slice(0, 2).map(tag => (
+                                                    {(article.tags || []).slice(0, 2).map(tag => (
                                                         <Chip
                                                             key={tag}
                                                             label={tag}
@@ -477,9 +715,9 @@ const NewsManagement: React.FC = () => {
                                                             sx={{ fontSize: '0.7rem' }}
                                                         />
                                                     ))}
-                                                    {article.tags.length > 2 && (
+                                                    {(article.tags || []).length > 2 && (
                                                         <Chip
-                                                            label={`+${article.tags.length - 2}`}
+                                                            label={`+${(article.tags || []).length - 2}`}
                                                             size="small"
                                                             variant="outlined"
                                                             sx={{ fontSize: '0.7rem' }}
@@ -487,16 +725,21 @@ const NewsManagement: React.FC = () => {
                                                     )}
                                                 </Box>
                                             </TableCell>
-                                            <TableCell>{article.author}</TableCell>
+                                            <TableCell>{article.author?.name || 'N/A'}</TableCell>
                                             <TableCell align="center">
                                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                    {article.views.toLocaleString()}
+                                                    {(article.statistics?.views || 0).toLocaleString()}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {article.readingTime || 0} phút
                                                 </Typography>
                                             </TableCell>
                                             <TableCell align="center">
                                                 <Chip
                                                     label={getStatusLabel(article.status)}
-                                                    color={getStatusColor(article.status) as any}
+                                                    color={getStatusColor(article.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                                                     size="small"
                                                 />
                                             </TableCell>
@@ -510,7 +753,7 @@ const NewsManagement: React.FC = () => {
                                             </TableCell>
                                             <TableCell align="center">
                                                 <IconButton
-                                                    onClick={(e) => handleMenuOpen(e, article)}
+                                                    onClick={(e: React.MouseEvent<HTMLElement>) => handleMenuOpen(e, article)}
                                                     size="small"
                                                 >
                                                     <MoreVertIcon />
@@ -525,7 +768,7 @@ const NewsManagement: React.FC = () => {
                         <TablePagination
                             rowsPerPageOptions={[5, 10, 25]}
                             component="div"
-                            count={filteredArticles.length}
+                            count={pagination.total}
                             rowsPerPage={rowsPerPage}
                             page={page}
                             onPageChange={handleChangePage}
@@ -578,29 +821,106 @@ const NewsManagement: React.FC = () => {
                     sx: { overflow: 'visible' }
                 }}
             >
-                <DialogTitle>Xác nhận xóa</DialogTitle>
+                <DialogTitle>Xác nhận xóa bài viết</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>
-                        Bạn có chắc chắn muốn xóa bài viết "{selectedArticle?.title}"?
-                        Hành động này không thể hoàn tác.
+                    <DialogContentText sx={{ mb: 2 }}>
+                        Bạn có chắc chắn muốn xóa bài viết này?
+                    </DialogContentText>
+                    {selectedArticle && (
+                        <Box sx={{
+                            p: 2,
+                            backgroundColor: '#f5f5f5',
+                            borderRadius: 1,
+                            border: '1px solid #e0e0e0'
+                        }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                                {selectedArticle.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Danh mục: {selectedArticle.categoryId?.name || 'N/A'}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Trạng thái: {getStatusLabel(selectedArticle.status)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Lượt xem: {(selectedArticle.statistics?.views || 0).toLocaleString()}
+                            </Typography>
+                        </Box>
+                    )}
+                    <DialogContentText sx={{ mt: 2, color: 'error.main', fontWeight: 600 }}>
+                        ⚠️ Hành động này không thể hoàn tác!
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDeleteCancel}>Hủy</Button>
-                    <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-                        Xóa
+                    <Button onClick={handleDeleteConfirm} color="error" variant="contained" disabled={saving}>
+                        {saving ? 'Đang xóa...' : 'Xóa bài viết'}
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            {/* News Form Dialog */}
-            <NewsForm
-                open={formOpen}
-                onClose={handleFormClose}
-                onSubmit={handleFormSubmit}
-                mode={formMode}
-                initialData={selectedArticle}
-            />
+            {/* Bulk Delete Confirmation Dialog */}
+            <Dialog
+                open={bulkDeleteDialogOpen}
+                onClose={handleBulkDeleteCancel}
+                PaperProps={{
+                    sx: { overflow: 'visible' }
+                }}
+            >
+                <DialogTitle>Xác nhận xóa nhiều bài viết</DialogTitle>
+                <DialogContent>
+                    <DialogContentText sx={{ mb: 2 }}>
+                        Bạn có chắc chắn muốn xóa {selectedArticles.length} bài viết đã chọn?
+                    </DialogContentText>
+                    <Box sx={{
+                        p: 2,
+                        backgroundColor: '#f5f5f5',
+                        borderRadius: 1,
+                        border: '1px solid #e0e0e0',
+                        maxHeight: 200,
+                        overflow: 'auto'
+                    }}>
+                        {articles
+                            .filter(article => selectedArticles.includes(article._id))
+                            .map(article => (
+                                <Box key={article._id} sx={{ mb: 1, pb: 1, borderBottom: '1px solid #e0e0e0' }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        {article.title}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {article.categoryId?.name || 'N/A'} • {getStatusLabel(article.status)}
+                                    </Typography>
+                                </Box>
+                            ))
+                        }
+                    </Box>
+                    <DialogContentText sx={{ mt: 2, color: 'error.main', fontWeight: 600 }}>
+                        ⚠️ Hành động này không thể hoàn tác!
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleBulkDeleteCancel}>Hủy</Button>
+                    <Button onClick={handleBulkDeleteConfirm} color="error" variant="contained" disabled={saving}>
+                        {saving ? 'Đang xóa...' : `Xóa ${selectedArticles.length} bài viết`}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+
+            {/* Snackbar for notifications */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={() => setSnackbarOpen(false)}
+            >
+                <Alert
+                    onClose={() => setSnackbarOpen(false)}
+                    severity={snackbarMessage.includes('❌') ? 'error' : 'success'}
+                    sx={{ width: '100%' }}
+                >
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

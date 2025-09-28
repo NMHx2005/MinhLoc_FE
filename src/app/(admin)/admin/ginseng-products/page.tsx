@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Box,
     Typography,
@@ -11,6 +12,7 @@ import {
     Tabs,
     Card,
     CardContent,
+    Button,
 } from '@mui/material';
 import {
     Home as HomeIcon,
@@ -19,6 +21,7 @@ import {
     Inventory as ProductIcon,
     Category as CategoryIcon,
     LocationOn as OriginIcon,
+    Add as AddIcon,
 } from '@mui/icons-material';
 import AdminLayout from '../../../../components/admin/AdminLayout';
 import GinsengProductList from '../../../../components/admin/GinsengProductList';
@@ -59,10 +62,15 @@ function a11yProps(index: number) {
 }
 
 const GinsengProductsPage: React.FC = () => {
+    const router = useRouter();
     const [value, setValue] = useState(0);
 
     const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
         setValue(newValue);
+    };
+
+    const handleNavigateToCreate = () => {
+        router.push('/admin/ginseng-products/create');
     };
 
     return (
@@ -99,9 +107,20 @@ const GinsengProductsPage: React.FC = () => {
                     <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
                         🌿 Quản lý Sản phẩm Sâm
                     </Typography>
-                    <Typography variant="body1" color="text.secondary">
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
                         Quản lý danh sách sản phẩm sâm, phân loại và xuất xứ.
                     </Typography>
+
+                    {/* Quick Actions */}
+                    <Box sx={{ mb: 3 }}>
+                        <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            onClick={handleNavigateToCreate}
+                        >
+                            Thêm Sản phẩm Mới
+                        </Button>
+                    </Box>
                 </Box>
 
                 {/* Tabs */}

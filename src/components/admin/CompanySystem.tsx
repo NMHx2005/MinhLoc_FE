@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Typography,
@@ -33,6 +33,9 @@ import {
     Email as EmailIcon,
     Language as WebsiteIcon,
 } from '@mui/icons-material';
+import { companyService } from '../../services/admin/companyService';
+import type { CompanyInfo } from '../../services/admin/companyService';
+import { Alert, Snackbar, CircularProgress } from '@mui/material';
 
 interface Subsidiary {
     id: string;
@@ -59,92 +62,14 @@ interface Department {
 }
 
 const CompanySystem: React.FC = () => {
-    const [subsidiaries, setSubsidiaries] = useState<Subsidiary[]>([
-        {
-            id: '1',
-            name: 'MinhLoc Construction',
-            description: 'Công ty con chuyên về xây dựng và phát triển dự án',
-            type: 'subsidiary',
-            location: 'TP. Hồ Chí Minh',
-            contact: {
-                phone: '(+84) 28 1234 5678',
-                email: 'construction@minhlocgroup.com',
-                website: 'https://construction.minhlocgroup.com',
-            },
-            establishedYear: 2010,
-            isActive: true,
-        },
-        {
-            id: '2',
-            name: 'MinhLoc Real Estate',
-            description: 'Công ty con chuyên về bất động sản và đầu tư',
-            type: 'subsidiary',
-            location: 'TP. Hồ Chí Minh',
-            contact: {
-                phone: '(+84) 28 1234 5679',
-                email: 'realestate@minhlocgroup.com',
-                website: 'https://realestate.minhlocgroup.com',
-            },
-            establishedYear: 2012,
-            isActive: true,
-        },
-        {
-            id: '3',
-            name: 'Chi nhánh Hà Nội',
-            description: 'Chi nhánh tại miền Bắc',
-            type: 'branch',
-            location: 'Hà Nội',
-            contact: {
-                phone: '(+84) 24 1234 5678',
-                email: 'hanoi@minhlocgroup.com',
-                website: 'https://hanoi.minhlocgroup.com',
-            },
-            establishedYear: 2015,
-            isActive: true,
-        },
-    ]);
-
-    const [departments, setDepartments] = useState<Department[]>([
-        {
-            id: '1',
-            name: 'Phòng Kế hoạch & Phát triển',
-            description: 'Lập kế hoạch chiến lược và phát triển dự án',
-            head: 'Nguyễn Văn A',
-            employeeCount: 25,
-            responsibilities: [
-                'Lập kế hoạch chiến lược dài hạn',
-                'Nghiên cứu thị trường',
-                'Phát triển dự án mới',
-                'Quản lý danh mục đầu tư',
-            ],
-        },
-        {
-            id: '2',
-            name: 'Phòng Kỹ thuật',
-            description: 'Thiết kế và giám sát kỹ thuật',
-            head: 'Trần Thị B',
-            employeeCount: 40,
-            responsibilities: [
-                'Thiết kế dự án',
-                'Giám sát kỹ thuật',
-                'Quản lý chất lượng',
-                'Nghiên cứu công nghệ mới',
-            ],
-        },
-        {
-            id: '3',
-            name: 'Phòng Kinh doanh',
-            description: 'Marketing và bán hàng',
-            head: 'Lê Văn C',
-            employeeCount: 30,
-            responsibilities: [
-                'Marketing dự án',
-                'Bán hàng và chăm sóc khách hàng',
-                'Quản lý kênh phân phối',
-                'Phát triển thị trường',
-            ],
-        },
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+    const [subsidiaries, setSubsidiaries] = useState<Subsidiary[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
 
     const [subsidiaryDialogOpen, setSubsidiaryDialogOpen] = useState(false);
     const [editingSubsidiary, setEditingSubsidiary] = useState<Subsidiary | null>(null);
@@ -171,6 +96,56 @@ const CompanySystem: React.FC = () => {
         employeeCount: 0,
         responsibilities: [],
     });
+
+    // Load company system data from API
+    const loadCompanySystem = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const info = await companyService.getCompanyInfoBySection('system');
+            if (info) {
+                setCompanyInfo(info);
+                // Convert businessAreas to departments
+                const businessAreas = info.data?.businessAreas || [];
+                const systemDepartments: Department[] = businessAreas.map((area: any, index: number) => ({
+                    id: area._id || `dept-${index}`,
+                    name: area.name || '',
+                    description: area.description || '',
+                    head: 'Trưởng phòng', // Default value
+                    employeeCount: 0, // Default value
+                    responsibilities: area.items || [],
+                }));
+                setDepartments(systemDepartments);
+
+                // Convert network to subsidiaries
+                const network = info.data?.network || [];
+                const systemSubsidiaries: Subsidiary[] = network.map((item: any, index: number) => ({
+                    id: item._id || `sub-${index}`,
+                    name: `Chi nhánh ${item.city}`,
+                    description: `Chi nhánh tại ${item.city}`,
+                    type: 'branch' as const,
+                    location: item.city || '',
+                    contact: {
+                        phone: '',
+                        email: '',
+                        website: '',
+                    },
+                    establishedYear: 2020, // Default value
+                    isActive: true,
+                }));
+                setSubsidiaries(systemSubsidiaries);
+            }
+        } catch (err) {
+            console.error('Error loading company system data:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu hệ thống công ty');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadCompanySystem();
+    }, [loadCompanySystem]);
 
     const getTypeIcon = (type: string) => {
         switch (type) {
@@ -230,25 +205,103 @@ const CompanySystem: React.FC = () => {
         setSubsidiaryDialogOpen(true);
     };
 
-    const handleSaveSubsidiary = () => {
-        if (editingSubsidiary) {
-            setSubsidiaries(prev => prev.map(sub =>
-                sub.id === editingSubsidiary.id
-                    ? { ...subsidiaryFormData, id: editingSubsidiary.id }
-                    : sub
-            ));
-        } else {
-            const newSubsidiary: Subsidiary = {
-                ...subsidiaryFormData,
-                id: Date.now().toString(),
+    const handleSaveSubsidiary = async () => {
+        setSaving(true);
+        try {
+            let updatedSubsidiaries: Subsidiary[];
+
+            if (editingSubsidiary) {
+                updatedSubsidiaries = subsidiaries.map(sub =>
+                    sub.id === editingSubsidiary.id
+                        ? { ...subsidiaryFormData, id: editingSubsidiary.id }
+                        : sub
+                );
+            } else {
+                const newSubsidiary: Subsidiary = {
+                    ...subsidiaryFormData,
+                    id: Date.now().toString(),
+                };
+                updatedSubsidiaries = [...subsidiaries, newSubsidiary];
+            }
+
+            setSubsidiaries(updatedSubsidiaries);
+
+            // Convert subsidiaries back to network format and save to API
+            const network = updatedSubsidiaries.map(sub => ({
+                city: sub.location,
+                projects: 0, // Default value
+                staff: 0, // Default value
+            }));
+
+            const dataToSave = {
+                section: 'system',
+                title: companyInfo?.title || 'Hệ thống MinhLoc Group',
+                content: companyInfo?.content || '',
+                data: {
+                    businessAreas: departments.map(dept => ({
+                        name: dept.name,
+                        description: dept.description,
+                        items: dept.responsibilities,
+                        color: '#2196f3',
+                    })),
+                    network: network,
+                },
+                sortOrder: 4
             };
-            setSubsidiaries(prev => [...prev, newSubsidiary]);
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Lưu thông tin chi nhánh thành công!');
+            setSnackbarOpen(true);
+            setSubsidiaryDialogOpen(false);
+            await loadCompanySystem();
+        } catch (error) {
+            console.error('Error saving subsidiary:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu thông tin chi nhánh');
+            setSnackbarOpen(true);
+        } finally {
+            setSaving(false);
         }
-        setSubsidiaryDialogOpen(false);
     };
 
-    const handleDeleteSubsidiary = (subsidiaryId: string) => {
-        setSubsidiaries(prev => prev.filter(sub => sub.id !== subsidiaryId));
+    const handleDeleteSubsidiary = async (subsidiaryId: string) => {
+        try {
+            const updatedSubsidiaries = subsidiaries.filter(sub => sub.id !== subsidiaryId);
+            setSubsidiaries(updatedSubsidiaries);
+
+            // Convert subsidiaries back to network format and save to API
+            const network = updatedSubsidiaries.map(sub => ({
+                city: sub.location,
+                projects: 0, // Default value
+                staff: 0, // Default value
+            }));
+
+            const dataToSave = {
+                section: 'system',
+                title: companyInfo?.title || 'Hệ thống MinhLoc Group',
+                content: companyInfo?.content || '',
+                data: {
+                    businessAreas: departments.map(dept => ({
+                        name: dept.name,
+                        description: dept.description,
+                        items: dept.responsibilities,
+                        color: '#2196f3',
+                    })),
+                    network: network,
+                },
+                sortOrder: 4
+            };
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Xóa chi nhánh thành công!');
+            setSnackbarOpen(true);
+        } catch (error) {
+            console.error('Error deleting subsidiary:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa chi nhánh');
+            setSnackbarOpen(true);
+            await loadCompanySystem();
+        }
     };
 
     const handleAddDepartment = () => {
@@ -275,29 +328,122 @@ const CompanySystem: React.FC = () => {
         setDepartmentDialogOpen(true);
     };
 
-    const handleSaveDepartment = () => {
-        if (editingDepartment) {
-            setDepartments(prev => prev.map(dept =>
-                dept.id === editingDepartment.id
-                    ? { ...departmentFormData, id: editingDepartment.id }
-                    : dept
-            ));
-        } else {
-            const newDepartment: Department = {
-                ...departmentFormData,
-                id: Date.now().toString(),
+    const handleSaveDepartment = async () => {
+        setSaving(true);
+        try {
+            let updatedDepartments: Department[];
+
+            if (editingDepartment) {
+                updatedDepartments = departments.map(dept =>
+                    dept.id === editingDepartment.id
+                        ? { ...departmentFormData, id: editingDepartment.id }
+                        : dept
+                );
+            } else {
+                const newDepartment: Department = {
+                    ...departmentFormData,
+                    id: Date.now().toString(),
+                };
+                updatedDepartments = [...departments, newDepartment];
+            }
+
+            setDepartments(updatedDepartments);
+
+            // Convert departments back to businessAreas format and save to API
+            const businessAreas = updatedDepartments.map(dept => ({
+                name: dept.name,
+                description: dept.description,
+                items: dept.responsibilities,
+                color: '#2196f3',
+            }));
+
+            const dataToSave = {
+                section: 'system',
+                title: companyInfo?.title || 'Hệ thống MinhLoc Group',
+                content: companyInfo?.content || '',
+                data: {
+                    businessAreas: businessAreas,
+                    network: subsidiaries.map(sub => ({
+                        city: sub.location,
+                        projects: 0,
+                        staff: 0,
+                    })),
+                },
+                sortOrder: 4
             };
-            setDepartments(prev => [...prev, newDepartment]);
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Lưu thông tin phòng ban thành công!');
+            setSnackbarOpen(true);
+            setDepartmentDialogOpen(false);
+            await loadCompanySystem();
+        } catch (error) {
+            console.error('Error saving department:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu thông tin phòng ban');
+            setSnackbarOpen(true);
+        } finally {
+            setSaving(false);
         }
-        setDepartmentDialogOpen(false);
     };
 
-    const handleDeleteDepartment = (departmentId: string) => {
-        setDepartments(prev => prev.filter(dept => dept.id !== departmentId));
+    const handleDeleteDepartment = async (departmentId: string) => {
+        try {
+            const updatedDepartments = departments.filter(dept => dept.id !== departmentId);
+            setDepartments(updatedDepartments);
+
+            // Convert departments back to businessAreas format and save to API
+            const businessAreas = updatedDepartments.map(dept => ({
+                name: dept.name,
+                description: dept.description,
+                items: dept.responsibilities,
+                color: '#2196f3',
+            }));
+
+            const dataToSave = {
+                section: 'system',
+                title: companyInfo?.title || 'Hệ thống MinhLoc Group',
+                content: companyInfo?.content || '',
+                data: {
+                    businessAreas: businessAreas,
+                    network: subsidiaries.map(sub => ({
+                        city: sub.location,
+                        projects: 0,
+                        staff: 0,
+                    })),
+                },
+                sortOrder: 4
+            };
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Xóa phòng ban thành công!');
+            setSnackbarOpen(true);
+        } catch (error) {
+            console.error('Error deleting department:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa phòng ban');
+            setSnackbarOpen(true);
+            await loadCompanySystem();
+        }
     };
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải thông tin hệ thống công ty...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Hệ thống MinhLoc Group
@@ -341,10 +487,8 @@ const CompanySystem: React.FC = () => {
                                             </ListItemIcon>
                                             <ListItemText
                                                 primary={
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Typography variant="h6">
-                                                            {subsidiary.name}
-                                                        </Typography>
+                                                    <Typography variant="h6" component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <span>{subsidiary.name}</span>
                                                         <Chip
                                                             label={subsidiary.type}
                                                             size="small"
@@ -357,17 +501,17 @@ const CompanySystem: React.FC = () => {
                                                                 color="success"
                                                             />
                                                         )}
-                                                    </Box>
+                                                    </Typography>
                                                 }
                                                 secondary={
-                                                    <Box>
-                                                        <Typography variant="body2" sx={{ mb: 1 }}>
+                                                    <Typography variant="body2" color="text.secondary" component="span">
+                                                        <div style={{ marginBottom: 8 }}>
                                                             {subsidiary.description}
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
+                                                        </div>
+                                                        <span style={{ fontSize: '0.75rem' }}>
                                                             {subsidiary.location} • Thành lập {subsidiary.establishedYear}
-                                                        </Typography>
-                                                    </Box>
+                                                        </span>
+                                                    </Typography>
                                                 }
                                             />
                                             <Box>
@@ -430,26 +574,24 @@ const CompanySystem: React.FC = () => {
                                             </ListItemIcon>
                                             <ListItemText
                                                 primary={
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Typography variant="h6">
-                                                            {department.name}
-                                                        </Typography>
+                                                    <Typography variant="h6" component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <span>{department.name}</span>
                                                         <Chip
                                                             label={`${department.employeeCount} người`}
                                                             size="small"
                                                             color="info"
                                                         />
-                                                    </Box>
+                                                    </Typography>
                                                 }
                                                 secondary={
-                                                    <Box>
-                                                        <Typography variant="body2" sx={{ mb: 1 }}>
+                                                    <Typography variant="body2" color="text.secondary" component="span">
+                                                        <div style={{ marginBottom: 8 }}>
                                                             {department.description}
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
+                                                        </div>
+                                                        <span style={{ fontSize: '0.75rem' }}>
                                                             Trưởng phòng: {department.head}
-                                                        </Typography>
-                                                    </Box>
+                                                        </span>
+                                                    </Typography>
                                                 }
                                             />
                                             <Box>
@@ -624,14 +766,30 @@ const CompanySystem: React.FC = () => {
                     </Grid>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDepartmentDialogOpen(false)}>
+                    <Button onClick={() => setDepartmentDialogOpen(false)} disabled={saving}>
                         Hủy
                     </Button>
-                    <Button onClick={handleSaveDepartment} variant="contained">
-                        {editingDepartment ? 'Cập nhật' : 'Thêm'}
+                    <Button
+                        onClick={handleSaveDepartment}
+                        variant="contained"
+                        disabled={saving}
+                        startIcon={saving ? <CircularProgress size={20} /> : undefined}
+                    >
+                        {saving ? 'Đang lưu...' : (editingDepartment ? 'Cập nhật' : 'Thêm')}
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={() => setSnackbarOpen(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarMessage.includes('✅') ? 'success' : 'error'} sx={{ width: '100%' }}>
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

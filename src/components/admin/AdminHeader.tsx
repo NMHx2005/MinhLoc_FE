@@ -18,10 +18,12 @@ import {
     Logout as LogoutIcon,
     Person as PersonIcon,
 } from '@mui/icons-material';
+import { useAuth } from '../../contexts/AuthContext';
 
 const AdminHeader: React.FC = () => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
+    const { user, logout } = useAuth();
 
     const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
@@ -36,8 +38,12 @@ const AdminHeader: React.FC = () => {
         setNotificationAnchor(null);
     };
 
-    const handleLogout = () => {
-        // TODO: Implement logout logic
+    const handleLogout = async () => {
+        try {
+            await logout();
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
         handleMenuClose();
     };
 
@@ -112,8 +118,12 @@ const AdminHeader: React.FC = () => {
                 onClick={handleProfileMenuOpen}
                 color="inherit"
             >
-                <Avatar sx={{ width: 32, height: 32, bgcolor: '#E7C873' }}>
-                    A
+                <Avatar
+                    sx={{ width: 32, height: 32, bgcolor: '#E7C873' }}
+                    src={user?.avatar}
+                    alt={user?.fullName}
+                >
+                    {user?.fullName?.charAt(0).toUpperCase() || 'A'}
                 </Avatar>
             </IconButton>
 
@@ -127,10 +137,13 @@ const AdminHeader: React.FC = () => {
             >
                 <Box sx={{ p: 2, borderBottom: '1px solid #f0f0f0' }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                        Admin User
+                        {user?.fullName || 'Admin User'}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                        admin@minhlocgroup.com
+                        {user?.email || 'admin@minhlocgroup.com'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        {user?.role && `Role: ${user.role}`}
                     </Typography>
                 </Box>
 

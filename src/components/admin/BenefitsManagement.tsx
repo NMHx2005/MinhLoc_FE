@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Typography,
     Card,
     CardContent,
-    TextField,
     Button,
     Grid,
     Chip,
@@ -15,6 +14,10 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    TextField,
+    Snackbar,
+    Alert,
+    CircularProgress,
     Avatar,
     FormControl,
     InputLabel,
@@ -22,236 +25,157 @@ import {
     MenuItem,
     Switch,
     FormControlLabel,
-    Snackbar,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
 } from '@mui/material';
 import {
     Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
-    CardGiftcard as BenefitsIcon,
+    CardGiftcard as GiftIcon,
     AttachMoney as MoneyIcon,
     HealthAndSafety as HealthIcon,
-    School as EducationIcon,
+    School as SchoolIcon,
     Work as WorkIcon,
-    Home as HomeIcon,
-    DirectionsCar as TransportIcon,
-    Restaurant as FoodIcon,
 } from '@mui/icons-material';
 
 interface Benefit {
-    id: string;
+    _id: string;
     name: string;
     description: string;
-    type: 'salary' | 'insurance' | 'education' | 'work_life' | 'housing' | 'transport' | 'food' | 'other';
-    value: number;
-    currency: string;
-    period: 'monthly' | 'yearly' | 'one_time';
+    category: 'salary' | 'insurance' | 'training' | 'work_life' | 'other';
     isActive: boolean;
-    applicableTo: string[]; // Job positions or departments
-    requirements: string[];
     createdAt: string;
     updatedAt: string;
 }
 
 const BenefitsManagement: React.FC = () => {
-    const [benefits, setBenefits] = useState<Benefit[]>([
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [benefits, setBenefits] = useState<Benefit[]>([]);
+
+    // Mock data for benefits
+    const mockBenefits: Benefit[] = [
         {
-            id: '1',
-            name: 'Bảo hiểm sức khỏe toàn diện',
-            description: 'Bảo hiểm sức khỏe cho nhân viên và gia đình',
-            type: 'insurance',
-            value: 2000000,
-            currency: 'VND',
-            period: 'monthly',
+            _id: '1',
+            name: 'Bảo hiểm y tế',
+            description: 'Bảo hiểm y tế toàn diện cho nhân viên và gia đình.',
+            category: 'insurance',
             isActive: true,
-            applicableTo: ['Tất cả nhân viên'],
-            requirements: ['Làm việc từ 3 tháng trở lên'],
             createdAt: '2024-01-01',
-            updatedAt: '2024-01-15',
+            updatedAt: '2024-01-01'
         },
         {
-            id: '2',
+            _id: '2',
             name: 'Thưởng tháng 13',
-            description: 'Thưởng cuối năm dựa trên hiệu suất làm việc',
-            type: 'salary',
-            value: 100,
-            currency: 'PERCENT',
-            period: 'yearly',
+            description: 'Thưởng tháng 13 hàng năm dựa trên kết quả kinh doanh.',
+            category: 'salary',
             isActive: true,
-            applicableTo: ['Tất cả nhân viên'],
-            requirements: ['Hoàn thành mục tiêu KPI'],
             createdAt: '2024-01-01',
-            updatedAt: '2024-01-15',
+            updatedAt: '2024-01-01'
         },
         {
-            id: '3',
-            name: 'Hỗ trợ học tập',
-            description: 'Hỗ trợ chi phí học tập và phát triển kỹ năng',
-            type: 'education',
-            value: 5000000,
-            currency: 'VND',
-            period: 'yearly',
+            _id: '3',
+            name: 'Đào tạo kỹ năng',
+            description: 'Chương trình đào tạo và phát triển kỹ năng chuyên môn.',
+            category: 'training',
             isActive: true,
-            applicableTo: ['Tất cả nhân viên'],
-            requirements: ['Khóa học liên quan đến công việc'],
             createdAt: '2024-01-01',
-            updatedAt: '2024-01-15',
+            updatedAt: '2024-01-01'
         },
         {
-            id: '4',
-            name: 'Work from home',
-            description: 'Làm việc từ xa 2 ngày/tuần',
-            type: 'work_life',
-            value: 0,
-            currency: 'VND',
-            period: 'monthly',
+            _id: '4',
+            name: 'Làm việc linh hoạt',
+            description: 'Chế độ làm việc từ xa và giờ làm việc linh hoạt.',
+            category: 'work_life',
             isActive: true,
-            applicableTo: ['Phòng Kỹ thuật', 'Phòng Kế hoạch'],
-            requirements: ['Có kết nối internet ổn định'],
             createdAt: '2024-01-01',
-            updatedAt: '2024-01-15',
+            updatedAt: '2024-01-01'
         },
         {
-            id: '5',
-            name: 'Hỗ trợ nhà ở',
-            description: 'Trợ cấp nhà ở cho nhân viên ở xa',
-            type: 'housing',
-            value: 3000000,
-            currency: 'VND',
-            period: 'monthly',
+            _id: '5',
+            name: 'Du lịch công ty',
+            description: 'Chuyến du lịch hàng năm cho toàn thể nhân viên.',
+            category: 'other',
             isActive: true,
-            applicableTo: ['Nhân viên từ tỉnh khác'],
-            requirements: ['Có hộ khẩu ngoài TP.HCM'],
             createdAt: '2024-01-01',
-            updatedAt: '2024-01-15',
-        },
-        {
-            id: '6',
-            name: 'Xe đưa đón',
-            description: 'Xe đưa đón nhân viên từ các điểm tập trung',
-            type: 'transport',
-            value: 0,
-            currency: 'VND',
-            period: 'monthly',
-            isActive: true,
-            applicableTo: ['Tất cả nhân viên'],
-            requirements: ['Đăng ký trước 1 tuần'],
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-15',
-        },
-    ]);
+            updatedAt: '2024-01-01'
+        }
+    ];
+
+    const loadBenefits = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            // Simulate API call
+            setTimeout(() => {
+                setBenefits(mockBenefits);
+                setLoading(false);
+            }, 1000);
+        } catch (err) {
+            console.error('Error loading benefits:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải danh sách phúc lợi');
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadBenefits();
+    }, [loadBenefits]);
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingBenefit, setEditingBenefit] = useState<Benefit | null>(null);
-    const [formData, setFormData] = useState<Omit<Benefit, 'id' | 'createdAt' | 'updatedAt'>>({
+    const [formData, setFormData] = useState({
         name: '',
         description: '',
-        type: 'salary',
-        value: 0,
-        currency: 'VND',
-        period: 'monthly',
-        isActive: true,
-        applicableTo: [],
-        requirements: [],
+        category: 'other' as Benefit['category'],
+        isActive: true
     });
 
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
-
-    const getTypeIcon = (type: string) => {
-        switch (type) {
+    const getCategoryIcon = (category: string) => {
+        switch (category) {
             case 'salary':
                 return <MoneyIcon />;
             case 'insurance':
                 return <HealthIcon />;
-            case 'education':
-                return <EducationIcon />;
+            case 'training':
+                return <SchoolIcon />;
             case 'work_life':
                 return <WorkIcon />;
-            case 'housing':
-                return <HomeIcon />;
-            case 'transport':
-                return <TransportIcon />;
-            case 'food':
-                return <FoodIcon />;
             default:
-                return <BenefitsIcon />;
+                return <GiftIcon />;
         }
     };
 
-    const getTypeColor = (type: string) => {
-        switch (type) {
-            case 'salary':
-                return 'success';
-            case 'insurance':
-                return 'info';
-            case 'education':
-                return 'primary';
-            case 'work_life':
-                return 'warning';
-            case 'housing':
-                return 'secondary';
-            case 'transport':
-                return 'error';
-            case 'food':
-                return 'default';
-            default:
-                return 'primary';
-        }
-    };
-
-    const getTypeLabel = (type: string) => {
-        switch (type) {
+    const getCategoryLabel = (category: string) => {
+        switch (category) {
             case 'salary':
                 return 'Lương thưởng';
             case 'insurance':
                 return 'Bảo hiểm';
-            case 'education':
-                return 'Học tập';
+            case 'training':
+                return 'Đào tạo';
             case 'work_life':
                 return 'Cân bằng công việc';
-            case 'housing':
-                return 'Nhà ở';
-            case 'transport':
-                return 'Giao thông';
-            case 'food':
-                return 'Ăn uống';
             default:
                 return 'Khác';
         }
     };
 
-    const getPeriodLabel = (period: string) => {
-        switch (period) {
-            case 'monthly':
-                return 'Hàng tháng';
-            case 'yearly':
-                return 'Hàng năm';
-            case 'one_time':
-                return 'Một lần';
+    const getCategoryColor = (category: string) => {
+        switch (category) {
+            case 'salary':
+                return 'success';
+            case 'insurance':
+                return 'info';
+            case 'training':
+                return 'warning';
+            case 'work_life':
+                return 'primary';
             default:
-                return 'Không xác định';
+                return 'default';
         }
-    };
-
-    const formatValue = (benefit: Benefit) => {
-        if (benefit.value === 0) {
-            return 'Miễn phí';
-        }
-        if (benefit.currency === 'PERCENT') {
-            return `${benefit.value}%`;
-        }
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-        }).format(benefit.value);
     };
 
     const handleAddBenefit = () => {
@@ -259,13 +183,8 @@ const BenefitsManagement: React.FC = () => {
         setFormData({
             name: '',
             description: '',
-            type: 'salary',
-            value: 0,
-            currency: 'VND',
-            period: 'monthly',
-            isActive: true,
-            applicableTo: [],
-            requirements: [],
+            category: 'other',
+            isActive: true
         });
         setDialogOpen(true);
     };
@@ -275,66 +194,63 @@ const BenefitsManagement: React.FC = () => {
         setFormData({
             name: benefit.name,
             description: benefit.description,
-            type: benefit.type,
-            value: benefit.value,
-            currency: benefit.currency,
-            period: benefit.period,
-            isActive: benefit.isActive,
-            applicableTo: benefit.applicableTo,
-            requirements: benefit.requirements,
+            category: benefit.category,
+            isActive: benefit.isActive
         });
         setDialogOpen(true);
     };
 
-    const handleSaveBenefit = () => {
-        if (editingBenefit) {
-            setBenefits(prev => prev.map(benefit =>
-                benefit.id === editingBenefit.id
-                    ? {
-                        ...formData,
-                        id: editingBenefit.id,
-                        createdAt: benefit.createdAt,
-                        updatedAt: new Date().toISOString().split('T')[0]
-                    }
-                    : benefit
-            ));
-            setSnackbarMessage('Cập nhật phúc lợi thành công!');
-        } else {
-            const newBenefit: Benefit = {
-                ...formData,
-                id: Date.now().toString(),
-                createdAt: new Date().toISOString().split('T')[0],
-                updatedAt: new Date().toISOString().split('T')[0],
-            };
-            setBenefits(prev => [...prev, newBenefit]);
-            setSnackbarMessage('Thêm phúc lợi thành công!');
+    const handleSaveBenefit = async () => {
+        setSaving(true);
+        try {
+            // Simulate API call
+            setTimeout(() => {
+                setSnackbarMessage('✅ Lưu phúc lợi thành công!');
+                setSnackbarOpen(true);
+                setDialogOpen(false);
+                loadBenefits();
+                setSaving(false);
+            }, 1000);
+        } catch (error) {
+            console.error('Error saving benefit:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu phúc lợi');
+            setSnackbarOpen(true);
+            setSaving(false);
         }
-        setSnackbarOpen(true);
-        setDialogOpen(false);
     };
 
-    const handleDeleteBenefit = (benefitId: string) => {
-        setBenefits(prev => prev.filter(benefit => benefit.id !== benefitId));
-        setSnackbarMessage('Xóa phúc lợi thành công!');
-        setSnackbarOpen(true);
+    const handleDeleteBenefit = async (benefitId: string) => {
+        try {
+            // Simulate API call
+            setTimeout(() => {
+                setSnackbarMessage('✅ Xóa phúc lợi thành công!');
+                setSnackbarOpen(true);
+                loadBenefits();
+            }, 1000);
+        } catch (error) {
+            console.error('Error deleting benefit:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa phúc lợi');
+            setSnackbarOpen(true);
+        }
     };
 
-    const handleToggleStatus = (benefitId: string) => {
-        setBenefits(prev => prev.map(benefit =>
-            benefit.id === benefitId
-                ? {
-                    ...benefit,
-                    isActive: !benefit.isActive,
-                    updatedAt: new Date().toISOString().split('T')[0]
-                }
-                : benefit
-        ));
-        setSnackbarMessage('Cập nhật trạng thái phúc lợi thành công!');
-        setSnackbarOpen(true);
-    };
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải danh sách phúc lợi...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Quản lý phúc lợi
@@ -348,172 +264,80 @@ const BenefitsManagement: React.FC = () => {
                 </Button>
             </Box>
 
-            {/* Summary Cards */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                                    <BenefitsIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {benefits.length}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Tổng phúc lợi
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'success.main' }}>
-                                    <BenefitsIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {benefits.filter(b => b.isActive).length}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Đang hoạt động
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'info.main' }}>
-                                    <MoneyIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {benefits.filter(b => b.type === 'salary').length}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Lương thưởng
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'warning.main' }}>
-                                    <HealthIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {benefits.filter(b => b.type === 'insurance').length}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Bảo hiểm
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
-
-            {/* Benefits Table */}
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Phúc lợi</TableCell>
-                            <TableCell>Loại</TableCell>
-                            <TableCell>Giá trị</TableCell>
-                            <TableCell>Chu kỳ</TableCell>
-                            <TableCell>Áp dụng cho</TableCell>
-                            <TableCell>Trạng thái</TableCell>
-                            <TableCell>Thao tác</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {benefits.map((benefit) => (
-                            <TableRow key={benefit.id}>
-                                <TableCell>
+            <Grid container spacing={3}>
+                {benefits.map((benefit) => (
+                    <Grid item xs={12} md={6} lg={4} key={benefit._id}>
+                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <CardContent sx={{ flex: 1 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <Avatar
+                                            sx={{
+                                                bgcolor: `${getCategoryColor(benefit.category)}.main`,
+                                                width: 50,
+                                                height: 50
+                                            }}
+                                        >
+                                            {getCategoryIcon(benefit.category)}
+                                        </Avatar>
+                                        <Box>
+                                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                                {benefit.name}
+                                            </Typography>
+                                            <Chip
+                                                label={getCategoryLabel(benefit.category)}
+                                                size="small"
+                                                color={getCategoryColor(benefit.category) as any}
+                                            />
+                                        </Box>
+                                    </Box>
                                     <Box>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                            {benefit.name}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {benefit.description}
-                                        </Typography>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => handleEditBenefit(benefit)}
+                                        >
+                                            <EditIcon />
+                                        </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => handleDeleteBenefit(benefit._id)}
+                                            color="error"
+                                        >
+                                            <DeleteIcon />
+                                        </IconButton>
                                     </Box>
-                                </TableCell>
-                                <TableCell>
+                                </Box>
+
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{
+                                        mb: 2,
+                                        height: '3.2em',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        display: 'block',
+                                        lineHeight: 1.6
+                                    }}
+                                >
+                                    {benefit.description.length > 120
+                                        ? `${benefit.description.substring(0, 120)}...`
+                                        : benefit.description
+                                    }
+                                </Typography>
+
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Chip
-                                        icon={getTypeIcon(benefit.type)}
-                                        label={getTypeLabel(benefit.type)}
-                                        color={getTypeColor(benefit.type) as any}
+                                        label={benefit.isActive ? 'Đang áp dụng' : 'Tạm dừng'}
                                         size="small"
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                        {formatValue(benefit)}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {getPeriodLabel(benefit.period)}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {benefit.applicableTo.map((item, index) => (
-                                            <Chip key={index} label={item} size="small" variant="outlined" />
-                                        ))}
-                                    </Box>
-                                </TableCell>
-                                <TableCell>
-                                    <Chip
-                                        label={benefit.isActive ? 'Hoạt động' : 'Tạm dừng'}
                                         color={benefit.isActive ? 'success' : 'default'}
-                                        size="small"
                                     />
-                                </TableCell>
-                                <TableCell>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleEditBenefit(benefit)}
-                                    >
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleToggleStatus(benefit.id)}
-                                        color={benefit.isActive ? 'warning' : 'success'}
-                                    >
-                                        {benefit.isActive ? 'Tạm dừng' : 'Kích hoạt'}
-                                    </IconButton>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleDeleteBenefit(benefit.id)}
-                                        color="error"
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                                </Box>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                ))}
+            </Grid>
 
             {/* Add/Edit Benefit Dialog */}
             <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
@@ -531,6 +355,21 @@ const BenefitsManagement: React.FC = () => {
                             />
                         </Grid>
                         <Grid item xs={12}>
+                            <FormControl fullWidth>
+                                <InputLabel>Danh mục</InputLabel>
+                                <Select
+                                    value={formData.category}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as Benefit['category'] }))}
+                                >
+                                    <MenuItem value="salary">Lương thưởng</MenuItem>
+                                    <MenuItem value="insurance">Bảo hiểm</MenuItem>
+                                    <MenuItem value="training">Đào tạo</MenuItem>
+                                    <MenuItem value="work_life">Cân bằng công việc</MenuItem>
+                                    <MenuItem value="other">Khác</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12}>
                             <TextField
                                 fullWidth
                                 label="Mô tả"
@@ -540,58 +379,6 @@ const BenefitsManagement: React.FC = () => {
                                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <FormControl fullWidth>
-                                <InputLabel>Loại phúc lợi</InputLabel>
-                                <Select
-                                    value={formData.type}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
-                                >
-                                    <MenuItem value="salary">Lương thưởng</MenuItem>
-                                    <MenuItem value="insurance">Bảo hiểm</MenuItem>
-                                    <MenuItem value="education">Học tập</MenuItem>
-                                    <MenuItem value="work_life">Cân bằng công việc</MenuItem>
-                                    <MenuItem value="housing">Nhà ở</MenuItem>
-                                    <MenuItem value="transport">Giao thông</MenuItem>
-                                    <MenuItem value="food">Ăn uống</MenuItem>
-                                    <MenuItem value="other">Khác</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <FormControl fullWidth>
-                                <InputLabel>Chu kỳ</InputLabel>
-                                <Select
-                                    value={formData.period}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, period: e.target.value as any }))}
-                                >
-                                    <MenuItem value="monthly">Hàng tháng</MenuItem>
-                                    <MenuItem value="yearly">Hàng năm</MenuItem>
-                                    <MenuItem value="one_time">Một lần</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Giá trị"
-                                type="number"
-                                value={formData.value}
-                                onChange={(e) => setFormData(prev => ({ ...prev, value: parseInt(e.target.value) }))}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <FormControl fullWidth>
-                                <InputLabel>Đơn vị</InputLabel>
-                                <Select
-                                    value={formData.currency}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
-                                >
-                                    <MenuItem value="VND">VND</MenuItem>
-                                    <MenuItem value="PERCENT">Phần trăm</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
                         <Grid item xs={12}>
                             <FormControlLabel
                                 control={
@@ -600,7 +387,7 @@ const BenefitsManagement: React.FC = () => {
                                         onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
                                     />
                                 }
-                                label="Hoạt động"
+                                label="Đang áp dụng"
                             />
                         </Grid>
                     </Grid>
@@ -609,8 +396,8 @@ const BenefitsManagement: React.FC = () => {
                     <Button onClick={() => setDialogOpen(false)}>
                         Hủy
                     </Button>
-                    <Button onClick={handleSaveBenefit} variant="contained">
-                        {editingBenefit ? 'Cập nhật' : 'Thêm'}
+                    <Button onClick={handleSaveBenefit} variant="contained" disabled={saving}>
+                        {saving ? 'Đang lưu...' : (editingBenefit ? 'Cập nhật' : 'Thêm')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -619,8 +406,15 @@ const BenefitsManagement: React.FC = () => {
                 open={snackbarOpen}
                 autoHideDuration={6000}
                 onClose={() => setSnackbarOpen(false)}
-                message={snackbarMessage}
-            />
+            >
+                <Alert
+                    onClose={() => setSnackbarOpen(false)}
+                    severity={snackbarMessage.includes('❌') ? 'error' : 'success'}
+                    sx={{ width: '100%' }}
+                >
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

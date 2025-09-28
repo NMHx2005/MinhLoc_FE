@@ -1,5 +1,5 @@
-export type ProjectStatus = 'available' | 'sold' | 'coming-soon';
-export type ProjectType = 'apartment' | 'villa' | 'commercial' | 'land';
+export type ProjectStatus = 'available' | 'sold' | 'coming-soon' | 'planning' | 'construction' | 'completed' | 'on-hold' | 'cancelled';
+export type ProjectType = 'apartment' | 'villa' | 'commercial' | 'land' | 'office' | 'hotel';
 
 export interface ProjectDTO {
     id: number;
@@ -151,74 +151,3 @@ export async function fetchProjects(filter: ProjectFilter): Promise<ProjectDTO[]
     return filtered.slice(offset, offset + limit);
 }
 
-export interface SamDTO {
-    id: number;
-    slug: string;
-    name: string;
-    origin: string;
-    type: 'ngoc-linh' | 'han-quoc' | 'korean-red' | 'khac';
-    weightGram: number;
-    priceLabel: string;
-    image: string;
-    benefits: string[];
-    createdAt: string;
-}
-
-export interface SamFilter {
-    q?: string;
-    type?: SamDTO['type'] | 'all';
-    origin?: string | 'all';
-    minWeight?: number;
-    maxWeight?: number;
-    limit?: number;
-    offset?: number;
-}
-
-const MOCK_SAM: SamDTO[] = [
-    {
-        id: 1,
-        slug: 'sam-ngoc-linh-tuoi-10-nam',
-        name: 'Sâm Ngọc Linh tươi 10 năm',
-        origin: 'Kontum',
-        type: 'ngoc-linh',
-        weightGram: 500,
-        priceLabel: 'Liên hệ',
-        image: '/article-1.png',
-        benefits: ['Bồi bổ cơ thể', 'Tăng cường miễn dịch'],
-        createdAt: '2025-09-10T08:00:00.000Z',
-    },
-    {
-        id: 2,
-        slug: 'sam-han-quoc-hop-100g',
-        name: 'Sâm Hàn Quốc hộp 100g',
-        origin: 'Korea',
-        type: 'han-quoc',
-        weightGram: 100,
-        priceLabel: '1,9 triệu',
-        image: '/article-2.png',
-        benefits: ['Tăng sức bền', 'Hỗ trợ phục hồi'],
-        createdAt: '2025-09-12T08:00:00.000Z',
-    },
-];
-
-export async function fetchSam(filter: SamFilter): Promise<SamDTO[]> {
-    await new Promise((r) => setTimeout(r, 200));
-    const {
-        q = '',
-        type = 'all',
-        origin = 'all',
-        minWeight = 0,
-        maxWeight = Number.MAX_SAFE_INTEGER,
-        limit = 12,
-        offset = 0,
-    } = filter;
-    const qLower = q.trim().toLowerCase();
-    const filtered = MOCK_SAM.filter((p) => {
-        const matchesQ = !qLower || p.name.toLowerCase().includes(qLower);
-        const matchesType = type === 'all' || p.type === type;
-        const matchesOrigin = origin === 'all' || p.origin === origin;
-        const matchesWeight = p.weightGram >= minWeight && p.weightGram <= maxWeight;
-        return matchesQ && matchesType && matchesOrigin && matchesWeight;
-    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return filtered.slice(offset, offset + limit);
-}

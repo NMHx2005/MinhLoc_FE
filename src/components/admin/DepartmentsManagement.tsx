@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Typography,
     Card,
     CardContent,
-    TextField,
     Button,
     Grid,
     Chip,
@@ -15,15 +14,11 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Avatar,
+    TextField,
     Snackbar,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
+    Alert,
+    CircularProgress,
+    Avatar,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -31,154 +26,107 @@ import {
     Delete as DeleteIcon,
     Business as BusinessIcon,
     People as PeopleIcon,
-    Person as PersonIcon,
 } from '@mui/icons-material';
 
 interface Department {
-    id: string;
+    _id: string;
     name: string;
     description: string;
-    head: string;
-    headEmail: string;
-    headPhone: string;
+    manager: string;
     employeeCount: number;
-    maxEmployees: number;
-    location: string;
-    responsibilities: string[];
-    budget: number;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
 }
 
 const DepartmentsManagement: React.FC = () => {
-    const [departments, setDepartments] = useState<Department[]>([
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [departments, setDepartments] = useState<Department[]>([]);
+
+    // Mock data for departments
+    const mockDepartments: Department[] = [
         {
-            id: '1',
-            name: 'Phòng Kế hoạch & Phát triển',
-            description: 'Lập kế hoạch chiến lược và phát triển dự án mới',
-            head: 'Nguyễn Văn A',
-            headEmail: 'nguyenvana@minhlocgroup.com',
-            headPhone: '0123456789',
-            employeeCount: 25,
-            maxEmployees: 30,
-            location: 'Tầng 10, Tòa nhà A',
-            responsibilities: [
-                'Lập kế hoạch chiến lược dài hạn',
-                'Nghiên cứu thị trường',
-                'Phát triển dự án mới',
-                'Quản lý danh mục đầu tư',
-            ],
-            budget: 5000000000,
-            isActive: true,
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-15',
-        },
-        {
-            id: '2',
-            name: 'Phòng Kỹ thuật',
-            description: 'Thiết kế và giám sát kỹ thuật các dự án',
-            head: 'Trần Thị B',
-            headEmail: 'tranthib@minhlocgroup.com',
-            headPhone: '0987654321',
-            employeeCount: 40,
-            maxEmployees: 45,
-            location: 'Tầng 8, Tòa nhà A',
-            responsibilities: [
-                'Thiết kế dự án',
-                'Giám sát kỹ thuật',
-                'Quản lý chất lượng',
-                'Nghiên cứu công nghệ mới',
-            ],
-            budget: 8000000000,
-            isActive: true,
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-20',
-        },
-        {
-            id: '3',
-            name: 'Phòng Kinh doanh',
-            description: 'Marketing và bán hàng các sản phẩm, dịch vụ',
-            head: 'Lê Văn C',
-            headEmail: 'levanc@minhlocgroup.com',
-            headPhone: '0369852147',
-            employeeCount: 30,
-            maxEmployees: 35,
-            location: 'Tầng 6, Tòa nhà A',
-            responsibilities: [
-                'Marketing dự án',
-                'Bán hàng và chăm sóc khách hàng',
-                'Quản lý kênh phân phối',
-                'Phát triển thị trường',
-            ],
-            budget: 6000000000,
-            isActive: true,
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-18',
-        },
-        {
-            id: '4',
-            name: 'Phòng Nhân sự',
-            description: 'Quản lý nhân sự và phát triển nguồn nhân lực',
-            head: 'Phạm Thị D',
-            headEmail: 'phamthid@minhlocgroup.com',
-            headPhone: '0741852963',
+            _id: '1',
+            name: 'Kinh doanh',
+            description: 'Phòng kinh doanh chịu trách nhiệm phát triển thị trường và tìm kiếm khách hàng mới.',
+            manager: 'Nguyễn Văn A',
             employeeCount: 15,
-            maxEmployees: 20,
-            location: 'Tầng 5, Tòa nhà A',
-            responsibilities: [
-                'Tuyển dụng nhân sự',
-                'Đào tạo và phát triển',
-                'Quản lý lương thưởng',
-                'Chính sách nhân sự',
-            ],
-            budget: 2000000000,
             isActive: true,
             createdAt: '2024-01-01',
-            updatedAt: '2024-01-12',
+            updatedAt: '2024-01-01'
         },
-    ]);
+        {
+            _id: '2',
+            name: 'Marketing',
+            description: 'Phòng marketing phụ trách quảng bá thương hiệu và sản phẩm của công ty.',
+            manager: 'Trần Thị B',
+            employeeCount: 8,
+            isActive: true,
+            createdAt: '2024-01-01',
+            updatedAt: '2024-01-01'
+        },
+        {
+            _id: '3',
+            name: 'Công nghệ thông tin',
+            description: 'Phòng IT phát triển và duy trì hệ thống công nghệ thông tin.',
+            manager: 'Lê Văn C',
+            employeeCount: 12,
+            isActive: true,
+            createdAt: '2024-01-01',
+            updatedAt: '2024-01-01'
+        },
+        {
+            _id: '4',
+            name: 'Nhân sự',
+            description: 'Phòng nhân sự quản lý tuyển dụng, đào tạo và phát triển nhân viên.',
+            manager: 'Phạm Thị D',
+            employeeCount: 6,
+            isActive: true,
+            createdAt: '2024-01-01',
+            updatedAt: '2024-01-01'
+        }
+    ];
+
+    const loadDepartments = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            // Simulate API call
+            setTimeout(() => {
+                setDepartments(mockDepartments);
+                setLoading(false);
+            }, 1000);
+        } catch (err) {
+            console.error('Error loading departments:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải danh sách phòng ban');
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadDepartments();
+    }, [loadDepartments]);
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
-    const [formData, setFormData] = useState<Omit<Department, 'id' | 'createdAt' | 'updatedAt'>>({
+    const [formData, setFormData] = useState({
         name: '',
         description: '',
-        head: '',
-        headEmail: '',
-        headPhone: '',
-        employeeCount: 0,
-        maxEmployees: 0,
-        location: '',
-        responsibilities: [],
-        budget: 0,
-        isActive: true,
+        manager: '',
+        isActive: true
     });
-
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
-
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-        }).format(amount);
-    };
 
     const handleAddDepartment = () => {
         setEditingDepartment(null);
         setFormData({
             name: '',
             description: '',
-            head: '',
-            headEmail: '',
-            headPhone: '',
-            employeeCount: 0,
-            maxEmployees: 0,
-            location: '',
-            responsibilities: [],
-            budget: 0,
-            isActive: true,
+            manager: '',
+            isActive: true
         });
         setDialogOpen(true);
     };
@@ -188,68 +136,63 @@ const DepartmentsManagement: React.FC = () => {
         setFormData({
             name: department.name,
             description: department.description,
-            head: department.head,
-            headEmail: department.headEmail,
-            headPhone: department.headPhone,
-            employeeCount: department.employeeCount,
-            maxEmployees: department.maxEmployees,
-            location: department.location,
-            responsibilities: department.responsibilities,
-            budget: department.budget,
-            isActive: department.isActive,
+            manager: department.manager,
+            isActive: department.isActive
         });
         setDialogOpen(true);
     };
 
-    const handleSaveDepartment = () => {
-        if (editingDepartment) {
-            setDepartments(prev => prev.map(dept =>
-                dept.id === editingDepartment.id
-                    ? {
-                        ...formData,
-                        id: editingDepartment.id,
-                        createdAt: dept.createdAt,
-                        updatedAt: new Date().toISOString().split('T')[0]
-                    }
-                    : dept
-            ));
-            setSnackbarMessage('Cập nhật phòng ban thành công!');
-        } else {
-            const newDepartment: Department = {
-                ...formData,
-                id: Date.now().toString(),
-                createdAt: new Date().toISOString().split('T')[0],
-                updatedAt: new Date().toISOString().split('T')[0],
-            };
-            setDepartments(prev => [...prev, newDepartment]);
-            setSnackbarMessage('Thêm phòng ban thành công!');
+    const handleSaveDepartment = async () => {
+        setSaving(true);
+        try {
+            // Simulate API call
+            setTimeout(() => {
+                setSnackbarMessage('✅ Lưu phòng ban thành công!');
+                setSnackbarOpen(true);
+                setDialogOpen(false);
+                loadDepartments();
+                setSaving(false);
+            }, 1000);
+        } catch (error) {
+            console.error('Error saving department:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu phòng ban');
+            setSnackbarOpen(true);
+            setSaving(false);
         }
-        setSnackbarOpen(true);
-        setDialogOpen(false);
     };
 
-    const handleDeleteDepartment = (departmentId: string) => {
-        setDepartments(prev => prev.filter(dept => dept.id !== departmentId));
-        setSnackbarMessage('Xóa phòng ban thành công!');
-        setSnackbarOpen(true);
+    const handleDeleteDepartment = async (departmentId: string) => {
+        try {
+            // Simulate API call
+            setTimeout(() => {
+                setSnackbarMessage('✅ Xóa phòng ban thành công!');
+                setSnackbarOpen(true);
+                loadDepartments();
+            }, 1000);
+        } catch (error) {
+            console.error('Error deleting department:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa phòng ban');
+            setSnackbarOpen(true);
+        }
     };
 
-    const handleToggleStatus = (departmentId: string) => {
-        setDepartments(prev => prev.map(dept =>
-            dept.id === departmentId
-                ? {
-                    ...dept,
-                    isActive: !dept.isActive,
-                    updatedAt: new Date().toISOString().split('T')[0]
-                }
-                : dept
-        ));
-        setSnackbarMessage('Cập nhật trạng thái phòng ban thành công!');
-        setSnackbarOpen(true);
-    };
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải danh sách phòng ban...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Quản lý phòng ban
@@ -263,177 +206,92 @@ const DepartmentsManagement: React.FC = () => {
                 </Button>
             </Box>
 
-            {/* Summary Cards */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                                    <BusinessIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {departments.length}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Tổng phòng ban
-                                    </Typography>
+            <Grid container spacing={3}>
+                {departments.map((department) => (
+                    <Grid item xs={12} md={6} lg={4} key={department._id}>
+                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <CardContent sx={{ flex: 1 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <Avatar
+                                            sx={{
+                                                bgcolor: 'primary.main',
+                                                width: 50,
+                                                height: 50
+                                            }}
+                                        >
+                                            <BusinessIcon />
+                                        </Avatar>
+                                        <Box>
+                                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                                {department.name}
+                                            </Typography>
+                                            <Chip
+                                                label={department.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                                                size="small"
+                                                color={department.isActive ? 'success' : 'default'}
+                                            />
+                                        </Box>
+                                    </Box>
+                                    <Box>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => handleEditDepartment(department)}
+                                        >
+                                            <EditIcon />
+                                        </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => handleDeleteDepartment(department._id)}
+                                            color="error"
+                                        >
+                                            <DeleteIcon />
+                                        </IconButton>
+                                    </Box>
                                 </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'success.main' }}>
-                                    <PeopleIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {departments.reduce((sum, dept) => sum + dept.employeeCount, 0)}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Tổng nhân viên
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'info.main' }}>
-                                    <PersonIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {departments.filter(dept => dept.isActive).length}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Phòng ban hoạt động
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ bgcolor: 'warning.main' }}>
-                                    <BusinessIcon />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                        {formatCurrency(departments.reduce((sum, dept) => sum + dept.budget, 0))}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Tổng ngân sách
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
 
-            {/* Departments Table */}
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Phòng ban</TableCell>
-                            <TableCell>Trưởng phòng</TableCell>
-                            <TableCell>Nhân viên</TableCell>
-                            <TableCell>Vị trí</TableCell>
-                            <TableCell>Ngân sách</TableCell>
-                            <TableCell>Trạng thái</TableCell>
-                            <TableCell>Thao tác</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {departments.map((department) => (
-                            <TableRow key={department.id}>
-                                <TableCell>
-                                    <Box>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                            {department.name}
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{
+                                        mb: 2,
+                                        height: '3.2em',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        display: 'block',
+                                        lineHeight: 1.6
+                                    }}
+                                >
+                                    {department.description.length > 120
+                                        ? `${department.description.substring(0, 120)}...`
+                                        : department.description
+                                    }
+                                </Typography>
+
+                                <Box sx={{ mb: 2 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                        <PeopleIcon sx={{ mr: 1, fontSize: 16, color: 'text.secondary' }} />
+                                        <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                                            Trưởng phòng:
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {department.description}
-                                        </Typography>
-                                    </Box>
-                                </TableCell>
-                                <TableCell>
-                                    <Box>
                                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                            {department.head}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {department.headEmail}
+                                            {department.manager}
                                         </Typography>
                                     </Box>
-                                </TableCell>
-                                <TableCell>
-                                    <Box>
-                                        <Typography variant="body2">
-                                            {department.employeeCount}/{department.maxEmployees}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                                            Số nhân viên:
                                         </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            nhân viên
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                            {department.employeeCount} người
                                         </Typography>
                                     </Box>
-                                </TableCell>
-                                <TableCell>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {department.location}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Typography variant="body2">
-                                        {formatCurrency(department.budget)}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Chip
-                                        label={department.isActive ? 'Hoạt động' : 'Tạm dừng'}
-                                        color={department.isActive ? 'success' : 'default'}
-                                        size="small"
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleEditDepartment(department)}
-                                    >
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleToggleStatus(department.id)}
-                                        color={department.isActive ? 'warning' : 'success'}
-                                    >
-                                        {department.isActive ? 'Tạm dừng' : 'Kích hoạt'}
-                                    </IconButton>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleDeleteDepartment(department.id)}
-                                        color="error"
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                                </Box>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                ))}
+            </Grid>
 
             {/* Add/Edit Department Dialog */}
             <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
@@ -453,71 +311,19 @@ const DepartmentsManagement: React.FC = () => {
                         <Grid item xs={12}>
                             <TextField
                                 fullWidth
-                                label="Mô tả"
-                                multiline
-                                rows={3}
-                                value={formData.description}
-                                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
                                 label="Trưởng phòng"
-                                value={formData.head}
-                                onChange={(e) => setFormData(prev => ({ ...prev, head: e.target.value }))}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Email trưởng phòng"
-                                type="email"
-                                value={formData.headEmail}
-                                onChange={(e) => setFormData(prev => ({ ...prev, headEmail: e.target.value }))}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Số điện thoại trưởng phòng"
-                                value={formData.headPhone}
-                                onChange={(e) => setFormData(prev => ({ ...prev, headPhone: e.target.value }))}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Vị trí"
-                                value={formData.location}
-                                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Số nhân viên hiện tại"
-                                type="number"
-                                value={formData.employeeCount}
-                                onChange={(e) => setFormData(prev => ({ ...prev, employeeCount: parseInt(e.target.value) }))}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Số nhân viên tối đa"
-                                type="number"
-                                value={formData.maxEmployees}
-                                onChange={(e) => setFormData(prev => ({ ...prev, maxEmployees: parseInt(e.target.value) }))}
+                                value={formData.manager}
+                                onChange={(e) => setFormData(prev => ({ ...prev, manager: e.target.value }))}
                             />
                         </Grid>
                         <Grid item xs={12}>
                             <TextField
                                 fullWidth
-                                label="Ngân sách (VND)"
-                                type="number"
-                                value={formData.budget}
-                                onChange={(e) => setFormData(prev => ({ ...prev, budget: parseInt(e.target.value) }))}
+                                label="Mô tả"
+                                multiline
+                                rows={3}
+                                value={formData.description}
+                                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                             />
                         </Grid>
                     </Grid>
@@ -526,8 +332,8 @@ const DepartmentsManagement: React.FC = () => {
                     <Button onClick={() => setDialogOpen(false)}>
                         Hủy
                     </Button>
-                    <Button onClick={handleSaveDepartment} variant="contained">
-                        {editingDepartment ? 'Cập nhật' : 'Thêm'}
+                    <Button onClick={handleSaveDepartment} variant="contained" disabled={saving}>
+                        {saving ? 'Đang lưu...' : (editingDepartment ? 'Cập nhật' : 'Thêm')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -536,8 +342,15 @@ const DepartmentsManagement: React.FC = () => {
                 open={snackbarOpen}
                 autoHideDuration={6000}
                 onClose={() => setSnackbarOpen(false)}
-                message={snackbarMessage}
-            />
+            >
+                <Alert
+                    onClose={() => setSnackbarOpen(false)}
+                    severity={snackbarMessage.includes('❌') ? 'error' : 'success'}
+                    sx={{ width: '100%' }}
+                >
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
     Box,
     Typography,
@@ -8,6 +8,7 @@ import {
     Breadcrumbs,
     Link,
     Alert,
+    CircularProgress,
 } from '@mui/material';
 import {
     Home as HomeIcon,
@@ -17,65 +18,76 @@ import {
 import AdminLayout from '../../../../components/admin/AdminLayout';
 import ProjectFilters from '../../../../components/admin/ProjectFilters';
 import ProjectList from '../../../../components/admin/ProjectList';
-import ProjectForm from '../../../../components/admin/ProjectForm';
-
-interface FilterState {
-    search: string;
-    type: string;
-    status: string;
-    city: string;
-    district: string;
-    minPrice: string;
-    maxPrice: string;
-    minArea: string;
-    maxArea: string;
-}
+import { useProjects, useProjectStats } from '../../../../hooks/useProjects';
+import type { Project, ProjectFilters as ProjectFiltersType } from '../../../../services/admin/projectService';
 
 const ProjectsPage: React.FC = () => {
-    const [filters, setFilters] = useState<FilterState>({
-        search: '',
-        type: 'all',
-        status: 'all',
-        city: 'all',
-        district: 'all',
-        minPrice: '',
-        maxPrice: '',
-        minArea: '',
-        maxArea: '',
-    });
-    const [formOpen, setFormOpen] = useState(false);
-    const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
-    const [selectedProject, setSelectedProject] = useState<any>(null);
+    const {
+        projects,
+        loading,
+        error,
+        total,
+        page,
+        limit,
+        filters,
+        setPage,
+        setLimit,
+        deleteProject,
+        updateFilters,
+    } = useProjects();
 
-    const handleFilterChange = (newFilters: FilterState) => {
-        setFilters(newFilters);
-        console.log('Filters applied:', newFilters);
+    const { stats, loading: statsLoading } = useProjectStats();
+
+
+    const handleFilterChange = (newFilters: {
+        search: string;
+        type: string;
+        status: string;
+        city: string;
+        district: string;
+        minPrice: string;
+        maxPrice: string;
+        minArea: string;
+        maxArea: string;
+    }) => {
+        // Convert string values to numbers for price and area filters
+        const convertedFilters: ProjectFiltersType = {
+            ...newFilters,
+            minPrice: newFilters.minPrice ? parseFloat(String(newFilters.minPrice)) : undefined,
+            maxPrice: newFilters.maxPrice ? parseFloat(String(newFilters.maxPrice)) : undefined,
+            minArea: newFilters.minArea ? parseFloat(String(newFilters.minArea)) : undefined,
+            maxArea: newFilters.maxArea ? parseFloat(String(newFilters.maxArea)) : undefined,
+        };
+        updateFilters(convertedFilters);
     };
 
     const handleAddProject = () => {
-        setFormMode('create');
-        setSelectedProject(null);
-        setFormOpen(true);
+        window.location.href = '/admin/projects/create';
     };
 
-    const handleEditProject = (project: any) => {
-        setFormMode('edit');
-        setSelectedProject(project);
-        setFormOpen(true);
+    const handleEditProject = (project: Project) => {
+        window.location.href = `/admin/projects/edit/${project._id}`;
     };
 
-    const handleFormClose = () => {
-        setFormOpen(false);
-        setSelectedProject(null);
+
+
+    const handleDeleteProject = async (projectId: string) => {
+        if (window.confirm('Bạn có chắc chắn muốn xóa dự án này?')) {
+            try {
+                await deleteProject(projectId);
+            } catch (error) {
+                console.error('Error deleting project:', error);
+            }
+        }
     };
+
 
     const getFilterSummary = () => {
         const activeFilters = [];
         if (filters.search) activeFilters.push(`Tìm kiếm: "${filters.search}"`);
-        if (filters.type !== 'all') activeFilters.push(`Loại: ${filters.type}`);
-        if (filters.status !== 'all') activeFilters.push(`Trạng thái: ${filters.status}`);
-        if (filters.city !== 'all') activeFilters.push(`Thành phố: ${filters.city}`);
-        if (filters.district !== 'all') activeFilters.push(`Quận: ${filters.district}`);
+        if (filters.type) activeFilters.push(`Loại: ${filters.type}`);
+        if (filters.status) activeFilters.push(`Trạng thái: ${filters.status}`);
+        if (filters.location) activeFilters.push(`Vị trí: ${filters.location}`);
         if (filters.minPrice || filters.maxPrice) {
             const priceRange = `${filters.minPrice || '0'} - ${filters.maxPrice || '∞'} tỷ`;
             activeFilters.push(`Giá: ${priceRange}`);
@@ -140,63 +152,83 @@ const ProjectsPage: React.FC = () => {
                     </Alert>
                 )}
 
+                {/* Error Alert */}
+                {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                        {error}
+                    </Alert>
+                )}
+
                 {/* Project List */}
                 <Box sx={{ mb: 4 }}>
-                    <ProjectList
-                        onEditProject={handleEditProject}
-                        onAddProject={handleAddProject}
-                    />
+                    {loading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <ProjectList
+                            projects={projects}
+                            loading={loading}
+                            onEditProject={handleEditProject}
+                            onDeleteProject={handleDeleteProject}
+                            onAddProject={handleAddProject}
+                            total={total}
+                            page={page}
+                            limit={limit}
+                            onPageChange={setPage}
+                            onLimitChange={setLimit}
+                        />
+                    )}
                 </Box>
-
-                {/* Project Form Dialog */}
-                <ProjectForm
-                    open={formOpen}
-                    onClose={handleFormClose}
-                    project={selectedProject}
-                    mode={formMode}
-                />
 
                 {/* Quick Stats */}
                 <Box sx={{ mt: 4 }}>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
                         Thống kê Nhanh
                     </Typography>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 3 }}>
-                        <Box sx={{ p: 3, backgroundColor: '#e8f5e8', borderRadius: 2, textAlign: 'center' }}>
-                            <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
-                                24
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Tổng dự án
-                            </Typography>
+                    {statsLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                            <CircularProgress />
                         </Box>
-                        <Box sx={{ p: 3, backgroundColor: '#e3f2fd', borderRadius: 2, textAlign: 'center' }}>
-                            <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2196f3' }}>
-                                18
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Đang bán
-                            </Typography>
+                    ) : (
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 3 }}>
+                            <Box sx={{ p: 3, backgroundColor: '#e8f5e8', borderRadius: 2, textAlign: 'center' }}>
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
+                                    {stats.total}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Tổng dự án
+                                </Typography>
+                            </Box>
+                            <Box sx={{ p: 3, backgroundColor: '#e3f2fd', borderRadius: 2, textAlign: 'center' }}>
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2196f3' }}>
+                                    {stats.construction}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Đang xây dựng
+                                </Typography>
+                            </Box>
+                            <Box sx={{ p: 3, backgroundColor: '#fff3e0', borderRadius: 2, textAlign: 'center' }}>
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
+                                    {stats.planning}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Đang lên kế hoạch
+                                </Typography>
+                            </Box>
+                            <Box sx={{ p: 3, backgroundColor: '#ffebee', borderRadius: 2, textAlign: 'center' }}>
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#f44336' }}>
+                                    {stats.soldOut}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Đã bán hết
+                                </Typography>
+                            </Box>
                         </Box>
-                        <Box sx={{ p: 3, backgroundColor: '#fff3e0', borderRadius: 2, textAlign: 'center' }}>
-                            <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
-                                4
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Sắp mở bán
-                            </Typography>
-                        </Box>
-                        <Box sx={{ p: 3, backgroundColor: '#ffebee', borderRadius: 2, textAlign: 'center' }}>
-                            <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#f44336' }}>
-                                2
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Đã bán
-                            </Typography>
-                        </Box>
-                    </Box>
+                    )}
                 </Box>
             </Container>
+
         </AdminLayout>
     );
 };

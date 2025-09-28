@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Container,
@@ -10,6 +10,7 @@ import {
     TextField,
     Button,
     Divider,
+    CircularProgress,
 } from '@mui/material';
 import {
     Facebook,
@@ -17,10 +18,31 @@ import {
     Instagram,
     LinkedIn,
     ArrowForward,
+    YouTube,
 } from '@mui/icons-material';
 import Image from 'next/image';
+import { companyService, type CompanyInfo } from '@/services/client/companyService';
 
 const Footer: React.FC = () => {
+    const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCompanyInfo = async () => {
+            try {
+                setLoading(true);
+                const info = await companyService.getGeneralInfo();
+                setCompanyInfo(info);
+            } catch (error) {
+                console.error('Error fetching company info:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCompanyInfo();
+    }, []);
+
     return (
         <Box
             component="footer"
@@ -45,7 +67,7 @@ const Footer: React.FC = () => {
                     <Box sx={{ mb: { xs: 3, lg: 0 } }}>
                         <Image
                             src="/Logo_MinhLocGroup.png"
-                            alt="MINH LỘC GROUP"
+                            alt={companyInfo?.data?.companyName || "MINH LỘC GROUP"}
                             width={150}
                             height={56}
                             style={{
@@ -57,23 +79,76 @@ const Footer: React.FC = () => {
                     </Box>
 
                     {/* Social Media */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="body2" sx={{ mr: 2 }}>
-                            Theo dõi chúng tôi
-                        </Typography>
-                        <IconButton aria-label="Facebook" sx={{ color: 'white' }}>
-                            <Facebook />
-                        </IconButton>
-                        <IconButton aria-label="Twitter" sx={{ color: 'white' }}>
-                            <Twitter />
-                        </IconButton>
-                        <IconButton aria-label="Instagram" sx={{ color: 'white' }}>
-                            <Instagram />
-                        </IconButton>
-                        <IconButton aria-label="LinkedIn" sx={{ color: 'white' }}>
-                            <LinkedIn />
-                        </IconButton>
-                    </Box>
+                    {!loading && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Typography variant="body2" sx={{ mr: 2 }}>
+                                Theo dõi chúng tôi
+                            </Typography>
+                            {companyInfo?.data?.socialMedia?.facebook && (
+                                <IconButton
+                                    component={Link}
+                                    href={companyInfo.data.socialMedia.facebook}
+                                    target="_blank"
+                                    aria-label="Facebook"
+                                    sx={{ color: 'white' }}
+                                >
+                                    <Facebook />
+                                </IconButton>
+                            )}
+                            {companyInfo?.data?.socialMedia?.twitter && (
+                                <IconButton
+                                    component={Link}
+                                    href={companyInfo.data.socialMedia.twitter}
+                                    target="_blank"
+                                    aria-label="Twitter"
+                                    sx={{ color: 'white' }}
+                                >
+                                    <Twitter />
+                                </IconButton>
+                            )}
+                            {companyInfo?.data?.socialMedia?.instagram && (
+                                <IconButton
+                                    component={Link}
+                                    href={companyInfo.data.socialMedia.instagram}
+                                    target="_blank"
+                                    aria-label="Instagram"
+                                    sx={{ color: 'white' }}
+                                >
+                                    <Instagram />
+                                </IconButton>
+                            )}
+                            {companyInfo?.data?.socialMedia?.linkedin && (
+                                <IconButton
+                                    component={Link}
+                                    href={companyInfo.data.socialMedia.linkedin}
+                                    target="_blank"
+                                    aria-label="LinkedIn"
+                                    sx={{ color: 'white' }}
+                                >
+                                    <LinkedIn />
+                                </IconButton>
+                            )}
+                            {companyInfo?.data?.socialMedia?.youtube && (
+                                <IconButton
+                                    component={Link}
+                                    href={companyInfo.data.socialMedia.youtube}
+                                    target="_blank"
+                                    aria-label="YouTube"
+                                    sx={{ color: 'white' }}
+                                >
+                                    <YouTube />
+                                </IconButton>
+                            )}
+                        </Box>
+                    )}
+                    {loading && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Typography variant="body2" sx={{ mr: 2 }}>
+                                Theo dõi chúng tôi
+                            </Typography>
+                            <CircularProgress size={20} sx={{ color: 'white' }} />
+                        </Box>
+                    )}
                 </Box>
 
                 {/* Divider */}
@@ -268,17 +343,26 @@ const Footer: React.FC = () => {
                         >
                             Liên hệ
                         </Typography>
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                color: 'white',
-                                fontSize: '0.9rem',
-                                lineHeight: 1.6,
-                            }}
-                        >
-                            hi@minhlocgroup.com<br />
-                            (123) 456-7890
-                        </Typography>
+                        {!loading ? (
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    color: 'white',
+                                    fontSize: '0.9rem',
+                                    lineHeight: 1.6,
+                                }}
+                            >
+                                {companyInfo?.data?.contactInfo?.email || 'hi@minhlocgroup.com'}<br />
+                                {companyInfo?.data?.contactInfo?.phone || '(123) 456-7890'}
+                            </Typography>
+                        ) : (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CircularProgress size={16} sx={{ color: 'white' }} />
+                                <Typography variant="body2" sx={{ color: 'white', fontSize: '0.9rem' }}>
+                                    Đang tải...
+                                </Typography>
+                            </Box>
+                        )}
                     </Box>
 
                     {/* Our Address Section */}
@@ -295,17 +379,26 @@ const Footer: React.FC = () => {
                         >
                             Địa chỉ
                         </Typography>
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                color: 'white',
-                                fontSize: '0.9rem',
-                                lineHeight: 1.6,
-                            }}
-                        >
-                            123 Đường ABC, Quận 1<br />
-                            TP.HCM, Việt Nam
-                        </Typography>
+                        {!loading ? (
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    color: 'white',
+                                    fontSize: '0.9rem',
+                                    lineHeight: 1.6,
+                                }}
+                            >
+                                {companyInfo?.data?.contactInfo?.address || '123 Đường ABC, Quận 1'}<br />
+                                {companyInfo?.data?.headquarters || 'TP.HCM, Việt Nam'}
+                            </Typography>
+                        ) : (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CircularProgress size={16} sx={{ color: 'white' }} />
+                                <Typography variant="body2" sx={{ color: 'white', fontSize: '0.9rem' }}>
+                                    Đang tải...
+                                </Typography>
+                            </Box>
+                        )}
                     </Box>
                 </Box>
 
@@ -321,7 +414,7 @@ const Footer: React.FC = () => {
                             fontSize: '0.9rem',
                         }}
                     >
-                        Copyright 2025 HungDan - All Rights Reserved
+                        Copyright 2025 {companyInfo?.data?.companyName || 'MinhLoc Group'} - All Rights Reserved
                     </Typography>
                 </Box>
             </Container>

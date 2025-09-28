@@ -1,14 +1,15 @@
 'use client'
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     CardContent,
     Typography,
     Box,
     Grid,
-    Chip,
     LinearProgress,
+    CircularProgress,
+    Alert,
 } from '@mui/material';
 import {
     TrendingUp as TrendingUpIcon,
@@ -16,34 +17,88 @@ import {
     People as PeopleIcon,
     Mouse as ClickIcon,
 } from '@mui/icons-material';
+import { analyticsService } from '../../services/admin/analyticsService';
+import type { AnalyticsOverview, PageViewsData, TrafficSourcesData } from '../../services/admin/analyticsService';
 
-interface TrafficData {
-    date: string;
-    visitors: number;
-    pageViews: number;
-    sessions: number;
-    bounceRate: number;
+interface TrafficChartProps {
+    filters?: {
+        timeRange?: string;
+        device?: string;
+        source?: string;
+        page?: string;
+    };
 }
 
-const TrafficChart: React.FC = () => {
-    // Mock data for last 7 days
-    const trafficData: TrafficData[] = [
-        { date: '2024-01-15', visitors: 1240, pageViews: 3420, sessions: 1180, bounceRate: 35.2 },
-        { date: '2024-01-16', visitors: 1380, pageViews: 3890, sessions: 1320, bounceRate: 32.8 },
-        { date: '2024-01-17', visitors: 1150, pageViews: 3150, sessions: 1090, bounceRate: 38.5 },
-        { date: '2024-01-18', visitors: 1620, pageViews: 4560, sessions: 1540, bounceRate: 28.9 },
-        { date: '2024-01-19', visitors: 1890, pageViews: 5230, sessions: 1780, bounceRate: 25.4 },
-        { date: '2024-01-20', visitors: 2100, pageViews: 5890, sessions: 1980, bounceRate: 22.1 },
-        { date: '2024-01-21', visitors: 1950, pageViews: 5420, sessions: 1850, bounceRate: 24.8 },
-    ];
+const TrafficChart: React.FC<TrafficChartProps> = ({ filters }) => {
+    const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+    const [pageViews, setPageViews] = useState<PageViewsData[]>([]);
+    const [trafficSources, setTrafficSources] = useState<TrafficSourcesData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const maxVisitors = Math.max(...trafficData.map(d => d.visitors));
-    const maxPageViews = Math.max(...trafficData.map(d => d.pageViews));
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
 
-    const totalVisitors = trafficData.reduce((sum, d) => sum + d.visitors, 0);
-    const totalPageViews = trafficData.reduce((sum, d) => sum + d.pageViews, 0);
-    const totalSessions = trafficData.reduce((sum, d) => sum + d.sessions, 0);
-    const avgBounceRate = trafficData.reduce((sum, d) => sum + d.bounceRate, 0) / trafficData.length;
+                const params = {
+                    timeRange: filters?.timeRange || '7d',
+                    device: filters?.device || 'all',
+                    source: filters?.source || 'all',
+                    page: filters?.page || 'all',
+                };
+
+                const [overviewData, pageViewsData, trafficSourcesData] = await Promise.all([
+                    analyticsService.getOverview(params),
+                    analyticsService.getPageViews(params),
+                    analyticsService.getTrafficSources(params),
+                ]);
+
+                setOverview(overviewData);
+                setPageViews(pageViewsData);
+                setTrafficSources(trafficSourcesData);
+            } catch (err) {
+                console.error('Error loading traffic data:', err);
+                setError('Không thể tải dữ liệu traffic');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [filters]);
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (error) {
+        return (
+            <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+            </Alert>
+        );
+    }
+
+    if (!overview) {
+        return (
+            <Alert severity="info" sx={{ mb: 3 }}>
+                Không có dữ liệu traffic
+            </Alert>
+        );
+    }
+
+    const maxVisitors = pageViews && Array.isArray(pageViews) && pageViews.length > 0
+        ? Math.max(...pageViews.map(d => d.uniqueVisitors), 1)
+        : 1;
+    const totalVisitors = overview.uniqueVisitors;
+    const totalPageViews = overview.totalPageViews;
+    const avgBounceRate = overview.bounceRate;
 
     return (
         <Grid container spacing={3}>
@@ -61,7 +116,7 @@ const TrafficChart: React.FC = () => {
                             {totalVisitors.toLocaleString()}
                         </Typography>
                         <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                            +12.5% so với tuần trước
+                            Dữ liệu thời gian thực
                         </Typography>
                     </CardContent>
                 </Card>
@@ -80,7 +135,7 @@ const TrafficChart: React.FC = () => {
                             {totalPageViews.toLocaleString()}
                         </Typography>
                         <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                            +8.2% so với tuần trước
+                            Dữ liệu thời gian thực
                         </Typography>
                     </CardContent>
                 </Card>
@@ -96,10 +151,10 @@ const TrafficChart: React.FC = () => {
                             </Typography>
                         </Box>
                         <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                            {totalSessions.toLocaleString()}
+                            {overview.averageSessionDuration.toFixed(0)}s
                         </Typography>
                         <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                            +15.8% so với tuần trước
+                            Thời gian trung bình
                         </Typography>
                     </CardContent>
                 </Card>
@@ -118,7 +173,7 @@ const TrafficChart: React.FC = () => {
                             {avgBounceRate.toFixed(1)}%
                         </Typography>
                         <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                            -5.2% so với tuần trước
+                            Tỷ lệ thoát
                         </Typography>
                     </CardContent>
                 </Card>
@@ -134,11 +189,11 @@ const TrafficChart: React.FC = () => {
 
                         {/* Simple Bar Chart */}
                         <Box sx={{ display: 'flex', alignItems: 'end', height: 200, gap: 1, mb: 2 }}>
-                            {trafficData.map((data, index) => (
+                            {pageViews && Array.isArray(pageViews) && pageViews.length > 0 ? pageViews.map((data, index) => (
                                 <Box key={index} sx={{ flex: 1, textAlign: 'center' }}>
                                     <Box
                                         sx={{
-                                            height: `${(data.visitors / maxVisitors) * 100}%`,
+                                            height: `${(data.uniqueVisitors / maxVisitors) * 100}%`,
                                             backgroundColor: '#E7C873',
                                             borderRadius: '4px 4px 0 0',
                                             mb: 1,
@@ -158,14 +213,20 @@ const TrafficChart: React.FC = () => {
                                                 color: '#666',
                                             }}
                                         >
-                                            {data.visitors}
+                                            {data.uniqueVisitors}
                                         </Typography>
                                     </Box>
                                     <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
                                         {new Date(data.date).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' })}
                                     </Typography>
                                 </Box>
-                            ))}
+                            )) : (
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Không có dữ liệu để hiển thị
+                                    </Typography>
+                                </Box>
+                            )}
                         </Box>
 
                         {/* Legend */}
@@ -187,81 +248,43 @@ const TrafficChart: React.FC = () => {
                             Nguồn Traffic
                         </Typography>
 
-                        <Box sx={{ mb: 3 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                <Typography variant="body2">Google Search</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>45.2%</Typography>
-                            </Box>
-                            <LinearProgress
-                                variant="determinate"
-                                value={45.2}
-                                sx={{
-                                    height: 8,
-                                    borderRadius: 4,
-                                    backgroundColor: 'rgba(0,0,0,0.1)',
-                                    '& .MuiLinearProgress-bar': {
-                                        backgroundColor: '#1976d2',
-                                    },
-                                }}
-                            />
-                        </Box>
+                        {trafficSources && Array.isArray(trafficSources) && trafficSources.length > 0 ? trafficSources.map((source, index) => {
+                            const colors = ['#1976d2', '#1877F2', '#4caf50', '#FF0000', '#ff9800', '#9c27b0'];
+                            const color = colors[index % colors.length];
 
-                        <Box sx={{ mb: 3 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                <Typography variant="body2">Facebook</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>28.5%</Typography>
+                            return (
+                                <Box key={index} sx={{ mb: 3 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                        <Typography variant="body2">{source.source}</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {source.percentage.toFixed(1)}%
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ position: 'relative', width: '100%' }}>
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={source.percentage}
+                                            sx={{
+                                                height: 8,
+                                                borderRadius: 4,
+                                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                                width: '100%',
+                                                '& .MuiLinearProgress-bar': {
+                                                    backgroundColor: color,
+                                                    borderRadius: 4,
+                                                },
+                                            }}
+                                        />
+                                    </Box>
+                                </Box>
+                            );
+                        }) : (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 100 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Không có dữ liệu nguồn traffic
+                                </Typography>
                             </Box>
-                            <LinearProgress
-                                variant="determinate"
-                                value={28.5}
-                                sx={{
-                                    height: 8,
-                                    borderRadius: 4,
-                                    backgroundColor: 'rgba(0,0,0,0.1)',
-                                    '& .MuiLinearProgress-bar': {
-                                        backgroundColor: '#1877F2',
-                                    },
-                                }}
-                            />
-                        </Box>
-
-                        <Box sx={{ mb: 3 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                <Typography variant="body2">Direct</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>15.8%</Typography>
-                            </Box>
-                            <LinearProgress
-                                variant="determinate"
-                                value={15.8}
-                                sx={{
-                                    height: 8,
-                                    borderRadius: 4,
-                                    backgroundColor: 'rgba(0,0,0,0.1)',
-                                    '& .MuiLinearProgress-bar': {
-                                        backgroundColor: '#4caf50',
-                                    },
-                                }}
-                            />
-                        </Box>
-
-                        <Box sx={{ mb: 3 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                <Typography variant="body2">YouTube</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>10.5%</Typography>
-                            </Box>
-                            <LinearProgress
-                                variant="determinate"
-                                value={10.5}
-                                sx={{
-                                    height: 8,
-                                    borderRadius: 4,
-                                    backgroundColor: 'rgba(0,0,0,0.1)',
-                                    '& .MuiLinearProgress-bar': {
-                                        backgroundColor: '#FF0000',
-                                    },
-                                }}
-                            />
-                        </Box>
+                        )}
                     </CardContent>
                 </Card>
             </Grid>

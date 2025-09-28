@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Card,
@@ -25,6 +25,9 @@ import {
     TextField,
     Grid,
     Chip,
+    Alert,
+    CircularProgress,
+    Snackbar,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -33,63 +36,48 @@ import {
     Delete as DeleteIcon,
     Category as CategoryIcon,
 } from '@mui/icons-material';
-
-interface GinsengCategory {
-    id: number;
-    name: string;
-    description: string;
-    productCount: number;
-    status: 'active' | 'inactive';
-    createdAt: string;
-}
+import { ginsengService } from '../../services/admin/ginsengService';
+import type { GinsengCategory } from '../../services/admin/ginsengService';
 
 const GinsengCategories: React.FC = () => {
-    const [categories, setCategories] = useState<GinsengCategory[]>([
-        {
-            id: 1,
-            name: 'Sâm Ngọc Linh',
-            description: 'Sâm Ngọc Linh tự nhiên từ vùng núi Ngọc Linh, Kontum',
-            productCount: 15,
-            status: 'active',
-            createdAt: '2024-01-15'
-        },
-        {
-            id: 2,
-            name: 'Sâm Hàn Quốc',
-            description: 'Sâm nhập khẩu từ Hàn Quốc, chất lượng cao',
-            productCount: 8,
-            status: 'active',
-            createdAt: '2024-01-10'
-        },
-        {
-            id: 3,
-            name: 'Korean Red',
-            description: 'Hồng sâm Hàn Quốc cao cấp, được chế biến đặc biệt',
-            productCount: 5,
-            status: 'active',
-            createdAt: '2024-01-08'
-        },
-        {
-            id: 4,
-            name: 'Khác',
-            description: 'Các loại sâm khác từ các vùng miền khác nhau',
-            productCount: 3,
-            status: 'inactive',
-            createdAt: '2024-01-05'
-        },
-    ]);
+    const [categories, setCategories] = useState<GinsengCategory[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [selectedCategory, setSelectedCategory] = useState<GinsengCategory | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [formDialogOpen, setFormDialogOpen] = useState(false);
     const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
+        slug: '',
         description: '',
-        status: 'active' as const
+        status: 'active' as 'active' | 'inactive'
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Load categories on component mount
+    useEffect(() => {
+        loadCategories();
+    }, []);
+
+    const loadCategories = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const categoriesData = await ginsengService.getCategories();
+            setCategories(categoriesData);
+        } catch (err) {
+            console.error('Error loading categories:', err);
+            setError('Không thể tải danh sách phân loại');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, category: GinsengCategory) => {
         setAnchorEl(event.currentTarget);
@@ -98,7 +86,7 @@ const GinsengCategories: React.FC = () => {
 
     const handleMenuClose = () => {
         setAnchorEl(null);
-        setSelectedCategory(null);
+        // Don't reset selectedCategory here to preserve data for form operations
     };
 
     const handleEdit = () => {
@@ -106,6 +94,7 @@ const GinsengCategories: React.FC = () => {
             setFormMode('edit');
             setFormData({
                 name: selectedCategory.name,
+                slug: selectedCategory.slug,
                 description: selectedCategory.description,
                 status: selectedCategory.status
             });
@@ -119,11 +108,27 @@ const GinsengCategories: React.FC = () => {
         handleMenuClose();
     };
 
-    const handleDeleteConfirm = () => {
+    const handleToggleStatus = () => {
+        setStatusDialogOpen(true);
+        handleMenuClose();
+    };
+
+    const handleDeleteConfirm = async () => {
         if (selectedCategory) {
-            setCategories(categories.filter(cat => cat.id !== selectedCategory.id));
-            setDeleteDialogOpen(false);
-            setSelectedCategory(null);
+            try {
+                setLoading(true);
+                await ginsengService.deleteCategory(selectedCategory._id);
+                setSnackbarMessage('Xóa phân loại thành công');
+                setSnackbarOpen(true);
+                loadCategories(); // Reload categories
+                setDeleteDialogOpen(false);
+                setSelectedCategory(null);
+            } catch (err) {
+                console.error('Error deleting category:', err);
+                setError('Không thể xóa phân loại');
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -132,10 +137,42 @@ const GinsengCategories: React.FC = () => {
         setSelectedCategory(null);
     };
 
+    const handleStatusConfirm = async () => {
+        if (selectedCategory) {
+            try {
+                setLoading(true);
+                const newStatus = selectedCategory.status === 'active' ? 'inactive' : 'active';
+                await ginsengService.updateCategory({
+                    _id: selectedCategory._id,
+                    name: selectedCategory.name,
+                    slug: selectedCategory.slug,
+                    description: selectedCategory.description,
+                    status: newStatus
+                });
+                setSnackbarMessage(`Đã ${newStatus === 'active' ? 'kích hoạt' : 'vô hiệu hóa'} phân loại thành công`);
+                setSnackbarOpen(true);
+                loadCategories(); // Reload categories
+                setStatusDialogOpen(false);
+                setSelectedCategory(null);
+            } catch (err) {
+                console.error('Error updating category status:', err);
+                setError('Không thể cập nhật trạng thái phân loại');
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const handleStatusCancel = () => {
+        setStatusDialogOpen(false);
+        setSelectedCategory(null);
+    };
+
     const handleAddCategory = () => {
         setFormMode('add');
         setFormData({
             name: '',
+            slug: '',
             description: '',
             status: 'active'
         });
@@ -171,6 +208,10 @@ const GinsengCategories: React.FC = () => {
             newErrors.name = 'Tên phân loại là bắt buộc';
         }
 
+        if (!formData.slug.trim()) {
+            newErrors.slug = 'Slug là bắt buộc';
+        }
+
         if (!formData.description.trim()) {
             newErrors.description = 'Mô tả là bắt buộc';
         }
@@ -178,7 +219,7 @@ const GinsengCategories: React.FC = () => {
         // Check for duplicate name (exclude current category when editing)
         const duplicateName = categories.find(cat =>
             cat.name.toLowerCase() === formData.name.toLowerCase() &&
-            (formMode === 'add' || cat.id !== selectedCategory?.id)
+            (formMode === 'add' || cat._id !== selectedCategory?._id)
         );
 
         if (duplicateName) {
@@ -189,26 +230,31 @@ const GinsengCategories: React.FC = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleFormSubmit = () => {
+    const handleFormSubmit = async () => {
         if (validateForm()) {
-            if (formMode === 'add') {
-                const newCategory: GinsengCategory = {
-                    id: Math.max(...categories.map(c => c.id)) + 1,
-                    name: formData.name,
-                    description: formData.description,
-                    status: formData.status,
-                    productCount: 0,
-                    createdAt: new Date().toISOString().split('T')[0],
-                };
-                setCategories([...categories, newCategory]);
-            } else if (formMode === 'edit' && selectedCategory) {
-                setCategories(categories.map(cat =>
-                    cat.id === selectedCategory.id
-                        ? { ...cat, name: formData.name, description: formData.description, status: formData.status }
-                        : cat
-                ));
+            try {
+                setLoading(true);
+                if (formMode === 'add') {
+                    await ginsengService.createCategory(formData);
+                    setSnackbarMessage('Thêm phân loại thành công');
+                } else if (selectedCategory) {
+                    await ginsengService.updateCategory({
+                        _id: selectedCategory._id,
+                        ...formData
+                    });
+                    setSnackbarMessage('Cập nhật phân loại thành công');
+                }
+                setSnackbarOpen(true);
+                loadCategories(); // Reload categories
+                setFormDialogOpen(false);
+                setSelectedCategory(null);
+                setErrors({});
+            } catch (err) {
+                console.error('Error submitting category:', err);
+                setError(formMode === 'add' ? 'Không thể thêm phân loại' : 'Không thể cập nhật phân loại');
+            } finally {
+                setLoading(false);
             }
-            handleFormClose();
         }
     };
 
@@ -220,8 +266,19 @@ const GinsengCategories: React.FC = () => {
         return status === 'active' ? 'Đang sử dụng' : 'Ngừng sử dụng';
     };
 
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false);
+    };
+
     return (
         <Box>
+            {/* Error Alert */}
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
+
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -245,57 +302,72 @@ const GinsengCategories: React.FC = () => {
 
             {/* Categories Grid */}
             <Grid container spacing={3} sx={{ mb: 3 }}>
-                {categories.map((category) => (
-                    <Grid item xs={12} md={6} lg={4} key={category.id}>
-                        <Card
-                            sx={{
-                                height: '100%',
-                                position: 'relative',
-                                '&:hover': {
-                                    boxShadow: 6,
-                                    transform: 'translateY(-2px)',
-                                    transition: 'all 0.3s ease'
-                                }
-                            }}
-                        >
-                            <CardContent>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <CategoryIcon sx={{ color: '#E7C873' }} />
-                                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                            {category.name}
-                                        </Typography>
-                                    </Box>
-                                    <IconButton
-                                        size="small"
-                                        onClick={(e) => handleMenuOpen(e, category)}
-                                    >
-                                        <MoreVertIcon />
-                                    </IconButton>
-                                </Box>
-
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
-                                    {category.description}
-                                </Typography>
-
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        Số sản phẩm: {category.productCount}
-                                    </Typography>
-                                    <Chip
-                                        label={getStatusLabel(category.status)}
-                                        color={getStatusColor(category.status) as any}
-                                        size="small"
-                                    />
-                                </Box>
-
-                                <Typography variant="caption" color="text.secondary">
-                                    Tạo: {new Date(category.createdAt).toLocaleDateString('vi-VN')}
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                {loading ? (
+                    <Grid item xs={12} sx={{ textAlign: 'center', py: 4 }}>
+                        <CircularProgress />
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                            Đang tải dữ liệu...
+                        </Typography>
                     </Grid>
-                ))}
+                ) : categories.length === 0 ? (
+                    <Grid item xs={12} sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Không có phân loại nào
+                        </Typography>
+                    </Grid>
+                ) : (
+                    categories.map((category) => (
+                        <Grid item xs={12} md={6} lg={4} key={category._id}>
+                            <Card
+                                sx={{
+                                    height: '100%',
+                                    position: 'relative',
+                                    '&:hover': {
+                                        boxShadow: 6,
+                                        transform: 'translateY(-2px)',
+                                        transition: 'all 0.3s ease'
+                                    }
+                                }}
+                            >
+                                <CardContent>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <CategoryIcon sx={{ color: '#E7C873' }} />
+                                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                                {category.name}
+                                            </Typography>
+                                        </Box>
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => handleMenuOpen(e, category)}
+                                        >
+                                            <MoreVertIcon />
+                                        </IconButton>
+                                    </Box>
+
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
+                                        {category.description}
+                                    </Typography>
+
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            Số sản phẩm: {category.productCount}
+                                        </Typography>
+                                        <Chip
+                                            label={getStatusLabel(category.status)}
+                                            color={getStatusColor(category.status) as 'success' | 'warning' | 'error' | 'default' | 'primary' | 'secondary' | 'info'}
+                                            size="small"
+                                        />
+                                    </Box>
+
+                                    <Typography variant="caption" color="text.secondary">
+                                        Tạo: {new Date(category.createdAt).toLocaleDateString('vi-VN')}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    ))
+                )}
             </Grid>
 
             {/* Detailed Table */}
@@ -317,48 +389,67 @@ const GinsengCategories: React.FC = () => {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {categories.map((category) => (
-                                    <TableRow key={category.id} hover>
-                                        <TableCell>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <CategoryIcon sx={{ color: '#E7C873' }} />
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                    {category.name}
-                                                </Typography>
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2">
-                                                {category.description}
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                                            <CircularProgress />
+                                            <Typography variant="body2" sx={{ mt: 1 }}>
+                                                Đang tải dữ liệu...
                                             </Typography>
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                {category.productCount}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <Chip
-                                                label={getStatusLabel(category.status)}
-                                                color={getStatusColor(category.status) as any}
-                                                size="small"
-                                            />
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <Typography variant="body2">
-                                                {new Date(category.createdAt).toLocaleDateString('vi-VN')}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <IconButton
-                                                onClick={(e) => handleMenuOpen(e, category)}
-                                                size="small"
-                                            >
-                                                <MoreVertIcon />
-                                            </IconButton>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                ) : categories.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Không có phân loại nào
+                                            </Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    categories.map((category) => (
+                                        <TableRow key={category._id} hover>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <CategoryIcon sx={{ color: '#E7C873' }} />
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                        {category.name}
+                                                    </Typography>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2">
+                                                    {category.description}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                    {category.productCount}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Chip
+                                                    label={getStatusLabel(category.status)}
+                                                    color={getStatusColor(category.status) as 'success' | 'warning' | 'error' | 'default' | 'primary' | 'secondary' | 'info'}
+                                                    size="small"
+                                                />
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Typography variant="body2">
+                                                    {new Date(category.createdAt).toLocaleDateString('vi-VN')}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <IconButton
+                                                    onClick={(e) => handleMenuOpen(e, category)}
+                                                    size="small"
+                                                >
+                                                    <MoreVertIcon />
+                                                </IconButton>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
                             </TableBody>
                         </Table>
                     </TableContainer>
@@ -377,6 +468,10 @@ const GinsengCategories: React.FC = () => {
                 <MenuItem onClick={handleEdit}>
                     <EditIcon sx={{ mr: 1 }} />
                     Chỉnh sửa
+                </MenuItem>
+                <MenuItem onClick={handleToggleStatus}>
+                    <CategoryIcon sx={{ mr: 1 }} />
+                    {selectedCategory?.status === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt'}
                 </MenuItem>
                 <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
                     <DeleteIcon sx={{ mr: 1 }} />
@@ -407,6 +502,33 @@ const GinsengCategories: React.FC = () => {
                 </DialogActions>
             </Dialog>
 
+            {/* Status Toggle Confirmation Dialog */}
+            <Dialog
+                open={statusDialogOpen}
+                onClose={handleStatusCancel}
+                PaperProps={{
+                    sx: { overflow: 'visible' }
+                }}
+            >
+                <DialogTitle>Xác nhận thay đổi trạng thái</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Bạn có chắc chắn muốn {selectedCategory?.status === 'active' ? 'vô hiệu hóa' : 'kích hoạt'} phân loại "{selectedCategory?.name}"?
+                        {selectedCategory?.status === 'active' && ' Phân loại này sẽ không hiển thị trong danh sách sản phẩm.'}
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleStatusCancel}>Hủy</Button>
+                    <Button
+                        onClick={handleStatusConfirm}
+                        color={selectedCategory?.status === 'active' ? 'warning' : 'success'}
+                        variant="contained"
+                    >
+                        {selectedCategory?.status === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             {/* Form Dialog */}
             <Dialog
                 open={formDialogOpen}
@@ -432,6 +554,18 @@ const GinsengCategories: React.FC = () => {
                                 error={!!errors.name}
                                 helperText={errors.name}
                                 placeholder="VD: Sâm Ngọc Linh"
+                            />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                label="Slug"
+                                value={formData.slug}
+                                onChange={handleFormChange('slug')}
+                                error={!!errors.slug}
+                                helperText={errors.slug || "URL-friendly identifier (VD: sam-ngoc-linh)"}
+                                placeholder="VD: sam-ngoc-linh"
                             />
                         </Grid>
 
@@ -470,6 +604,14 @@ const GinsengCategories: React.FC = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Snackbar for notifications */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={handleSnackbarClose}
+                message={snackbarMessage}
+            />
         </Box>
     );
 };

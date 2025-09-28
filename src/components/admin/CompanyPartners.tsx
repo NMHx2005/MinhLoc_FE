@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Typography,
@@ -23,6 +23,10 @@ import {
     Avatar,
     ImageList,
     ImageListItem,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -36,6 +40,10 @@ import {
     Phone as PhoneIcon,
     Email as EmailIcon,
 } from '@mui/icons-material';
+import { companyService } from '../../services/admin/companyService';
+import type { CompanyInfo } from '../../services/admin/companyService';
+import { Alert, Snackbar, CircularProgress } from '@mui/material';
+import ImageUpload from './ImageUpload';
 
 interface Partner {
     id: string;
@@ -56,76 +64,13 @@ interface Partner {
 }
 
 const CompanyPartners: React.FC = () => {
-    const [partners, setPartners] = useState<Partner[]>([
-        {
-            id: '1',
-            name: 'Samsung C&T',
-            description: 'Đối tác chiến lược trong lĩnh vực xây dựng và phát triển dự án',
-            type: 'strategic',
-            logo: '/partners/samsung-ct.png',
-            website: 'https://samsungct.com',
-            contact: {
-                phone: '(+82) 2 2145 5114',
-                email: 'contact@samsungct.com',
-                address: 'Seoul, South Korea',
-            },
-            partnershipStart: '2015-01-01',
-            isActive: true,
-            rating: 5,
-            projects: ['Chung cư Green Valley', 'Tòa nhà văn phòng ABC'],
-        },
-        {
-            id: '2',
-            name: 'Vietcombank',
-            description: 'Đối tác tài chính cung cấp các gói vay ưu đãi cho dự án',
-            type: 'financial',
-            logo: '/partners/vietcombank.png',
-            website: 'https://vietcombank.com.vn',
-            contact: {
-                phone: '(+84) 24 3942 0321',
-                email: 'info@vietcombank.com.vn',
-                address: 'Hà Nội, Việt Nam',
-            },
-            partnershipStart: '2010-03-15',
-            isActive: true,
-            rating: 4,
-            projects: ['Dự án Khu đô thị XYZ', 'Chung cư Sunshine'],
-        },
-        {
-            id: '3',
-            name: 'Autodesk Vietnam',
-            description: 'Nhà cung cấp phần mềm thiết kế và quản lý dự án',
-            type: 'technology',
-            logo: '/partners/autodesk.png',
-            website: 'https://autodesk.com.vn',
-            contact: {
-                phone: '(+84) 28 3822 8899',
-                email: 'vietnam@autodesk.com',
-                address: 'TP.HCM, Việt Nam',
-            },
-            partnershipStart: '2018-06-01',
-            isActive: true,
-            rating: 4,
-            projects: ['Tất cả dự án thiết kế'],
-        },
-        {
-            id: '4',
-            name: 'Cement Corporation',
-            description: 'Nhà cung cấp vật liệu xây dựng chính',
-            type: 'supplier',
-            logo: '/partners/cement-corp.png',
-            website: 'https://cementcorp.vn',
-            contact: {
-                phone: '(+84) 28 1234 5678',
-                email: 'sales@cementcorp.vn',
-                address: 'TP.HCM, Việt Nam',
-            },
-            partnershipStart: '2012-01-01',
-            isActive: true,
-            rating: 3,
-            projects: ['Tất cả dự án xây dựng'],
-        },
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+    const [partners, setPartners] = useState<Partner[]>([]);
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
@@ -145,6 +90,47 @@ const CompanyPartners: React.FC = () => {
         rating: 5,
         projects: [],
     });
+
+    // Load company partners data from API
+    const loadCompanyPartners = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const info = await companyService.getCompanyInfoBySection('partners');
+            if (info) {
+                setCompanyInfo(info);
+                // Convert partners to Partner format
+                const partnersData = info.data?.partners || [];
+                const systemPartners: Partner[] = partnersData.map((partner: any, index: number) => ({
+                    id: partner._id || `partner-${index}`,
+                    name: partner.name || '',
+                    description: partner.type || '',
+                    type: 'strategic' as const, // Default type
+                    logo: partner.logo || '',
+                    website: '',
+                    contact: {
+                        phone: '',
+                        email: '',
+                        address: '',
+                    },
+                    partnershipStart: new Date().toISOString().split('T')[0],
+                    isActive: true,
+                    rating: 5,
+                    projects: [],
+                }));
+                setPartners(systemPartners);
+            }
+        } catch (err) {
+            console.error('Error loading company partners data:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu đối tác');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadCompanyPartners();
+    }, [loadCompanyPartners]);
 
     const getTypeIcon = (type: string) => {
         switch (type) {
@@ -235,25 +221,91 @@ const CompanyPartners: React.FC = () => {
         setDialogOpen(true);
     };
 
-    const handleSavePartner = () => {
-        if (editingPartner) {
-            setPartners(prev => prev.map(partner =>
-                partner.id === editingPartner.id
-                    ? { ...formData, id: editingPartner.id }
-                    : partner
-            ));
-        } else {
-            const newPartner: Partner = {
-                ...formData,
-                id: Date.now().toString(),
+    const handleSavePartner = async () => {
+        setSaving(true);
+        try {
+            let updatedPartners: Partner[];
+
+            if (editingPartner) {
+                updatedPartners = partners.map(partner =>
+                    partner.id === editingPartner.id
+                        ? { ...formData, id: editingPartner.id }
+                        : partner
+                );
+            } else {
+                const newPartner: Partner = {
+                    ...formData,
+                    id: Date.now().toString(),
+                };
+                updatedPartners = [...partners, newPartner];
+            }
+
+            setPartners(updatedPartners);
+
+            // Convert partners back to API format and save
+            const partnersData = updatedPartners.map(partner => ({
+                name: partner.name,
+                type: partner.description,
+                logo: partner.logo,
+            }));
+
+            const dataToSave = {
+                section: 'partners',
+                title: companyInfo?.title || 'Đối tác chiến lược',
+                content: companyInfo?.content || '',
+                data: {
+                    partners: partnersData,
+                },
+                sortOrder: 5
             };
-            setPartners(prev => [...prev, newPartner]);
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Lưu thông tin đối tác thành công!');
+            setSnackbarOpen(true);
+            setDialogOpen(false);
+            await loadCompanyPartners();
+        } catch (error) {
+            console.error('Error saving partner:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu thông tin đối tác');
+            setSnackbarOpen(true);
+        } finally {
+            setSaving(false);
         }
-        setDialogOpen(false);
     };
 
-    const handleDeletePartner = (partnerId: string) => {
-        setPartners(prev => prev.filter(partner => partner.id !== partnerId));
+    const handleDeletePartner = async (partnerId: string) => {
+        try {
+            const updatedPartners = partners.filter(partner => partner.id !== partnerId);
+            setPartners(updatedPartners);
+
+            // Convert partners back to API format and save
+            const partnersData = updatedPartners.map(partner => ({
+                name: partner.name,
+                type: partner.description,
+                logo: partner.logo,
+            }));
+
+            const dataToSave = {
+                section: 'partners',
+                title: companyInfo?.title || 'Đối tác chiến lược',
+                content: companyInfo?.content || '',
+                data: {
+                    partners: partnersData,
+                },
+                sortOrder: 5
+            };
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Xóa đối tác thành công!');
+            setSnackbarOpen(true);
+        } catch (error) {
+            console.error('Error deleting partner:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa đối tác');
+            setSnackbarOpen(true);
+            await loadCompanyPartners();
+        }
     };
 
     const renderStars = (rating: number) => {
@@ -268,8 +320,23 @@ const CompanyPartners: React.FC = () => {
         ));
     };
 
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải thông tin đối tác...</Typography>
+            </Box>
+        );
+    }
+
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Đối tác & Nhà cung cấp
@@ -403,20 +470,20 @@ const CompanyPartners: React.FC = () => {
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                select
-                                label="Loại đối tác"
-                                value={formData.type}
-                                onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
-                                SelectProps={{ native: true }}
-                            >
-                                <option value="strategic">Chiến lược</option>
-                                <option value="supplier">Nhà cung cấp</option>
-                                <option value="distributor">Phân phối</option>
-                                <option value="technology">Công nghệ</option>
-                                <option value="financial">Tài chính</option>
-                            </TextField>
+                            <FormControl fullWidth>
+                                <InputLabel>Loại đối tác</InputLabel>
+                                <Select
+                                    value={formData.type}
+                                    label="Loại đối tác"
+                                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
+                                >
+                                    <MenuItem value="strategic">Chiến lược</MenuItem>
+                                    <MenuItem value="supplier">Nhà cung cấp</MenuItem>
+                                    <MenuItem value="distributor">Phân phối</MenuItem>
+                                    <MenuItem value="technology">Công nghệ</MenuItem>
+                                    <MenuItem value="financial">Tài chính</MenuItem>
+                                </Select>
+                            </FormControl>
                         </Grid>
                         <Grid item xs={12}>
                             <TextField
@@ -428,12 +495,14 @@ const CompanyPartners: React.FC = () => {
                                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Logo URL"
+                        <Grid item xs={12}>
+                            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                                Logo đối tác
+                            </Typography>
+                            <ImageUpload
                                 value={formData.logo}
-                                onChange={(e) => setFormData(prev => ({ ...prev, logo: e.target.value }))}
+                                onChange={(url) => setFormData(prev => ({ ...prev, logo: url }))}
+                                showPreview={false}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -442,9 +511,10 @@ const CompanyPartners: React.FC = () => {
                                 label="Website"
                                 value={formData.website}
                                 onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
+                                placeholder="https://example.com"
                             />
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
                                 label="Điện thoại"
@@ -453,9 +523,10 @@ const CompanyPartners: React.FC = () => {
                                     ...prev,
                                     contact: { ...prev.contact, phone: e.target.value }
                                 }))}
+                                placeholder="+84 123 456 789"
                             />
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
                                 label="Email"
@@ -465,9 +536,10 @@ const CompanyPartners: React.FC = () => {
                                     ...prev,
                                     contact: { ...prev.contact, email: e.target.value }
                                 }))}
+                                placeholder="contact@partner.com"
                             />
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
                                 label="Địa chỉ"
@@ -476,6 +548,7 @@ const CompanyPartners: React.FC = () => {
                                     ...prev,
                                     contact: { ...prev.contact, address: e.target.value }
                                 }))}
+                                placeholder="Địa chỉ trụ sở chính"
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -495,20 +568,37 @@ const CompanyPartners: React.FC = () => {
                                 type="number"
                                 inputProps={{ min: 1, max: 5 }}
                                 value={formData.rating}
-                                onChange={(e) => setFormData(prev => ({ ...prev, rating: parseInt(e.target.value) }))}
+                                onChange={(e) => setFormData(prev => ({ ...prev, rating: parseInt(e.target.value) || 5 }))}
+                                placeholder="5"
                             />
                         </Grid>
                     </Grid>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDialogOpen(false)}>
+                    <Button onClick={() => setDialogOpen(false)} disabled={saving}>
                         Hủy
                     </Button>
-                    <Button onClick={handleSavePartner} variant="contained">
-                        {editingPartner ? 'Cập nhật' : 'Thêm'}
+                    <Button
+                        onClick={handleSavePartner}
+                        variant="contained"
+                        disabled={saving}
+                        startIcon={saving ? <CircularProgress size={20} /> : undefined}
+                    >
+                        {saving ? 'Đang lưu...' : (editingPartner ? 'Cập nhật' : 'Thêm')}
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={() => setSnackbarOpen(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarMessage.includes('✅') ? 'success' : 'error'} sx={{ width: '100%' }}>
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

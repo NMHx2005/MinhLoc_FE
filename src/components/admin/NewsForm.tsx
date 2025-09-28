@@ -13,42 +13,30 @@ import {
     InputLabel,
     Select,
     MenuItem,
-    Box,
-    Typography,
     Switch,
     FormControlLabel,
     Chip,
-    OutlinedInput,
-    Avatar,
+    Box,
+    Typography,
     IconButton,
+    Alert,
+    CircularProgress,
+    Autocomplete,
+    Divider,
 } from '@mui/material';
 import {
-    CloudUpload as UploadIcon,
-    Photo as PhotoIcon,
+    Close as CloseIcon,
     Add as AddIcon,
+    Delete as DeleteIcon,
+    Image as ImageIcon,
 } from '@mui/icons-material';
-
-interface NewsArticle {
-    id: number;
-    title: string;
-    slug: string;
-    excerpt: string;
-    content: string;
-    category: string;
-    tags: string[];
-    author: string;
-    status: 'draft' | 'published' | 'archived';
-    featured: boolean;
-    featuredImage: string;
-    publishedAt: string;
-    createdAt: string;
-    views: number;
-}
+import { newsService } from '../../services/admin/newsService';
+import type { NewsArticle, CreateNewsData, UpdateNewsData, NewsCategory, NewsTag } from '../../services/admin/newsService';
 
 interface NewsFormProps {
     open: boolean;
     onClose: () => void;
-    onSubmit: (data: Partial<NewsArticle>) => void;
+    onSubmit: (data: CreateNewsData | UpdateNewsData) => void;
     mode: 'add' | 'edit' | 'view';
     initialData?: NewsArticle | null;
 }
@@ -60,54 +48,65 @@ const NewsForm: React.FC<NewsFormProps> = ({
     mode,
     initialData
 }) => {
-    const [formData, setFormData] = useState({
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [categories, setCategories] = useState<NewsCategory[]>([]);
+    const [tags, setTags] = useState<NewsTag[]>([]);
+    const [newTag, setNewTag] = useState('');
+    const [newKeyword, setNewKeyword] = useState('');
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+    const [formData, setFormData] = useState<CreateNewsData>({
         title: '',
         slug: '',
         excerpt: '',
         content: '',
         category: '',
-        tags: [] as string[],
-        author: 'Admin',
-        status: 'draft' as const,
+        tags: [],
+        status: 'draft',
         featured: false,
-        featuredImage: '/placeholder-news.jpg',
-        publishedAt: '',
+        featuredImage: '',
+        isBreaking: false,
+        allowComments: true,
+        seo: {
+            metaTitle: '',
+            metaDescription: '',
+            keywords: []
+        }
     });
 
-    const [newTag, setNewTag] = useState('');
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
-    const categories = [
-        'Thị trường BDS',
-        'Sản phẩm Sâm',
-        'Chính sách',
-        'Dự án mới',
-        'Kiến thức',
-        'Tin tức',
-    ];
-
-    const availableTags = [
-        'BDS', 'Đầu tư', 'Sâm Ngọc Linh', 'Kontum', 'Y học',
-        'Thuế', 'Chính sách', 'Sâm Hàn Quốc', 'Sức khỏe',
-        'Căn hộ', 'Quận 7', 'Cao cấp', 'Dự án'
-    ];
-
+    // Load categories and tags
     useEffect(() => {
-        if (initialData && (mode === 'edit' || mode === 'view')) {
+        if (open) {
+            loadCategoriesAndTags();
+        }
+    }, [open]);
+
+    // Populate form when editing
+    useEffect(() => {
+        if (initialData && mode !== 'add') {
+            console.warn('Initial data for edit:', initialData);
+            console.warn('Category ID from initial data:', initialData.categoryId?._id);
             setFormData({
-                title: initialData.title,
-                slug: initialData.slug,
-                excerpt: initialData.excerpt,
-                content: initialData.content,
-                category: initialData.category,
-                tags: initialData.tags,
-                author: initialData.author,
-                status: initialData.status,
-                featured: initialData.featured,
-                featuredImage: initialData.featuredImage,
-                publishedAt: initialData.publishedAt,
+                title: initialData.title || '',
+                slug: initialData.slug || '',
+                excerpt: initialData.excerpt || '',
+                content: initialData.content || '',
+                category: initialData.categoryId?._id || '',
+                tags: initialData.tags || [],
+                status: initialData.status || 'draft',
+                featured: initialData.isFeatured || false,
+                featuredImage: initialData.featuredImage || '',
+                isBreaking: initialData.isBreaking || false,
+                allowComments: initialData.allowComments ?? true,
+                seo: {
+                    metaTitle: initialData.seo?.metaTitle || '',
+                    metaDescription: initialData.seo?.metaDescription || '',
+                    keywords: initialData.seo?.keywords || []
+                }
             });
-        } else {
+        } else if (mode === 'add') {
+            // Reset form for new article
             setFormData({
                 title: '',
                 slug: '',
@@ -115,42 +114,83 @@ const NewsForm: React.FC<NewsFormProps> = ({
                 content: '',
                 category: '',
                 tags: [],
-                author: 'Admin',
                 status: 'draft',
                 featured: false,
-                featuredImage: '/placeholder-news.jpg',
-                publishedAt: '',
+                featuredImage: '',
+                isBreaking: false,
+                allowComments: true,
+                seo: {
+                    metaTitle: '',
+                    metaDescription: '',
+                    keywords: []
+                }
             });
         }
-        setErrors({});
-    }, [initialData, mode, open]);
+    }, [initialData, mode]);
+
+    const loadCategoriesAndTags = async () => {
+        setLoading(true);
+        try {
+            const [categoriesResponse, tagsResponse] = await Promise.all([
+                newsService.getNewsCategories(),
+                newsService.getNewsTags()
+            ]);
+
+            // Handle different response structures for categories
+            console.warn('Categories response:', categoriesResponse);
+            if (categoriesResponse.success && categoriesResponse.data) {
+                setCategories(categoriesResponse.data);
+                console.warn('Categories loaded from success.data:', categoriesResponse.data);
+            } else if (Array.isArray(categoriesResponse)) {
+                setCategories(categoriesResponse);
+                console.warn('Categories loaded from array:', categoriesResponse);
+            } else if (categoriesResponse.data) {
+                setCategories(categoriesResponse.data);
+                console.warn('Categories loaded from data:', categoriesResponse.data);
+            } else {
+                setCategories([]);
+                console.warn('No categories found');
+            }
+
+            // Handle different response structures for tags
+            if (tagsResponse.success && tagsResponse.data) {
+                setTags(tagsResponse.data);
+            } else if (Array.isArray(tagsResponse)) {
+                setTags(tagsResponse);
+            } else if (tagsResponse.data) {
+                setTags(tagsResponse.data);
+            } else {
+                setTags([]);
+            }
+        } catch (error) {
+            console.error('Error loading categories and tags:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const generateSlug = (title: string) => {
         return title
             .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
             .replace(/[^a-z0-9\s-]/g, '')
             .replace(/\s+/g, '-')
             .replace(/-+/g, '-')
-            .trim('-');
+            .trim();
     };
 
-    const handleChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const value = event.target.value;
-        setFormData(prev => {
-            const newData = {
+    const handleInputChange = (field: string, value: any) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+
+        // Auto-generate slug from title
+        if (field === 'title' && !formData.slug) {
+            setFormData(prev => ({
                 ...prev,
-                [field]: value
-            };
-
-            // Auto-generate slug from title
-            if (field === 'title') {
-                newData.slug = generateSlug(value);
-            }
-
-            return newData;
-        });
+                slug: generateSlug(value)
+            }));
+        }
 
         // Clear error when user starts typing
         if (errors[field]) {
@@ -161,25 +201,13 @@ const NewsForm: React.FC<NewsFormProps> = ({
         }
     };
 
-    const handleSelectChange = (field: string) => (event: any) => {
+    const handleSEOChange = (field: string, value: any) => {
         setFormData(prev => ({
             ...prev,
-            [field]: event.target.value
-        }));
-
-        // Clear error when user selects
-        if (errors[field]) {
-            setErrors(prev => ({
-                ...prev,
-                [field]: ''
-            }));
-        }
-    };
-
-    const handleSwitchChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: event.target.checked
+            seo: {
+                ...prev.seo,
+                [field]: value
+            }
         }));
     };
 
@@ -200,69 +228,114 @@ const NewsForm: React.FC<NewsFormProps> = ({
         }));
     };
 
-    const handleAvailableTagClick = (tag: string) => {
-        if (!formData.tags.includes(tag)) {
+    const handleAddKeyword = () => {
+        const keyword = newKeyword.trim();
+        if (keyword && !formData.seo.keywords.includes(keyword)) {
             setFormData(prev => ({
                 ...prev,
-                tags: [...prev.tags, tag]
+                seo: {
+                    ...prev.seo,
+                    keywords: [...prev.seo.keywords, keyword]
+                }
             }));
+            setNewKeyword('');
         }
     };
 
+    const handleRemoveKeyword = (keywordToRemove: string) => {
+        setFormData(prev => ({
+            ...prev,
+            seo: {
+                ...prev.seo,
+                keywords: prev.seo.keywords.filter(keyword => keyword !== keywordToRemove)
+            }
+        }));
+    };
+
     const validateForm = () => {
-        const newErrors: Record<string, string> = {};
+        const newErrors: { [key: string]: string } = {};
 
         if (!formData.title.trim()) {
             newErrors.title = 'Tiêu đề là bắt buộc';
+        } else if (formData.title.length < 10) {
+            newErrors.title = 'Tiêu đề phải có ít nhất 10 ký tự';
+        }
+
+        if (!formData.slug.trim()) {
+            newErrors.slug = 'Slug là bắt buộc';
         }
 
         if (!formData.excerpt.trim()) {
             newErrors.excerpt = 'Tóm tắt là bắt buộc';
+        } else if (formData.excerpt.length < 50) {
+            newErrors.excerpt = 'Tóm tắt phải có ít nhất 50 ký tự';
         }
 
         if (!formData.content.trim()) {
             newErrors.content = 'Nội dung là bắt buộc';
+        } else if (formData.content.length < 100) {
+            newErrors.content = 'Nội dung phải có ít nhất 100 ký tự';
         }
 
         if (!formData.category) {
             newErrors.category = 'Danh mục là bắt buộc';
         }
 
-        if (formData.status === 'published' && !formData.publishedAt) {
-            const today = new Date().toISOString().split('T')[0];
-            setFormData(prev => ({ ...prev, publishedAt: today }));
+        if (!formData.featuredImage.trim()) {
+            newErrors.featuredImage = 'Hình ảnh đại diện là bắt buộc';
         }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = () => {
-        if (mode === 'view') {
-            onClose();
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!validateForm()) {
             return;
         }
 
-        if (validateForm()) {
-            onSubmit(formData);
-        }
-    };
-
-    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setFormData(prev => ({
-                    ...prev,
-                    featuredImage: e.target?.result as string
-                }));
+        setSaving(true);
+        try {
+            // Create API data with correct field names
+            const apiData = {
+                title: formData.title,
+                slug: formData.slug,
+                excerpt: formData.excerpt,
+                content: formData.content,
+                categoryId: formData.category, // Map category to categoryId
+                isFeatured: formData.featured, // Map featured to isFeatured
+                status: formData.status,
+                tags: formData.tags,
+                seo: formData.seo,
+                publishedAt: formData.publishedAt,
+                author: formData.author,
+                imageUrl: formData.imageUrl,
+                imageAlt: formData.imageAlt,
+                viewCount: formData.viewCount,
+                likeCount: formData.likeCount,
+                shareCount: formData.shareCount,
+                isBreaking: formData.isBreaking,
+                isTrending: formData.isTrending,
+                featuredImageUrl: formData.featuredImageUrl,
+                featuredImageAlt: formData.featuredImageAlt,
+                gallery: formData.gallery,
+                relatedArticles: formData.relatedArticles,
+                customFields: formData.customFields,
+                notes: formData.notes
             };
-            reader.readAsDataURL(file);
+
+            await onSubmit(apiData);
+        } catch (error) {
+            console.error('Error submitting form:', error);
+        } finally {
+            setSaving(false);
         }
     };
 
-    const isReadOnly = mode === 'view';
+    const isViewMode = mode === 'view';
+    const isEditMode = mode === 'edit';
 
     return (
         <Dialog
@@ -271,93 +344,90 @@ const NewsForm: React.FC<NewsFormProps> = ({
             maxWidth="lg"
             fullWidth
             PaperProps={{
-                sx: { overflow: 'visible' }
+                sx: { minHeight: '80vh' }
             }}
         >
             <DialogTitle>
-                {mode === 'add' ? '📝 Thêm Bài viết Mới' :
-                    mode === 'edit' ? '✏️ Chỉnh sửa Bài viết' :
-                        '👁️ Xem Chi tiết Bài viết'}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6">
+                        {mode === 'add' ? 'Thêm bài viết mới' :
+                            mode === 'edit' ? 'Chỉnh sửa bài viết' :
+                                'Xem chi tiết bài viết'}
+                    </Typography>
+                    <IconButton onClick={onClose} size="small">
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
             </DialogTitle>
 
-            <DialogContent>
-                <Grid container spacing={3} sx={{ mt: 1 }}>
-                    {/* Featured Image */}
-                    <Grid item xs={12} md={4}>
-                        <Box sx={{ textAlign: 'center' }}>
-                            <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                                Ảnh đại diện
-                            </Typography>
-                            <Avatar
-                                src={formData.featuredImage}
-                                sx={{
-                                    width: '100%',
-                                    height: 160,
-                                    borderRadius: 2,
-                                    mb: 2,
-                                    bgcolor: '#f5f5f5'
-                                }}
-                                variant="rounded"
-                            >
-                                <PhotoIcon sx={{ fontSize: 40, color: '#999' }} />
-                            </Avatar>
-                            {!isReadOnly && (
-                                <>
-                                    <input
-                                        accept="image/*"
-                                        style={{ display: 'none' }}
-                                        id="featured-image-upload"
-                                        type="file"
-                                        onChange={handleImageUpload}
-                                    />
-                                    <label htmlFor="featured-image-upload">
-                                        <IconButton
-                                            color="primary"
-                                            component="span"
-                                            sx={{
-                                                border: '2px dashed #E7C873',
-                                                borderRadius: 2,
-                                                p: 2,
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(231, 200, 115, 0.1)'
-                                                }
-                                            }}
-                                        >
-                                            <UploadIcon />
-                                        </IconButton>
-                                    </label>
-                                    <Typography variant="caption" display="block" color="text.secondary">
-                                        Nhấp để tải ảnh lên
-                                    </Typography>
-                                </>
-                            )}
-                        </Box>
-                    </Grid>
-
-                    {/* Article Information */}
-                    <Grid item xs={12} md={8}>
-                        <Grid container spacing={2}>
+            <DialogContent dividers>
+                {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                        <CircularProgress />
+                    </Box>
+                ) : (
+                    <form onSubmit={handleSubmit}>
+                        <Grid container spacing={3}>
+                            {/* Basic Information */}
                             <Grid item xs={12}>
+                                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
+                                    Thông tin cơ bản
+                                </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} md={8}>
                                 <TextField
                                     fullWidth
                                     label="Tiêu đề bài viết"
                                     value={formData.title}
-                                    onChange={handleChange('title')}
+                                    onChange={(e) => handleInputChange('title', e.target.value)}
                                     error={!!errors.title}
                                     helperText={errors.title}
-                                    disabled={isReadOnly}
-                                    placeholder="VD: Xu hướng bất động sản 2024"
+                                    disabled={isViewMode}
+                                    required
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} md={4}>
+                                <TextField
+                                    fullWidth
+                                    label="Slug"
+                                    value={formData.slug}
+                                    onChange={(e) => handleInputChange('slug', e.target.value)}
+                                    error={!!errors.slug}
+                                    helperText={errors.slug}
+                                    disabled={isViewMode}
+                                    required
                                 />
                             </Grid>
 
                             <Grid item xs={12}>
                                 <TextField
                                     fullWidth
-                                    label="Slug URL"
-                                    value={formData.slug}
-                                    onChange={handleChange('slug')}
-                                    disabled={isReadOnly}
-                                    helperText="URL thân thiện cho bài viết (tự động tạo từ tiêu đề)"
+                                    label="Tóm tắt"
+                                    multiline
+                                    rows={3}
+                                    value={formData.excerpt}
+                                    onChange={(e) => handleInputChange('excerpt', e.target.value)}
+                                    error={!!errors.excerpt}
+                                    helperText={errors.excerpt}
+                                    disabled={isViewMode}
+                                    required
+                                />
+                            </Grid>
+
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    label="Nội dung bài viết"
+                                    multiline
+                                    rows={8}
+                                    value={formData.content}
+                                    onChange={(e) => handleInputChange('content', e.target.value)}
+                                    error={!!errors.content}
+                                    helperText={errors.content}
+                                    disabled={isViewMode}
+                                    required
                                 />
                             </Grid>
 
@@ -367,17 +437,17 @@ const NewsForm: React.FC<NewsFormProps> = ({
                                     <Select
                                         value={formData.category}
                                         label="Danh mục"
-                                        onChange={handleSelectChange('category')}
-                                        disabled={isReadOnly}
+                                        onChange={(e) => handleInputChange('category', e.target.value)}
+                                        disabled={isViewMode}
                                     >
-                                        {categories.map(category => (
-                                            <MenuItem key={category} value={category}>
-                                                {category}
+                                        {categories.map((category) => (
+                                            <MenuItem key={category._id} value={category._id}>
+                                                {category.name}
                                             </MenuItem>
                                         ))}
                                     </Select>
                                     {errors.category && (
-                                        <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
+                                        <Typography variant="caption" color="error" sx={{ mt: 1, ml: 2 }}>
                                             {errors.category}
                                         </Typography>
                                     )}
@@ -387,119 +457,68 @@ const NewsForm: React.FC<NewsFormProps> = ({
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
-                                    label="Tác giả"
-                                    value={formData.author}
-                                    onChange={handleChange('author')}
-                                    disabled={isReadOnly}
-                                />
-                            </Grid>
-
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="Tóm tắt"
-                                    multiline
-                                    rows={2}
-                                    value={formData.excerpt}
-                                    onChange={handleChange('excerpt')}
-                                    error={!!errors.excerpt}
-                                    helperText={errors.excerpt}
-                                    disabled={isReadOnly}
-                                    placeholder="Tóm tắt nội dung bài viết..."
-                                />
-                            </Grid>
-
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="Nội dung"
-                                    multiline
-                                    rows={6}
-                                    value={formData.content}
-                                    onChange={handleChange('content')}
-                                    error={!!errors.content}
-                                    helperText={errors.content}
-                                    disabled={isReadOnly}
-                                    placeholder="Nội dung chi tiết của bài viết..."
+                                    label="Hình ảnh đại diện (URL)"
+                                    value={formData.featuredImage}
+                                    onChange={(e) => handleInputChange('featuredImage', e.target.value)}
+                                    error={!!errors.featuredImage}
+                                    helperText={errors.featuredImage}
+                                    disabled={isViewMode}
+                                    required
                                 />
                             </Grid>
 
                             {/* Tags */}
                             <Grid item xs={12}>
-                                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
                                     Tags
                                 </Typography>
-
-                                {/* Current Tags */}
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                                    {formData.tags.map(tag => (
+                                    {formData.tags.map((tag) => (
                                         <Chip
                                             key={tag}
                                             label={tag}
-                                            onDelete={!isReadOnly ? () => handleRemoveTag(tag) : undefined}
+                                            onDelete={isViewMode ? undefined : () => handleRemoveTag(tag)}
                                             color="primary"
                                             variant="outlined"
                                         />
                                     ))}
                                 </Box>
-
-                                {!isReadOnly && (
-                                    <>
-                                        {/* Add New Tag */}
-                                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                                            <TextField
-                                                size="small"
-                                                placeholder="Thêm tag mới..."
-                                                value={newTag}
-                                                onChange={(e) => setNewTag(e.target.value)}
-                                                onKeyPress={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        handleAddTag();
-                                                    }
-                                                }}
-                                            />
-                                            <Button
-                                                variant="outlined"
-                                                size="small"
-                                                onClick={handleAddTag}
-                                                startIcon={<AddIcon />}
-                                            >
-                                                Thêm
-                                            </Button>
-                                        </Box>
-
-                                        {/* Available Tags */}
-                                        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                                            Tags có sẵn (nhấp để thêm):
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {availableTags.map(tag => (
-                                                <Chip
-                                                    key={tag}
-                                                    label={tag}
-                                                    size="small"
-                                                    onClick={() => handleAvailableTagClick(tag)}
-                                                    disabled={formData.tags.includes(tag)}
-                                                    sx={{
-                                                        cursor: formData.tags.includes(tag) ? 'default' : 'pointer',
-                                                        opacity: formData.tags.includes(tag) ? 0.5 : 1
-                                                    }}
-                                                />
-                                            ))}
-                                        </Box>
-                                    </>
+                                {!isViewMode && (
+                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                        <TextField
+                                            size="small"
+                                            placeholder="Nhập tag mới"
+                                            value={newTag}
+                                            onChange={(e) => setNewTag(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                                        />
+                                        <Button
+                                            variant="outlined"
+                                            onClick={handleAddTag}
+                                            disabled={!newTag.trim()}
+                                        >
+                                            Thêm
+                                        </Button>
+                                    </Box>
                                 )}
                             </Grid>
 
                             {/* Settings */}
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12}>
+                                <Divider sx={{ my: 2 }} />
+                                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
+                                    Cài đặt
+                                </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} md={4}>
                                 <FormControl fullWidth>
                                     <InputLabel>Trạng thái</InputLabel>
                                     <Select
                                         value={formData.status}
                                         label="Trạng thái"
-                                        onChange={handleSelectChange('status')}
-                                        disabled={isReadOnly}
+                                        onChange={(e) => handleInputChange('status', e.target.value)}
+                                        disabled={isViewMode}
                                     >
                                         <MenuItem value="draft">Bản nháp</MenuItem>
                                         <MenuItem value="published">Đã xuất bản</MenuItem>
@@ -508,45 +527,121 @@ const NewsForm: React.FC<NewsFormProps> = ({
                                 </FormControl>
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={8}>
+                                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={formData.featured}
+                                                onChange={(e) => handleInputChange('featured', e.target.checked)}
+                                                disabled={isViewMode}
+                                            />
+                                        }
+                                        label="Bài viết nổi bật"
+                                    />
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={formData.isBreaking}
+                                                onChange={(e) => handleInputChange('isBreaking', e.target.checked)}
+                                                disabled={isViewMode}
+                                            />
+                                        }
+                                        label="Tin nóng"
+                                    />
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={formData.allowComments}
+                                                onChange={(e) => handleInputChange('allowComments', e.target.checked)}
+                                                disabled={isViewMode}
+                                            />
+                                        }
+                                        label="Cho phép bình luận"
+                                    />
+                                </Box>
+                            </Grid>
+
+                            {/* SEO Settings */}
+                            <Grid item xs={12}>
+                                <Divider sx={{ my: 2 }} />
+                                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
+                                    SEO Settings
+                                </Typography>
+                            </Grid>
+
+                            <Grid item xs={12}>
                                 <TextField
                                     fullWidth
-                                    label="Ngày xuất bản"
-                                    type="date"
-                                    value={formData.publishedAt}
-                                    onChange={handleChange('publishedAt')}
-                                    disabled={isReadOnly}
-                                    InputLabelProps={{
-                                        shrink: true,
-                                    }}
+                                    label="Meta Title"
+                                    value={formData.seo.metaTitle}
+                                    onChange={(e) => handleSEOChange('metaTitle', e.target.value)}
+                                    disabled={isViewMode}
+                                    helperText="Tiêu đề hiển thị trên kết quả tìm kiếm"
                                 />
                             </Grid>
 
                             <Grid item xs={12}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={formData.featured}
-                                            onChange={handleSwitchChange('featured')}
-                                            disabled={isReadOnly}
-                                        />
-                                    }
-                                    label="Bài viết nổi bật"
+                                <TextField
+                                    fullWidth
+                                    label="Meta Description"
+                                    multiline
+                                    rows={2}
+                                    value={formData.seo.metaDescription}
+                                    onChange={(e) => handleSEOChange('metaDescription', e.target.value)}
+                                    disabled={isViewMode}
+                                    helperText="Mô tả hiển thị trên kết quả tìm kiếm"
                                 />
                             </Grid>
+
+                            <Grid item xs={12}>
+                                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                    Keywords
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                                    {formData.seo.keywords.map((keyword) => (
+                                        <Chip
+                                            key={keyword}
+                                            label={keyword}
+                                            onDelete={isViewMode ? undefined : () => handleRemoveKeyword(keyword)}
+                                            color="secondary"
+                                            variant="outlined"
+                                        />
+                                    ))}
+                                </Box>
+                                {!isViewMode && (
+                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                        <TextField
+                                            size="small"
+                                            placeholder="Nhập keyword mới"
+                                            value={newKeyword}
+                                            onChange={(e) => setNewKeyword(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddKeyword())}
+                                        />
+                                        <Button
+                                            variant="outlined"
+                                            onClick={handleAddKeyword}
+                                            disabled={!newKeyword.trim()}
+                                        >
+                                            Thêm
+                                        </Button>
+                                    </Box>
+                                )}
+                            </Grid>
                         </Grid>
-                    </Grid>
-                </Grid>
+                    </form>
+                )}
             </DialogContent>
 
-            <DialogActions sx={{ p: 3 }}>
+            <DialogActions>
                 <Button onClick={onClose}>
-                    {isReadOnly ? 'Đóng' : 'Hủy'}
+                    {isViewMode ? 'Đóng' : 'Hủy'}
                 </Button>
-                {!isReadOnly && (
+                {!isViewMode && (
                     <Button
                         onClick={handleSubmit}
                         variant="contained"
+                        disabled={saving}
                         sx={{
                             backgroundColor: '#E7C873',
                             color: '#000',
@@ -555,7 +650,7 @@ const NewsForm: React.FC<NewsFormProps> = ({
                             },
                         }}
                     >
-                        {mode === 'add' ? 'Thêm bài viết' : 'Cập nhật'}
+                        {saving ? 'Đang lưu...' : (mode === 'add' ? 'Thêm bài viết' : 'Cập nhật')}
                     </Button>
                 )}
             </DialogActions>

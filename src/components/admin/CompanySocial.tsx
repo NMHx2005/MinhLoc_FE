@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import {
     Box,
     Typography,
@@ -15,10 +16,6 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    List,
-    ListItem,
-    ListItemText,
-    ListItemIcon,
     Divider,
     Avatar,
     ImageList,
@@ -31,12 +28,15 @@ import {
     Favorite as FavoriteIcon,
     School as SchoolIcon,
     VolunteerActivism as VolunteerIcon,
-    Eco as EcoIcon,
     Groups as GroupsIcon,
     Event as EventIcon,
     LocationOn as LocationIcon,
     CalendarToday as CalendarIcon,
+    Nature as EcoIcon,
 } from '@mui/icons-material';
+import { companyService } from '../../services/admin/companyService';
+import type { CompanyInfo } from '../../services/admin/companyService';
+import { Alert, Snackbar, CircularProgress } from '@mui/material';
 
 interface SocialActivity {
     id: string;
@@ -55,68 +55,13 @@ interface SocialActivity {
 }
 
 const CompanySocial: React.FC = () => {
-    const [activities, setActivities] = useState<SocialActivity[]>([
-        {
-            id: '1',
-            title: 'Chương trình "Xây dựng tương lai"',
-            description: 'Hỗ trợ xây dựng trường học cho trẻ em vùng sâu vùng xa',
-            type: 'education',
-            date: '2024-03-15',
-            location: 'Tỉnh Đắk Lắk',
-            participants: 50,
-            budget: 500000000,
-            images: ['/activities/school-building-1.jpg', '/activities/school-building-2.jpg'],
-            impact: 'Xây dựng 2 trường học mới, hỗ trợ 500 học sinh',
-            isActive: true,
-            organizer: 'Phòng Nhân sự',
-            status: 'completed',
-        },
-        {
-            id: '2',
-            title: 'Chiến dịch "Xanh hóa thành phố"',
-            description: 'Trồng cây xanh và bảo vệ môi trường tại các khu vực công cộng',
-            type: 'environment',
-            date: '2024-04-22',
-            location: 'Công viên Lê Văn Tám, TP.HCM',
-            participants: 100,
-            budget: 200000000,
-            images: ['/activities/green-campaign-1.jpg'],
-            impact: 'Trồng 1000 cây xanh, tạo không gian xanh cho cộng đồng',
-            isActive: true,
-            organizer: 'Phòng Marketing',
-            status: 'ongoing',
-        },
-        {
-            id: '3',
-            title: 'Hỗ trợ người dân vùng lũ',
-            description: 'Quyên góp và hỗ trợ trực tiếp người dân bị ảnh hưởng bởi lũ lụt',
-            type: 'charity',
-            date: '2024-01-10',
-            location: 'Tỉnh Quảng Nam',
-            participants: 30,
-            budget: 1000000000,
-            images: ['/activities/flood-relief-1.jpg', '/activities/flood-relief-2.jpg'],
-            impact: 'Hỗ trợ 200 gia đình, cung cấp nhu yếu phẩm và tiền mặt',
-            isActive: true,
-            organizer: 'Ban Giám đốc',
-            status: 'completed',
-        },
-        {
-            id: '4',
-            title: 'Giải chạy "Vì sức khỏe cộng đồng"',
-            description: 'Tổ chức giải chạy marathon gây quỹ cho bệnh viện nhi',
-            type: 'sports',
-            date: '2024-05-20',
-            location: 'Quận 1, TP.HCM',
-            participants: 500,
-            budget: 300000000,
-            images: ['/activities/marathon-1.jpg'],
-            impact: 'Gây quỹ 2 tỷ đồng cho bệnh viện Nhi đồng 1',
-            isActive: true,
-            organizer: 'Phòng Kinh doanh',
-            status: 'planned',
-        },
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+    const [activities, setActivities] = useState<SocialActivity[]>([]);
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingActivity, setEditingActivity] = useState<SocialActivity | null>(null);
@@ -134,6 +79,45 @@ const CompanySocial: React.FC = () => {
         organizer: '',
         status: 'planned',
     });
+
+    // Load company social activities data from API
+    const loadCompanySocial = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const info = await companyService.getCompanyInfoBySection('social_activities');
+            if (info) {
+                setCompanyInfo(info);
+                // Convert activities to SocialActivity format
+                const activitiesData = info.data?.activities || [];
+                const socialActivities: SocialActivity[] = activitiesData.map((activity: any, index: number) => ({
+                    id: activity._id || `activity-${index}`,
+                    title: activity.title || '',
+                    description: activity.description || '',
+                    type: 'community' as const, // Default type
+                    date: new Date().toISOString().split('T')[0],
+                    location: '',
+                    participants: 0,
+                    budget: 0,
+                    images: activity.image ? [activity.image] : [],
+                    impact: '',
+                    isActive: true,
+                    organizer: '',
+                    status: 'completed' as const,
+                }));
+                setActivities(socialActivities);
+            }
+        } catch (err) {
+            console.error('Error loading company social activities data:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu hoạt động xã hội');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadCompanySocial();
+    }, [loadCompanySocial]);
 
     const getTypeIcon = (type: string) => {
         switch (type) {
@@ -260,25 +244,93 @@ const CompanySocial: React.FC = () => {
         setDialogOpen(true);
     };
 
-    const handleSaveActivity = () => {
-        if (editingActivity) {
-            setActivities(prev => prev.map(activity =>
-                activity.id === editingActivity.id
-                    ? { ...formData, id: editingActivity.id }
-                    : activity
-            ));
-        } else {
-            const newActivity: SocialActivity = {
-                ...formData,
-                id: Date.now().toString(),
+    const handleSaveActivity = async () => {
+        setSaving(true);
+        try {
+            let updatedActivities: SocialActivity[];
+
+            if (editingActivity) {
+                updatedActivities = activities.map(activity =>
+                    activity.id === editingActivity.id
+                        ? { ...formData, id: editingActivity.id }
+                        : activity
+                );
+            } else {
+                const newActivity: SocialActivity = {
+                    ...formData,
+                    id: Date.now().toString(),
+                };
+                updatedActivities = [...activities, newActivity];
+            }
+
+            setActivities(updatedActivities);
+
+            // Convert activities back to API format and save
+            const activitiesData = updatedActivities.map(activity => ({
+                title: activity.title,
+                description: activity.description,
+                image: activity.images[0] || '',
+            }));
+
+            const dataToSave = {
+                section: 'social_activities',
+                title: companyInfo?.title || 'Hoạt động xã hội và trách nhiệm cộng đồng',
+                content: companyInfo?.content || '',
+                data: {
+                    activities: activitiesData,
+                    achievements: companyInfo?.data?.achievements || [],
+                },
+                sortOrder: 6
             };
-            setActivities(prev => [...prev, newActivity]);
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Lưu hoạt động xã hội thành công!');
+            setSnackbarOpen(true);
+            setDialogOpen(false);
+            await loadCompanySocial();
+        } catch (error) {
+            console.error('Error saving social activity:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu hoạt động xã hội');
+            setSnackbarOpen(true);
+        } finally {
+            setSaving(false);
         }
-        setDialogOpen(false);
     };
 
-    const handleDeleteActivity = (activityId: string) => {
-        setActivities(prev => prev.filter(activity => activity.id !== activityId));
+    const handleDeleteActivity = async (activityId: string) => {
+        try {
+            const updatedActivities = activities.filter(activity => activity.id !== activityId);
+            setActivities(updatedActivities);
+
+            // Convert activities back to API format and save
+            const activitiesData = updatedActivities.map(activity => ({
+                title: activity.title,
+                description: activity.description,
+                image: activity.images[0] || '',
+            }));
+
+            const dataToSave = {
+                section: 'social_activities',
+                title: companyInfo?.title || 'Hoạt động xã hội và trách nhiệm cộng đồng',
+                content: companyInfo?.content || '',
+                data: {
+                    activities: activitiesData,
+                    achievements: companyInfo?.data?.achievements || [],
+                },
+                sortOrder: 6
+            };
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Xóa hoạt động xã hội thành công!');
+            setSnackbarOpen(true);
+        } catch (error) {
+            console.error('Error deleting social activity:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa hoạt động xã hội');
+            setSnackbarOpen(true);
+            await loadCompanySocial();
+        }
     };
 
     const formatCurrency = (amount: number) => {
@@ -288,8 +340,23 @@ const CompanySocial: React.FC = () => {
         }).format(amount);
     };
 
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải thông tin hoạt động xã hội...</Typography>
+            </Box>
+        );
+    }
+
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Hoạt động xã hội
@@ -401,10 +468,11 @@ const CompanySocial: React.FC = () => {
                                         <ImageList sx={{ width: '100%', height: 100 }} cols={2} rowHeight={100}>
                                             {activity.images.map((image, index) => (
                                                 <ImageListItem key={index}>
-                                                    <img
+                                                    <Image
                                                         src={image}
+                                                        width={100}
+                                                        height={100}
                                                         alt={`Activity ${index + 1}`}
-                                                        loading="lazy"
                                                         style={{ objectFit: 'cover' }}
                                                     />
                                                 </ImageListItem>
@@ -532,14 +600,30 @@ const CompanySocial: React.FC = () => {
                     </Grid>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDialogOpen(false)}>
+                    <Button onClick={() => setDialogOpen(false)} disabled={saving}>
                         Hủy
                     </Button>
-                    <Button onClick={handleSaveActivity} variant="contained">
-                        {editingActivity ? 'Cập nhật' : 'Thêm'}
+                    <Button
+                        onClick={handleSaveActivity}
+                        variant="contained"
+                        disabled={saving}
+                        startIcon={saving ? <CircularProgress size={20} /> : undefined}
+                    >
+                        {saving ? 'Đang lưu...' : (editingActivity ? 'Cập nhật' : 'Thêm')}
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={() => setSnackbarOpen(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarMessage.includes('✅') ? 'success' : 'error'} sx={{ width: '100%' }}>
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

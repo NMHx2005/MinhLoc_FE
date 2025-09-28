@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Card,
@@ -25,6 +25,9 @@ import {
     TextField,
     Grid,
     Chip,
+    FormControl,
+    InputLabel,
+    Select,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -33,56 +36,25 @@ import {
     Delete as DeleteIcon,
     Category as CategoryIcon,
 } from '@mui/icons-material';
+import { newsService } from '../../services/admin/newsService';
 
 interface NewsCategory {
-    id: number;
+    _id: string;
     name: string;
     slug: string;
-    description: string;
-    articleCount: number;
-    status: 'active' | 'inactive';
+    description?: string;
+    color: string;
+    isActive: boolean;
+    sortOrder: number;
     createdAt: string;
+    updatedAt: string;
+    articleCount?: number;
 }
 
 const NewsCategoriesManagement: React.FC = () => {
-    const [categories, setCategories] = useState<NewsCategory[]>([
-        {
-            id: 1,
-            name: 'Thị trường BDS',
-            slug: 'thi-truong-bds',
-            description: 'Tin tức và phân tích về thị trường bất động sản',
-            articleCount: 15,
-            status: 'active',
-            createdAt: '2024-01-15'
-        },
-        {
-            id: 2,
-            name: 'Sản phẩm Sâm',
-            slug: 'san-pham-sam',
-            description: 'Thông tin về các sản phẩm sâm và lợi ích sức khỏe',
-            articleCount: 8,
-            status: 'active',
-            createdAt: '2024-01-10'
-        },
-        {
-            id: 3,
-            name: 'Chính sách',
-            slug: 'chinh-sach',
-            description: 'Cập nhật các chính sách liên quan đến BDS và kinh doanh',
-            articleCount: 5,
-            status: 'active',
-            createdAt: '2024-01-08'
-        },
-        {
-            id: 4,
-            name: 'Dự án mới',
-            slug: 'du-an-moi',
-            description: 'Giới thiệu các dự án bất động sản mới',
-            articleCount: 3,
-            status: 'inactive',
-            createdAt: '2024-01-05'
-        },
-    ]);
+    const [categories, setCategories] = useState<NewsCategory[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [selectedCategory, setSelectedCategory] = useState<NewsCategory | null>(null);
@@ -92,19 +64,50 @@ const NewsCategoriesManagement: React.FC = () => {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        status: 'active' as const
+        color: '#E7C873',
+        isActive: true
     });
+
+    // Load categories from API
+    const loadCategories = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await newsService.getNewsCategories();
+
+            // Handle different response structures
+            if (response.success && response.data) {
+                setCategories(response.data);
+            } else if (Array.isArray(response)) {
+                setCategories(response);
+            } else if (response.data) {
+                setCategories(response.data);
+            } else {
+                setCategories([]);
+            }
+        } catch (err) {
+            console.error('Error loading categories:', err);
+            setError('Không thể tải danh sách danh mục');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadCategories();
+    }, []);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
+    // Function to generate slug from name
     const generateSlug = (name: string) => {
         return name
             .toLowerCase()
             .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .trim('-');
+            .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+            .replace(/\s+/g, '-') // Replace spaces with hyphens
+            .replace(/-+/g, '-') // Replace multiple hyphens with single
+            .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
     };
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, category: NewsCategory) => {
@@ -122,30 +125,56 @@ const NewsCategoriesManagement: React.FC = () => {
             setFormMode('edit');
             setFormData({
                 name: selectedCategory.name,
-                description: selectedCategory.description,
-                status: selectedCategory.status
+                description: selectedCategory.description || '',
+                color: selectedCategory.color,
+                isActive: selectedCategory.isActive
             });
             setFormDialogOpen(true);
         }
-        handleMenuClose();
     };
 
     const handleDelete = () => {
         setDeleteDialogOpen(true);
-        handleMenuClose();
     };
 
-    const handleDeleteConfirm = () => {
+    const handleDeleteConfirm = async () => {
         if (selectedCategory) {
-            setCategories(categories.filter(cat => cat.id !== selectedCategory.id));
-            setDeleteDialogOpen(false);
-            setSelectedCategory(null);
+            try {
+                setLoading(true);
+                await newsService.deleteNewsCategory(selectedCategory._id);
+                await loadCategories();
+                setDeleteDialogOpen(false);
+                setSelectedCategory(null);
+                handleMenuClose();
+            } catch (err) {
+                console.error('Error deleting category:', err);
+                setError('Không thể xóa danh mục: ' + (err as Error)?.message || 'Unknown error');
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
     const handleDeleteCancel = () => {
         setDeleteDialogOpen(false);
         setSelectedCategory(null);
+        handleMenuClose();
+    };
+
+    const handleToggleStatus = async () => {
+        if (selectedCategory) {
+            try {
+                setLoading(true);
+                await newsService.toggleNewsCategoryStatus(selectedCategory._id);
+                await loadCategories();
+                handleMenuClose();
+            } catch (err) {
+                console.error('Error toggling category status:', err);
+                setError('Không thể thay đổi trạng thái danh mục: ' + (err as Error)?.message || 'Unknown error');
+            } finally {
+                setLoading(false);
+            }
+        }
     };
 
     const handleAddCategory = () => {
@@ -153,7 +182,8 @@ const NewsCategoriesManagement: React.FC = () => {
         setFormData({
             name: '',
             description: '',
-            status: 'active'
+            color: '#E7C873',
+            isActive: true
         });
         setErrors({});
         setFormDialogOpen(true);
@@ -163,9 +193,10 @@ const NewsCategoriesManagement: React.FC = () => {
         setFormDialogOpen(false);
         setSelectedCategory(null);
         setErrors({});
+        handleMenuClose(); // Close menu when closing form
     };
 
-    const handleFormChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFormChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData(prev => ({
             ...prev,
             [field]: event.target.value
@@ -186,13 +217,9 @@ const NewsCategoriesManagement: React.FC = () => {
             newErrors.name = 'Tên danh mục là bắt buộc';
         }
 
-        if (!formData.description.trim()) {
-            newErrors.description = 'Mô tả là bắt buộc';
-        }
-
         const duplicateName = categories.find(cat =>
             cat.name.toLowerCase() === formData.name.toLowerCase() &&
-            (formMode === 'add' || cat.id !== selectedCategory?.id)
+            cat._id !== selectedCategory?._id
         );
 
         if (duplicateName) {
@@ -203,33 +230,37 @@ const NewsCategoriesManagement: React.FC = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleFormSubmit = () => {
+    const handleFormSubmit = async () => {
         if (validateForm()) {
-            if (formMode === 'add') {
-                const newCategory: NewsCategory = {
-                    id: Math.max(...categories.map(c => c.id)) + 1,
-                    name: formData.name,
-                    slug: generateSlug(formData.name),
-                    description: formData.description,
-                    status: formData.status,
-                    articleCount: 0,
-                    createdAt: new Date().toISOString().split('T')[0],
-                };
-                setCategories([...categories, newCategory]);
-            } else if (formMode === 'edit' && selectedCategory) {
-                setCategories(categories.map(cat =>
-                    cat.id === selectedCategory.id
-                        ? {
-                            ...cat,
-                            name: formData.name,
-                            slug: generateSlug(formData.name),
-                            description: formData.description,
-                            status: formData.status
-                        }
-                        : cat
-                ));
+            try {
+                setLoading(true);
+                const slug = generateSlug(formData.name);
+
+                if (formMode === 'add') {
+                    await newsService.createNewsCategory({
+                        name: formData.name,
+                        slug: slug,
+                        description: formData.description,
+                        color: formData.color,
+                        isActive: formData.isActive
+                    });
+                } else if (formMode === 'edit' && selectedCategory) {
+                    await newsService.updateNewsCategory(selectedCategory._id, {
+                        name: formData.name,
+                        slug: slug,
+                        description: formData.description,
+                        color: formData.color,
+                        isActive: formData.isActive
+                    });
+                }
+                await loadCategories();
+                handleFormClose();
+            } catch (err) {
+                console.error('Error saving category:', err);
+                setError('Không thể lưu danh mục: ' + (err as Error)?.message || 'Unknown error');
+            } finally {
+                setLoading(false);
             }
-            handleFormClose();
         }
     };
 
@@ -240,6 +271,22 @@ const NewsCategoriesManagement: React.FC = () => {
     const getStatusLabel = (status: string) => {
         return status === 'active' ? 'Đang sử dụng' : 'Ngừng sử dụng';
     };
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <Typography>Đang tải danh mục...</Typography>
+            </Box>
+        );
+    }
+
+    if (error) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <Typography color="error">{error}</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box>
@@ -267,7 +314,7 @@ const NewsCategoriesManagement: React.FC = () => {
             {/* Categories Grid */}
             <Grid container spacing={3} sx={{ mb: 3 }}>
                 {categories.map((category) => (
-                    <Grid item xs={12} md={6} lg={4} key={category.id}>
+                    <Grid item xs={12} md={6} lg={4} key={category._id}>
                         <Card
                             sx={{
                                 height: '100%',
@@ -304,8 +351,8 @@ const NewsCategoriesManagement: React.FC = () => {
                                         Số bài viết: {category.articleCount}
                                     </Typography>
                                     <Chip
-                                        label={getStatusLabel(category.status)}
-                                        color={getStatusColor(category.status) as any}
+                                        label={getStatusLabel(category.isActive ? 'active' : 'inactive')}
+                                        color={getStatusColor(category.isActive ? 'active' : 'inactive') as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                                         size="small"
                                     />
                                 </Box>
@@ -340,7 +387,7 @@ const NewsCategoriesManagement: React.FC = () => {
                             </TableHead>
                             <TableBody>
                                 {categories.map((category) => (
-                                    <TableRow key={category.id} hover>
+                                    <TableRow key={category._id} hover>
                                         <TableCell>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <CategoryIcon sx={{ color: '#E7C873' }} />
@@ -366,8 +413,8 @@ const NewsCategoriesManagement: React.FC = () => {
                                         </TableCell>
                                         <TableCell align="center">
                                             <Chip
-                                                label={getStatusLabel(category.status)}
-                                                color={getStatusColor(category.status) as any}
+                                                label={getStatusLabel(category.isActive ? 'active' : 'inactive')}
+                                                color={getStatusColor(category.isActive ? 'active' : 'inactive') as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                                                 size="small"
                                             />
                                         </TableCell>
@@ -404,6 +451,10 @@ const NewsCategoriesManagement: React.FC = () => {
                 <MenuItem onClick={handleEdit}>
                     <EditIcon sx={{ mr: 1 }} />
                     Chỉnh sửa
+                </MenuItem>
+                <MenuItem onClick={handleToggleStatus}>
+                    <CategoryIcon sx={{ mr: 1 }} />
+                    {selectedCategory?.isActive ? 'Ngừng sử dụng' : 'Kích hoạt'}
                 </MenuItem>
                 <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
                     <DeleteIcon sx={{ mr: 1 }} />
@@ -475,6 +526,36 @@ const NewsCategoriesManagement: React.FC = () => {
                                 placeholder="Mô tả chi tiết về danh mục này..."
                             />
                         </Grid>
+
+                        <Grid item xs={6}>
+                            <TextField
+                                fullWidth
+                                label="Màu sắc"
+                                type="color"
+                                value={formData.color}
+                                onChange={handleFormChange('color')}
+                                InputProps={{
+                                    style: { height: '56px' }
+                                }}
+                            />
+                        </Grid>
+
+                        <Grid item xs={6}>
+                            <FormControl fullWidth>
+                                <InputLabel>Trạng thái</InputLabel>
+                                <Select
+                                    value={formData.isActive ? 'active' : 'inactive'}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        isActive: e.target.value === 'active'
+                                    }))}
+                                    label="Trạng thái"
+                                >
+                                    <MenuItem value="active">Đang sử dụng</MenuItem>
+                                    <MenuItem value="inactive">Ngừng sử dụng</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
                     </Grid>
                 </DialogContent>
 
@@ -485,6 +566,7 @@ const NewsCategoriesManagement: React.FC = () => {
                     <Button
                         onClick={handleFormSubmit}
                         variant="contained"
+                        disabled={loading}
                         sx={{
                             backgroundColor: '#E7C873',
                             color: '#000',
@@ -493,7 +575,7 @@ const NewsCategoriesManagement: React.FC = () => {
                             },
                         }}
                     >
-                        {formMode === 'add' ? 'Thêm danh mục' : 'Cập nhật'}
+                        {loading ? 'Đang xử lý...' : (formMode === 'add' ? 'Thêm danh mục' : 'Cập nhật')}
                     </Button>
                 </DialogActions>
             </Dialog>

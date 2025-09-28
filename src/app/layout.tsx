@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import EmotionRegistry from '@/lib/emotion-registry';
 import ThemeProvider from '@/components/providers/ThemeProvider';
+import { AuthProvider } from '@/contexts/AuthContext';
+// import ErrorBoundary from '@/components/ErrorBoundary';
 // import AOSProvider from '@/components/providers/AOSProvider';
 import StructuredData from '@/components/seo/StructuredData';
 // import PerformanceMonitor from '@/components/common/PerformanceMonitor';
@@ -511,23 +513,21 @@ export default function RootLayout({
       <body className={inter.className}>
         <EmotionRegistry>
           <ThemeProvider>
-            {/* <AOSProvider> */}
-            {children}
-            {/* </AOSProvider> */}
-            {/* <PerformanceMonitor /> */}
-            {/* ServiceWorker removed */}
-            {/* <PerformanceOptimizer /> */}
-            {/* <FontLoaderOptimized /> */}
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-              }}
-            />
+            {/* <ErrorBoundary> */}
+            <AuthProvider>
+              {children}
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#363636',
+                    color: '#fff',
+                  },
+                }}
+              />
+            </AuthProvider>
+            {/* </ErrorBoundary> */}
           </ThemeProvider>
         </EmotionRegistry>
       </body>

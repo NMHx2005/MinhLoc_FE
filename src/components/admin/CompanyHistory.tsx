@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Typography,
@@ -9,13 +9,6 @@ import {
     TextField,
     Button,
     Grid,
-    Timeline,
-    TimelineItem,
-    TimelineSeparator,
-    TimelineConnector,
-    TimelineContent,
-    TimelineDot,
-    TimelineOppositeContent,
     Chip,
     IconButton,
     Dialog,
@@ -24,6 +17,15 @@ import {
     DialogActions,
 } from '@mui/material';
 import {
+    Timeline,
+    TimelineItem,
+    TimelineSeparator,
+    TimelineConnector,
+    TimelineContent,
+    TimelineDot,
+    TimelineOppositeContent,
+} from '@mui/lab';
+import {
     Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
@@ -31,6 +33,9 @@ import {
     TrendingUp as TrendingUpIcon,
     Star as StarIcon,
 } from '@mui/icons-material';
+import { companyService } from '../../services/admin/companyService';
+import type { CompanyInfo } from '../../services/admin/companyService';
+import { Alert, Snackbar, CircularProgress } from '@mui/material';
 
 interface HistoryEvent {
     id: string;
@@ -42,56 +47,13 @@ interface HistoryEvent {
 }
 
 const CompanyHistory: React.FC = () => {
-    const [events, setEvents] = useState<HistoryEvent[]>([
-        {
-            id: '1',
-            year: 2008,
-            title: 'Thành lập MinhLoc Group',
-            description: 'MinhLoc Group được thành lập với tầm nhìn trở thành tập đoàn đa ngành hàng đầu Việt Nam.',
-            type: 'milestone',
-            isImportant: true,
-        },
-        {
-            id: '2',
-            year: 2010,
-            title: 'Dự án đầu tiên',
-            description: 'Hoàn thành dự án chung cư đầu tiên tại TP.HCM với 200 căn hộ.',
-            type: 'achievement',
-            isImportant: false,
-        },
-        {
-            id: '3',
-            year: 2015,
-            title: 'Mở rộng ra Hà Nội',
-            description: 'Thành lập chi nhánh tại Hà Nội và bắt đầu các dự án bất động sản tại miền Bắc.',
-            type: 'expansion',
-            isImportant: true,
-        },
-        {
-            id: '4',
-            year: 2018,
-            title: 'Giải thưởng Doanh nghiệp Xanh',
-            description: 'Nhận giải thưởng Doanh nghiệp Xanh 2018 cho các dự án phát triển bền vững.',
-            type: 'award',
-            isImportant: true,
-        },
-        {
-            id: '5',
-            year: 2020,
-            title: 'Diversification Strategy',
-            description: 'Mở rộng sang lĩnh vực đầu tư tài chính và quản lý tài sản.',
-            type: 'expansion',
-            isImportant: false,
-        },
-        {
-            id: '6',
-            year: 2023,
-            title: 'Top 100 Doanh nghiệp lớn nhất',
-            description: 'Lọt vào danh sách Top 100 doanh nghiệp lớn nhất Việt Nam theo VNR500.',
-            type: 'award',
-            isImportant: true,
-        },
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+    const [events, setEvents] = useState<HistoryEvent[]>([]);
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<HistoryEvent | null>(null);
@@ -102,6 +64,38 @@ const CompanyHistory: React.FC = () => {
         type: 'milestone',
         isImportant: false,
     });
+
+    // Load company history from API
+    const loadCompanyHistory = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const info = await companyService.getCompanyInfoBySection('history');
+            if (info) {
+                setCompanyInfo(info);
+                // Convert milestones to events
+                const milestones = info.data?.milestones || [];
+                const historyEvents: HistoryEvent[] = milestones.map((milestone: any, index: number) => ({
+                    id: milestone._id || `milestone-${index}`,
+                    year: parseInt(milestone.year) || new Date().getFullYear(),
+                    title: milestone.event || '',
+                    description: milestone.description || '',
+                    type: 'milestone' as const,
+                    isImportant: index < 3, // First 3 milestones are important
+                }));
+                setEvents(historyEvents);
+            }
+        } catch (err) {
+            console.error('Error loading company history:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải lịch sử công ty');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadCompanyHistory();
+    }, [loadCompanyHistory]);
 
     const getEventIcon = (type: string) => {
         switch (type) {
@@ -157,31 +151,116 @@ const CompanyHistory: React.FC = () => {
         setDialogOpen(true);
     };
 
-    const handleSaveEvent = () => {
-        if (editingEvent) {
-            // Update existing event
-            setEvents(prev => prev.map(event =>
-                event.id === editingEvent.id
-                    ? { ...formData, id: editingEvent.id }
-                    : event
-            ));
-        } else {
-            // Add new event
-            const newEvent: HistoryEvent = {
-                ...formData,
-                id: Date.now().toString(),
+    const handleSaveEvent = async () => {
+        setSaving(true);
+        try {
+            let updatedEvents: HistoryEvent[];
+
+            if (editingEvent) {
+                // Update existing event
+                updatedEvents = events.map(event =>
+                    event.id === editingEvent.id
+                        ? { ...formData, id: editingEvent.id }
+                        : event
+                );
+            } else {
+                // Add new event
+                const newEvent: HistoryEvent = {
+                    ...formData,
+                    id: Date.now().toString(),
+                };
+                updatedEvents = [...events, newEvent].sort((a, b) => a.year - b.year);
+            }
+
+            // Update local state first
+            setEvents(updatedEvents);
+
+            // Convert events back to milestones format and save to API
+            const milestones = updatedEvents.map(event => ({
+                year: event.year.toString(),
+                event: event.title,
+                description: event.description,
+            }));
+
+            const dataToSave = {
+                section: 'history',
+                title: companyInfo?.title || 'Lịch sử hình thành và phát triển',
+                content: companyInfo?.content || '',
+                data: {
+                    milestones: milestones,
+                },
+                sortOrder: 2
             };
-            setEvents(prev => [...prev, newEvent].sort((a, b) => a.year - b.year));
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Lưu lịch sử công ty thành công!');
+            setSnackbarOpen(true);
+            setDialogOpen(false);
+            // Reload data
+            await loadCompanyHistory();
+        } catch (error) {
+            console.error('Error saving company history:', error);
+            setSnackbarMessage('❌ Lỗi khi lưu lịch sử công ty');
+            setSnackbarOpen(true);
+        } finally {
+            setSaving(false);
         }
-        setDialogOpen(false);
     };
 
-    const handleDeleteEvent = (eventId: string) => {
-        setEvents(prev => prev.filter(event => event.id !== eventId));
+    const handleDeleteEvent = async (eventId: string) => {
+        try {
+            // Update local state first
+            const updatedEvents = events.filter(event => event.id !== eventId);
+            setEvents(updatedEvents);
+
+            // Convert events back to milestones format and save to API
+            const milestones = updatedEvents.map(event => ({
+                year: event.year.toString(),
+                event: event.title,
+                description: event.description,
+            }));
+
+            const dataToSave = {
+                section: 'history',
+                title: companyInfo?.title || 'Lịch sử hình thành và phát triển',
+                content: companyInfo?.content || '',
+                data: {
+                    milestones: milestones,
+                },
+                sortOrder: 2
+            };
+
+            await companyService.createOrUpdateCompanyInfo(dataToSave);
+
+            setSnackbarMessage('✅ Xóa sự kiện thành công!');
+            setSnackbarOpen(true);
+        } catch (error) {
+            console.error('Error deleting event:', error);
+            setSnackbarMessage('❌ Lỗi khi xóa sự kiện');
+            setSnackbarOpen(true);
+            // Reload data to restore state
+            await loadCompanyHistory();
+        }
     };
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Đang tải lịch sử công ty...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Lịch sử hình thành và phát triển
@@ -198,7 +277,7 @@ const CompanyHistory: React.FC = () => {
             <Card>
                 <CardContent>
                     <Timeline>
-                        {events.map((event, index) => (
+                        {events.map((event) => (
                             <TimelineItem key={event.id}>
                                 <TimelineOppositeContent
                                     sx={{ m: 'auto 0' }}
@@ -311,14 +390,30 @@ const CompanyHistory: React.FC = () => {
                     </Grid>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDialogOpen(false)}>
+                    <Button onClick={() => setDialogOpen(false)} disabled={saving}>
                         Hủy
                     </Button>
-                    <Button onClick={handleSaveEvent} variant="contained">
-                        {editingEvent ? 'Cập nhật' : 'Thêm'}
+                    <Button
+                        onClick={handleSaveEvent}
+                        variant="contained"
+                        disabled={saving}
+                        startIcon={saving ? <CircularProgress size={20} /> : undefined}
+                    >
+                        {saving ? 'Đang lưu...' : (editingEvent ? 'Cập nhật' : 'Thêm')}
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={() => setSnackbarOpen(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarMessage.includes('✅') ? 'success' : 'error'} sx={{ width: '100%' }}>
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };
