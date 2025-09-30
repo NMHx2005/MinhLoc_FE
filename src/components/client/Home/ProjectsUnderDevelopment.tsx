@@ -264,8 +264,8 @@ const ProjectsUnderDevelopment: React.FC = () => {
                 {!loading && !error && (
                     <>
                         {/* Tabs */}
-                        <Box className="prj tabs" sx={{ mb: 4 }}>
-                            <Box className="nav-scroll" sx={{ mb: 2 }}>
+                        <Box className="prj tabs" sx={{ mb: { xs: 3, sm: 3.5, md: 4 } }}>
+                            <Box className="nav-scroll" sx={{ mb: { xs: 1.5, sm: 2 } }}>
                                 <Box
                                     component="ul"
                                     className="tab-links"
@@ -274,10 +274,14 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                         listStyle: 'none',
                                         p: 0,
                                         mb: 0,
-                                        gap: 1,
+                                        gap: { xs: 0.5, sm: 0.75, md: 1 },
                                         overflowX: 'auto',
-                                        marginBottom: "20px",
+                                        flexWrap: 'wrap',
+                                        marginBottom: { xs: "15px", sm: "18px", md: "20px" },
+                                        px: { xs: 1, sm: 0 },
                                         '&::-webkit-scrollbar': { display: 'none' },
+                                        scrollbarWidth: 'none',
+                                        msOverflowStyle: 'none',
                                     }}
                                 >
                                     {projectCategories.map((category) => (
@@ -297,16 +301,17 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                                 sx={{
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    gap: 1,
-                                                    px: 2,
-                                                    py: 1.5,
+                                                    gap: { xs: 0.5, sm: 0.75, md: 1 },
+                                                    px: { xs: 1.25, sm: 1.5, md: 2 },
+                                                    py: { xs: 1, sm: 1.25, md: 1.5 },
                                                     backgroundColor: activeTab === category.id ? '#E7C873' : 'white',
                                                     color: activeTab === category.id ? 'white' : '#666',
-                                                    // borderRadius: 2,
+                                                    borderRadius: { xs: 1, sm: 1.5, md: 2 },
                                                     textTransform: 'none',
-                                                    fontSize: '0.9rem',
+                                                    fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.9rem' },
                                                     fontWeight: 500,
                                                     minWidth: 'auto',
+                                                    whiteSpace: 'nowrap',
                                                     '&:hover': {
                                                         backgroundColor: activeTab === category.id ? '#E7C873' : '#f5f5f5',
                                                     },
@@ -317,10 +322,10 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                                         component="img"
                                                         src={category.icon}
                                                         alt={category.name}
-                                                        sx={{ width: 24, height: 24 }}
+                                                        sx={{ width: { xs: 16, sm: 20, md: 24 }, height: { xs: 16, sm: 20, md: 24 } }}
                                                     />
                                                 )}
-                                                <Box component="span">{category.name}</Box>
+                                                <Box component="span" sx={{ fontSize: 'inherit' }}>{category.name}</Box>
                                             </Button>
                                         </Box>
                                     ))}
@@ -333,7 +338,10 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                     <Box className="descZone" sx={{ mb: 2 }}></Box>
 
                                     {/* Projects Slider */}
-                                    <Box className="zone-projectSlider link" sx={{ position: 'relative' }}>
+                                    <Box className="zone-projectSlider link" sx={{
+                                        position: 'relative',
+                                        px: { xs: 3, sm: 4, md: 5 }, // Thêm padding để chứa navigation arrows
+                                    }}>
                                         {/* Navigation Arrows */}
                                         <IconButton
                                             className="slick-prev slick-arrow"
@@ -341,13 +349,16 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                             disabled={totalSlides <= 1 || isAnimating}
                                             sx={{
                                                 position: 'absolute',
-                                                left: -50,
+                                                left: { xs: 0, sm: 0, md: 0 },
                                                 top: '50%',
                                                 transform: 'translateY(-50%)',
                                                 zIndex: 2,
                                                 backgroundColor: '#F5F5F5',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                                                 transition: 'all 0.2s ease-out',
+                                                width: { xs: 32, sm: 40, md: 48 },
+                                                height: { xs: 32, sm: 40, md: 48 },
+                                                display: { xs: totalSlides <= 1 ? 'none' : 'flex', sm: 'flex' },
                                                 '&:hover': {
                                                     backgroundColor: '#f5f5f5',
                                                     transform: 'translateY(-50%) scale(1.05)',
@@ -359,7 +370,7 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                                 },
                                             }}
                                         >
-                                            <ArrowBack />
+                                            <ArrowBack sx={{ fontSize: { xs: '1rem', sm: '1.2rem', md: '1.5rem' } }} />
                                         </IconButton>
 
                                         <IconButton
@@ -368,13 +379,16 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                             disabled={totalSlides <= 1 || isAnimating}
                                             sx={{
                                                 position: 'absolute',
-                                                right: -50,
+                                                right: { xs: 0, sm: 0, md: 0 },
                                                 top: '50%',
                                                 transform: 'translateY(-50%)',
                                                 zIndex: 2,
                                                 backgroundColor: '#F5F5F5',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                                                 transition: 'all 0.2s ease-out',
+                                                width: { xs: 32, sm: 40, md: 48 },
+                                                height: { xs: 32, sm: 40, md: 48 },
+                                                display: { xs: totalSlides <= 1 ? 'none' : 'flex', sm: 'flex' },
                                                 '&:hover': {
                                                     backgroundColor: '#f5f5f5',
                                                     transform: 'translateY(-50%) scale(1.05)',
@@ -386,7 +400,7 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                                 },
                                             }}
                                         >
-                                            <ArrowForward />
+                                            <ArrowForward sx={{ fontSize: { xs: '1rem', sm: '1.2rem', md: '1.5rem' } }} />
                                         </IconButton>
 
                                         {/* Projects Grid */}
@@ -407,13 +421,14 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                                         sm: 'repeat(2, 1fr)',
                                                         md: 'repeat(3, 1fr)',
                                                     },
-                                                    gap: 3,
-                                                    mb: 4,
+                                                    gap: { xs: 2, sm: 2.5, md: 3 },
+                                                    mb: { xs: 3, sm: 3.5, md: 4 },
                                                     minHeight: {
-                                                        xs: 300,
-                                                        sm: 350,
+                                                        xs: 280,
+                                                        sm: 320,
                                                         md: 400,
                                                     },
+                                                    px: { xs: 0, sm: 0 },
                                                     transition: isDragging ? 'none' : 'all 0.2s ease-out',
                                                     opacity: isAnimating ? 0.8 : 1,
                                                     transform: `${isAnimating ? 'scale(0.99)' : 'scale(1)'} ${isDragging ? `translateX(${translateX}px)` : ''}`,
@@ -434,9 +449,13 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                                             sx={{
                                                                 width: '100%',
                                                                 transition: 'all 0.2s ease-out',
-                                                                boxShadow: '0 8px 25px rgba(0,0,0,0.1)',
+                                                                boxShadow: { xs: '0 4px 15px rgba(0,0,0,0.08)', sm: '0 6px 20px rgba(0,0,0,0.1)', md: '0 8px 25px rgba(0,0,0,0.1)' },
+                                                                borderRadius: { xs: 1, sm: 1.5, md: 2 },
+                                                                overflow: 'hidden',
+                                                                backgroundColor: 'white',
                                                                 '&:hover': {
-                                                                    transform: 'translateY(-4px)',
+                                                                    transform: { xs: 'translateY(-2px)', sm: 'translateY(-3px)', md: 'translateY(-4px)' },
+                                                                    boxShadow: { xs: '0 6px 20px rgba(0,0,0,0.12)', sm: '0 8px 25px rgba(0,0,0,0.15)', md: '0 12px 35px rgba(0,0,0,0.15)' },
                                                                 },
                                                             }}
                                                         >
@@ -452,27 +471,31 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                                                         alt={project.title}
                                                                         sx={{
                                                                             width: '100%',
-                                                                            // height: 200,
-
+                                                                            height: { xs: 180, sm: 200, md: 220 },
                                                                             objectFit: 'cover',
                                                                             borderRadius: 0,
                                                                             transition: 'transform 0.3s ease',
                                                                             '&:hover': {
-                                                                                // transform: 'scale(1.05)',
+                                                                                transform: { xs: 'scale(1.02)', sm: 'scale(1.03)', md: 'scale(1.05)' },
                                                                             },
                                                                         }}
                                                                     />
                                                                 </Link>
-                                                                <Box component="figcaption" sx={{ p: 2 }}>
+                                                                <Box component="figcaption" sx={{ p: { xs: 1.5, sm: 1.75, md: 2 } }}>
                                                                     <Typography
                                                                         variant="h6"
                                                                         component="h3"
                                                                         className="project-title"
                                                                         sx={{
-                                                                            fontSize: '1.25rem',
+                                                                            fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem' },
                                                                             fontWeight: 700,
-                                                                            mb: 1,
+                                                                            mb: { xs: 0.75, sm: 0.875, md: 1 },
                                                                             color: '#1a1a1a',
+                                                                            lineHeight: 1.3,
+                                                                            display: '-webkit-box',
+                                                                            WebkitLineClamp: 2,
+                                                                            WebkitBoxOrient: 'vertical',
+                                                                            overflow: 'hidden',
                                                                         }}
                                                                     >
                                                                         <Link
@@ -486,25 +509,27 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                                                         </Link>
                                                                     </Typography>
                                                                     <Box className="project-brief">
-                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                                                                            <Business sx={{ fontSize: '1rem', color: '#666' }} />
+                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.25, sm: 0.5 }, mb: { xs: 0.25, sm: 0.5 } }}>
+                                                                            <Business sx={{ fontSize: { xs: '0.875rem', sm: '1rem' }, color: '#666' }} />
                                                                             <Typography
                                                                                 variant="body2"
                                                                                 sx={{
                                                                                     color: '#666',
-                                                                                    fontSize: '0.9rem',
+                                                                                    fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.9rem' },
+                                                                                    lineHeight: 1.2,
                                                                                 }}
                                                                             >
                                                                                 Quy mô: {project.scale}
                                                                             </Typography>
                                                                         </Box>
-                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                                            <BorderStyle sx={{ fontSize: '1rem', color: '#666' }} />
+                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.25, sm: 0.5 } }}>
+                                                                            <BorderStyle sx={{ fontSize: { xs: '0.875rem', sm: '1rem' }, color: '#666' }} />
                                                                             <Typography
                                                                                 variant="body2"
                                                                                 sx={{
                                                                                     color: '#666',
-                                                                                    fontSize: '0.9rem',
+                                                                                    fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.9rem' },
+                                                                                    lineHeight: 1.2,
                                                                                 }}
                                                                             >
                                                                                 {project.area}
@@ -524,16 +549,17 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                             <Box sx={{
                                                 display: 'flex',
                                                 justifyContent: 'center',
-                                                gap: 1,
-                                                mt: 2
+                                                gap: { xs: 0.75, sm: 1 },
+                                                mt: { xs: 1.5, sm: 2 },
+                                                px: { xs: 2, sm: 0 },
                                             }}>
                                                 {Array.from({ length: totalSlides }).map((_, index) => (
                                                     <Box
                                                         key={index}
                                                         onClick={() => handleSlideChange(index)}
                                                         sx={{
-                                                            width: 8,
-                                                            height: 8,
+                                                            width: { xs: 6, sm: 8 },
+                                                            height: { xs: 6, sm: 8 },
                                                             borderRadius: '50%',
                                                             backgroundColor: currentSlide === index ? '#E7C873' : '#ddd',
                                                             cursor: isAnimating ? 'not-allowed' : 'pointer',
@@ -553,26 +579,29 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                     {/* View All Button */}
                                     <Box
                                         className="btn-wrap"
-
-
-
-                                        sx={{ textAlign: 'center', mt: 4 }}
+                                        sx={{ textAlign: 'center', mt: { xs: 3, sm: 3.5, md: 4 } }}
                                     >
                                         <Button
                                             component={Link}
                                             href="/projects"
                                             className="btn-viewAll"
                                             variant="outlined"
-                                            endIcon={<ArrowForward />}
+                                            endIcon={<ArrowForward sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }} />}
                                             sx={{
                                                 color: '#E7C873',
                                                 borderColor: '#E7C873',
                                                 textTransform: 'none',
-                                                fontSize: '1rem',
+                                                fontSize: { xs: '0.875rem', sm: '0.9375rem', md: '1rem' },
                                                 fontWeight: 500,
-                                                px: 4,
-                                                py: 1.5,
+                                                px: { xs: 3, sm: 3.5, md: 4 },
+                                                py: { xs: 1.25, sm: 1.375, md: 1.5 },
                                                 borderRadius: 1,
+                                                minWidth: { xs: 120, sm: 140, md: 160 },
+                                                '&:hover': {
+                                                    backgroundColor: '#E7C873',
+                                                    color: 'white',
+                                                    borderColor: '#E7C873',
+                                                },
                                             }}
                                         >
                                             Xem tất cả

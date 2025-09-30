@@ -489,7 +489,7 @@ const Header: React.FC = () => {
 
                     {/* Mobile User Controls */}
                     <Box sx={{ mb: 2 }}>
-                        <Stack direction="row" sx={{ gap: 2, display: 'flex', flexDirection: 'column' }}>
+                        <Stack direction="row" sx={{ gap: 2, display: 'none', flexDirection: 'column' }}>
                             <Button
                                 component={Link}
                                 href="/login"

@@ -83,21 +83,20 @@ const FeaturedProjects: React.FC = () => {
     }
 
     return (
-        <Box sx={{ py: 8, backgroundColor: '#F5F5F5' }}>
+        <Box sx={{ py: { xs: 4, sm: 6, md: 8 }, backgroundColor: '#F5F5F5' }}>
             <Container maxWidth="lg">
                 {/* Section Title */}
-                <Box sx={{ textAlign: 'center', mb: 6 }}>
+                <Box sx={{ textAlign: 'center', mb: { xs: 4, sm: 5, md: 6 } }}>
                     <Typography
                         variant="h3"
                         component="h2"
-
-
                         sx={{
                             color: '#E7C873',
                             fontWeight: 700,
-                            fontSize: { xs: '2rem', md: '2.5rem' },
+                            fontSize: { xs: '1.75rem', sm: '2rem', md: '2.5rem' },
                             textTransform: 'uppercase',
                             letterSpacing: '1px',
+                            lineHeight: 1.2,
                         }}
                     >
                         DỰ ÁN NỔI BẬT
@@ -105,22 +104,30 @@ const FeaturedProjects: React.FC = () => {
                 </Box>
 
                 {/* Projects Grid */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, alignItems: 'stretch' }}>
+                <Box sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: '1fr', md: '1fr 1fr' },
+                    gap: { xs: 0, sm: 2.5, md: 3 },
+                    alignItems: 'stretch'
+                }}>
                     {/* Large Featured Project */}
-                    <Box>
+                    <Box sx={{
+                        // Trên mobile, hiển thị full width
+                        gridColumn: { xs: '1 / -1', sm: '1 / -1', md: '1 / 2' }
+                    }}>
                         <Card
                             sx={{
                                 height: '100%',
-                                borderRadius: 0,
+                                borderRadius: { xs: 1, sm: 1.5, md: 0 },
                                 overflow: 'hidden',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                boxShadow: { xs: '0 4px 20px rgba(0,0,0,0.08)', sm: '0 6px 24px rgba(0,0,0,0.1)', md: '0 8px 32px rgba(0,0,0,0.12)' },
                                 transition: 'transform 0.3s ease, box-shadow 0.3s ease',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 maxWidth: '100%',
                                 '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                    boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+                                    transform: { xs: 'translateY(-2px)', sm: 'translateY(-3px)', md: 'translateY(-4px)' },
+                                    boxShadow: { xs: '0 6px 24px rgba(0,0,0,0.12)', sm: '0 8px 32px rgba(0,0,0,0.15)', md: '0 16px 48px rgba(0,0,0,0.2)' },
                                 },
                             }}
                         >
@@ -130,22 +137,27 @@ const FeaturedProjects: React.FC = () => {
                                 alt={projects[0].name || 'Dự án'}
                                 sx={{
                                     objectFit: 'cover',
-                                    // height: 200,
+                                    height: { xs: 200, sm: 220, md: 250 },
                                     width: '100%',
                                     flexShrink: 0,
                                     maxWidth: '100%',
                                     overflow: 'hidden!important',
                                 }}
                             />
-                            <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 }, flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 <Typography
                                     variant="h5"
                                     component="h3"
                                     sx={{
                                         fontWeight: 700,
-                                        mb: 2,
-                                        fontSize: '1.5rem',
+                                        mb: { xs: 1.5, sm: 1.75, md: 2 },
+                                        fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem' },
                                         color: '#E7C873',
+                                        lineHeight: 1.3,
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
                                     }}
                                 >
                                     {projects[0].name || 'Dự án'}
@@ -155,9 +167,10 @@ const FeaturedProjects: React.FC = () => {
                                     lineHeight={1.6}
                                     fontSize="0.95rem"
                                     sx={{
-                                        mb: 3,
+                                        mb: { xs: 2, sm: 2.5, md: 3 },
                                         color: '#666',
-                                        flex: 1
+                                        flex: 1,
+                                        fontSize: { xs: '0.875rem', sm: '0.9rem', md: '0.95rem' }
                                     }}
                                 >
                                     {projects[0].description || 'Mô tả dự án'}
@@ -165,9 +178,9 @@ const FeaturedProjects: React.FC = () => {
                                 <Button
                                     component={Link}
                                     href={`/projects/${projects[0].slug || '#'}`}
-                                    endIcon={<ArrowForward />}
+                                    endIcon={<ArrowForward sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }} />}
                                     sx={{
-                                        fontSize: '0.95rem',
+                                        fontSize: { xs: '0.875rem', sm: '0.9rem', md: '0.95rem' },
                                         fontWeight: 500,
                                         color: '#E7C873',
                                         textTransform: 'none',
@@ -184,8 +197,14 @@ const FeaturedProjects: React.FC = () => {
                         </Card>
                     </Box>
 
-                    {/* Smaller Projects */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
+                    {/* Smaller Projects - Ẩn trên mobile, hiển thị từ tablet trở lên */}
+                    <Box sx={{
+                        display: { xs: 'none', sm: 'flex', md: 'flex' },
+                        flexDirection: 'column',
+                        gap: { sm: 2.5, md: 3 },
+                        height: '100%',
+                        gridColumn: { sm: '1 / -1', md: '2 / 3' }
+                    }}>
                         {projects.slice(1).map((project) => (
                             <Box
                                 key={project._id}
@@ -194,33 +213,35 @@ const FeaturedProjects: React.FC = () => {
                                 <Card
                                     sx={{
                                         height: '100%',
-                                        borderRadius: 0,
+                                        borderRadius: { xs: 1, sm: 1.5, md: 0 },
                                         overflow: 'hidden',
-                                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                                        boxShadow: { xs: '0 2px 12px rgba(0,0,0,0.06)', sm: '0 3px 16px rgba(0,0,0,0.08)', md: '0 4px 20px rgba(0,0,0,0.08)' },
                                         transition: 'transform 0.3s ease, box-shadow 0.3s ease',
                                         display: 'flex',
-                                        flexDirection: 'row',
+                                        flexDirection: { xs: 'column', sm: 'row' },
                                         minHeight: 0,
                                         maxWidth: '100%',
                                         '&:hover': {
-                                            transform: 'translateY(-2px)',
+                                            transform: { xs: 'translateY(-1px)', sm: 'translateY(-2px)' },
+                                            boxShadow: { xs: '0 4px 16px rgba(0,0,0,0.1)', sm: '0 6px 20px rgba(0,0,0,0.12)' },
                                         },
                                     }}
                                 >
                                     <CardMedia
                                         component="img"
                                         sx={{
-                                            width: '40%',
+                                            width: { xs: '100%', sm: '40%' },
+                                            height: { xs: 150, sm: 'auto' },
                                             objectFit: 'cover',
                                             flexShrink: 0,
-                                            maxWidth: '40%',
+                                            maxWidth: { xs: '100%', sm: '40%' },
                                             overflow: 'hidden!important',
                                         }}
                                         image={project.images?.[0] || '/modern-house.png'}
                                         alt={project.name}
                                     />
                                     <CardContent sx={{
-                                        p: 3,
+                                        p: { xs: 2, sm: 2.5, md: 3 },
                                         flex: 1,
                                         display: 'flex',
                                         flexDirection: 'column',
@@ -234,9 +255,14 @@ const FeaturedProjects: React.FC = () => {
                                                 component="h3"
                                                 sx={{
                                                     fontWeight: 700,
-                                                    mb: 2,
-                                                    fontSize: '1.1rem',
+                                                    mb: { xs: 1.5, sm: 1.75, md: 2 },
+                                                    fontSize: { xs: '1rem', sm: '1.05rem', md: '1.1rem' },
                                                     color: '#E7C873',
+                                                    lineHeight: 1.3,
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden',
                                                 }}
                                             >
                                                 {project.name}
@@ -246,8 +272,9 @@ const FeaturedProjects: React.FC = () => {
                                                 lineHeight={1.5}
                                                 fontSize="0.9rem"
                                                 sx={{
-                                                    mb: 2,
-                                                    color: '#666'
+                                                    mb: { xs: 1.5, sm: 1.75, md: 2 },
+                                                    color: '#666',
+                                                    fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' }
                                                 }}
                                             >
                                                 {project.description}
@@ -256,11 +283,11 @@ const FeaturedProjects: React.FC = () => {
                                         <Button
                                             component={Link}
                                             href={`/projects/${project.slug}`}
-                                            endIcon={<ArrowForward />}
+                                            endIcon={<ArrowForward sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
                                             sx={{
                                                 color: '#E7C873',
                                                 textTransform: 'none',
-                                                fontSize: '0.9rem',
+                                                fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' },
                                                 fontWeight: 500,
                                                 p: 0,
                                                 alignSelf: 'flex-start',
