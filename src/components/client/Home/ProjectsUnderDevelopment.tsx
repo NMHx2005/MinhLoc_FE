@@ -472,7 +472,6 @@ const ProjectsUnderDevelopment: React.FC = () => {
                                                                         sx={{
                                                                             width: '100%',
                                                                             height: { xs: 180, sm: 200, md: 220 },
-                                                                            objectFit: 'cover',
                                                                             borderRadius: 0,
                                                                             transition: 'transform 0.3s ease',
                                                                             '&:hover': {
